@@ -699,6 +699,34 @@ async function handleDrop(files){
 // ===== PRICE REFRESH via Angel One (Google Apps Script Proxy) =====
 var ANGEL_PROXY_URL="https://script.google.com/macros/s/AKfycbyBRVLBnbzp9UdhFi0P9C45brwAiLH_5A2xBmfaIExRUUgfMmh1YVrX7nUFplrhuJw8/exec";
 
+// JSONP helper — injects a <script> tag, no CORS restrictions
+function jsonpRequest(url, payload){
+  return new Promise(function(resolve,reject){
+    var cbName="_tc_cb_"+Date.now()+"_"+Math.floor(Math.random()*10000);
+    var script=document.createElement("script");
+    var done=false;
+    var timer=setTimeout(function(){
+      if(done)return;done=true;
+      cleanup();reject(new Error("JSONP timeout"));
+    },25000);
+    window[cbName]=function(data){
+      if(done)return;done=true;
+      cleanup();resolve(data);
+    };
+    function cleanup(){
+      clearTimeout(timer);
+      delete window[cbName];
+      if(script.parentNode)script.parentNode.removeChild(script);
+    }
+    script.onerror=function(){
+      if(done)return;done=true;
+      cleanup();reject(new Error("JSONP script error"));
+    };
+    script.src=url+"?callback="+cbName+"&payload="+encodeURIComponent(payload);
+    document.head.appendChild(script);
+  });
+}
+
 async function fetchPricesViaAngel(positions){
   if(!positions.length)return{};
   var symbols=[];
@@ -717,14 +745,11 @@ async function fetchPricesViaAngel(positions){
     state.toast="⟳ Batch "+(Math.floor(b/15)+1)+"/"+Math.ceil(symbols.length/15)+"...";render();
     try{
       var payload=JSON.stringify({action:"ltp",symbols:batch});
-      // Use GET with ?payload= — Apps Script doGet has proper CORS headers
-      var r=await fetch(ANGEL_PROXY_URL+"?payload="+encodeURIComponent(payload),{
-        method:"GET",
-        redirect:"follow"
-      });
-      var text=await r.text();
-      var d=JSON.parse(text);
-      if(d.status&&d.prices){for(var k in d.prices)allPrices[k]=d.prices[k]}
+      // JSONP: bypasses CORS entirely — no preflight, works from any origin
+      var batchPrices=await jsonpRequest(ANGEL_PROXY_URL,payload);
+      if(batchPrices&&batchPrices.status&&batchPrices.prices){
+        for(var k in batchPrices.prices)allPrices[k]=batchPrices.prices[k];
+      }
     }catch(e){console.error("Batch "+(Math.floor(b/15)+1)+" error:",e)}
   }
   return allPrices;
