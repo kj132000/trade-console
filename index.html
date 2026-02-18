@@ -699,6 +699,63 @@ async function handleDrop(files){
 // ===== PRICE REFRESH via Angel One (Google Apps Script Proxy) =====
 var ANGEL_PROXY_URL="https://script.google.com/macros/s/AKfycbyBRVLBnbzp9UdhFi0P9C45brwAiLH_5A2xBmfaIExRUUgfMmh1YVrX7nUFplrhuJw8/exec";
 
+// ===== INSTRUMENT MASTER (fetched once, cached in memory) =====
+var _masterCache=null;
+var _masterLoading=null;
+
+async function getInstrumentMaster(){
+  if(_masterCache)return _masterCache;
+  if(_masterLoading)return _masterLoading;
+  _masterLoading=(async function(){
+    try{
+      // Fetch Angel One instrument master directly — no CORS issue (CDN allows all origins)
+      var r=await fetch("https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json");
+      var data=await r.json();
+      // Build lookup maps for fast access
+      var bySymbolNSE={},bySymbolNFO={},bySymbolMCX={},byNameNSE={};
+      for(var i=0;i<data.length;i++){
+        var inst=data[i];
+        var seg=inst.exch_seg;
+        if(seg==="NSE"){bySymbolNSE[inst.symbol]=inst;if(!byNameNSE[inst.name])byNameNSE[inst.name]=inst;}
+        else if(seg==="NFO")bySymbolNFO[inst.symbol]=inst;
+        else if(seg==="MCX")bySymbolMCX[inst.symbol]=inst;
+      }
+      _masterCache={bySymbolNSE,bySymbolNFO,bySymbolMCX,byNameNSE,raw:data};
+      console.log("Instrument master loaded:",data.length,"instruments");
+      return _masterCache;
+    }catch(e){
+      _masterLoading=null;
+      throw new Error("Failed to load instrument master: "+e.message);
+    }
+  })();
+  return _masterLoading;
+}
+
+function lookupTokenClientSide(symbol, segCat, master){
+  // EQ: try SYMBOL-EQ first, then name match
+  if(segCat==="eq"||segCat==="EQ"){
+    var inst=master.bySymbolNSE[symbol+"-EQ"]||master.bySymbolNSE[symbol+"-BE"]||master.byNameNSE[symbol];
+    if(inst)return{token:inst.token,exchange:"NSE",tradingSymbol:inst.symbol};
+    // BSE fallback
+    for(var i=0;i<master.raw.length;i++){
+      var r=master.raw[i];
+      if(r.exch_seg==="BSE"&&(r.symbol===symbol+"-EQ"||r.name===symbol))
+        return{token:r.token,exchange:"BSE",tradingSymbol:r.symbol};
+    }
+  }
+  // F&O: exact symbol match in NFO
+  if(segCat==="fo"||segCat==="FO"){
+    var inst=master.bySymbolNFO[symbol];
+    if(inst)return{token:inst.token,exchange:"NFO",tradingSymbol:inst.symbol};
+  }
+  // Commodity: MCX
+  if(segCat==="com"||segCat==="COM"){
+    var inst=master.bySymbolMCX[symbol];
+    if(inst)return{token:inst.token,exchange:"MCX",tradingSymbol:inst.symbol};
+  }
+  return null;
+}
+
 // JSONP helper — injects a <script> tag, no CORS restrictions
 function jsonpRequest(url, payload){
   return new Promise(function(resolve,reject){
@@ -708,7 +765,7 @@ function jsonpRequest(url, payload){
     var timer=setTimeout(function(){
       if(done)return;done=true;
       cleanup();reject(new Error("JSONP timeout"));
-    },25000);
+    },15000);
     window[cbName]=function(data){
       if(done)return;done=true;
       cleanup();resolve(data);
@@ -729,28 +786,52 @@ function jsonpRequest(url, payload){
 
 async function fetchPricesViaAngel(positions){
   if(!positions.length)return{};
-  var symbols=[];
+
+  // Step 1: Load instrument master (cached after first load)
+  state.toast="⟳ Loading instrument master...";render();
+  var master;
+  try{
+    master=await getInstrumentMaster();
+  }catch(e){
+    showToast("❌ Could not load instrument master: "+e.message);
+    return{};
+  }
+
+  // Step 2: Resolve tokens client-side — no proxy lookup needed
+  var resolved=[];
   var seen={};
   for(var i=0;i<positions.length;i++){
     var p=positions[i];
-    if(!seen[p.symbol]){
-      seen[p.symbol]=true;
-      symbols.push({symbol:p.symbol,segCat:p.segCat||"eq"});
+    if(seen[p.symbol])continue;
+    seen[p.symbol]=true;
+    var segCat=p.segCat||"eq";
+    var info=lookupTokenClientSide(p.symbol,segCat,master);
+    if(info){
+      resolved.push({symbol:p.symbol,token:info.token,exchange:info.exchange,tradingSymbol:info.tradingSymbol});
+    }else{
+      console.warn("No token found for",p.symbol,segCat);
     }
   }
-  // Batch into chunks of 15 to stay within Apps Script execution time
+  console.log("Resolved",resolved.length+"/"+Object.keys(seen).length,"tokens client-side");
+
+  // Step 3: Batch LTP calls — proxy now only does LTP, no lookup
+  // With no master load in proxy, each batch is fast: 10 symbols * ~300ms API = ~3s
   var allPrices={};
-  for(var b=0;b<symbols.length;b+=15){
-    var batch=symbols.slice(b,b+15);
-    state.toast="⟳ Batch "+(Math.floor(b/15)+1)+"/"+Math.ceil(symbols.length/15)+"...";render();
+  var batchSize=10;
+  var totalBatches=Math.ceil(resolved.length/batchSize);
+  for(var b=0;b<resolved.length;b+=batchSize){
+    var batch=resolved.slice(b,b+batchSize);
+    var batchNum=Math.floor(b/batchSize)+1;
+    state.toast="⟳ Prices "+batchNum+"/"+totalBatches+"...";render();
     try{
       var payload=JSON.stringify({action:"ltp",symbols:batch});
-      // JSONP: bypasses CORS entirely — no preflight, works from any origin
       var batchPrices=await jsonpRequest(ANGEL_PROXY_URL,payload);
       if(batchPrices&&batchPrices.status&&batchPrices.prices){
         for(var k in batchPrices.prices)allPrices[k]=batchPrices.prices[k];
       }
-    }catch(e){console.error("Batch "+(Math.floor(b/15)+1)+" error:",e)}
+    }catch(e){console.error("Batch "+batchNum+" error:",e)}
+    // Small buffer between batches
+    if(b+batchSize<resolved.length)await new Promise(r=>setTimeout(r,500));
   }
   return allPrices;
 }
