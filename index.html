@@ -233,6 +233,8 @@ const MCX_LOT_SIZES={
 };
 function getMCXLotInfo(symbol){const u=extractUnderlying(symbol);return MCX_LOT_SIZES[u]||null}
 
+var _corpActions={};  // symbol -> [{type:"split"|"bonus", exDate:"YYYY-MM-DD", ratio:N}]
+var _corpActionsLoaded=false;
 let state={positions:[],tradeLedger:[],lastUpdate:null,tab:"open",segTab:"all",sort:{k:"pnlPct",d:"desc"},filter:{broker:"All",cls:"All",seg:"All",search:""},showModal:false,editId:null,form:{},notesId:null,adjId:null,adjForm:{type:"split",ratio:"",newPrice:"",newQty:""},pxLoading:{},bulkLoading:false,toast:null,uploadLog:[],uploadBroker:"Zerodha",mainView:"positions",confirmReset:false};
 
 function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -272,7 +274,8 @@ async function loadData(){
           }else break;
         }catch(e2){break}
       }
-      console.log("IDB loaded: "+state.tradeLedger.length+" trades, recomputing positions...");
+      console.log("IDB loaded: "+state.tradeLedger.length+" trades, fetching corp actions...");
+      await fetchCorporateActions(false);
       recomputePositionsFromLedger();
       console.log("Positions recomputed: "+state.positions.length+" total");
       return;
@@ -395,15 +398,16 @@ function addTradesToLedger(newTrades,broker){
 
 function recomputePositionsFromLedger(){
   if(!state.tradeLedger||!state.tradeLedger.length)return;
+  const ledger=applyCorpActions(state.tradeLedger);  // adjust for splits/bonuses
   const groups={};
   // Build ISIN->canonical key map for EQ (handles renamed stocks)
   const isinKeyMap={};
-  state.tradeLedger.forEach(t=>{
+  ledger.forEach(t=>{
     if(getSegCategory(t.detectedSegment)==="eq"&&t.isin){
       if(!isinKeyMap[t.isin])isinKeyMap[t.isin]="EQ|"+t.isin+"|"+t.broker;
     }
   });
-  state.tradeLedger.forEach(t=>{
+  ledger.forEach(t=>{
     const sc=getSegCategory(t.detectedSegment);
     let key;
     if(sc==="eq"){
@@ -420,6 +424,24 @@ function recomputePositionsFromLedger(){
     }
     groups[key]._latestDate=t.date>(groups[key]._latestDate||"")?t.date:groups[key]._latestDate;
     if(t.tradeType==="buy")groups[key].buys.push(t);else groups[key].sells.push(t);
+  });
+  // Merge EQ groups with same symbol+broker but different ISINs (face value change / restructure)
+  const symBrokerMap={};
+  Object.keys(groups).forEach(key=>{
+    const g=groups[key];
+    if(g.segCat!=="eq")return;
+    const sb=g.symbol+"|"+g.broker;
+    if(!symBrokerMap[sb]){symBrokerMap[sb]=key;}
+    else if(symBrokerMap[sb]!==key){
+      // Merge this group into the first one
+      const primary=groups[symBrokerMap[sb]];
+      primary.buys=primary.buys.concat(g.buys);
+      primary.sells=primary.sells.concat(g.sells);
+      // Keep latest symbol name and date
+      if((g._latestDate||"")>(primary._latestDate||""))primary.symbol=g.symbol;
+      primary._latestDate=[(g._latestDate||""),(primary._latestDate||"")].sort().pop();
+      delete groups[key];
+    }
   });
   const metaMap={};
   state.positions.forEach(p=>{const mk=p._groupKey||(p.symbol+"|"+p.broker);metaMap[mk]={classification:p.classification,notes:p.notes,currentPrice:p.currentPrice,adjHistory:p.adjHistory,id:p.id,direction:p.direction,manualAdj:(p.adjHistory||[]).length>0}});
@@ -712,7 +734,7 @@ async function handleDrop(files){
       state.uploadLog.push(broker+" — "+file.name+" — "+result.count+" trades ("+r.added+" new)");
     }catch(err){console.error(err)}
   }
-  if(fileCount>0){recomputePositionsFromLedger();await saveData()}
+  if(fileCount>0){await fetchCorporateActions(false);recomputePositionsFromLedger();await saveData()}
   render();
   if(fileCount>0){showToast("✅ "+fileCount+" files: "+totalAdded+" new trades")}
 }
@@ -750,6 +772,84 @@ function jsonpRequest(url, payload, timeoutMs){
     script.src=url+"?callback="+cbName+"&payload="+encodeURIComponent(payload);
     document.head.appendChild(script);
   });
+}
+
+// ===== CORPORATE ACTIONS (split/bonus fetch & apply) =====
+async function fetchCorporateActions(forceRefresh){
+  // Get all unique EQ symbols from ledger
+  const symbols=[...new Set(state.tradeLedger
+    .filter(t=>getSegCategory(t.detectedSegment)==="eq")
+    .map(t=>t.symbol))];
+  if(!symbols.length)return;
+
+  // Check cache in IDB (refresh once per day)
+  const cacheKey=STORAGE_KEY+"-ca";
+  if(!forceRefresh){
+    try{
+      const cached=await storageAPI.get(cacheKey);
+      if(cached?.value){
+        const d=JSON.parse(cached.value);
+        if(d.ts&&(Date.now()-d.ts)<86400000){
+          _corpActions=d.data||{};
+          _corpActionsLoaded=true;
+          console.log("Corp actions loaded from cache:",Object.keys(_corpActions).length,"symbols");
+          return;
+        }
+      }
+    }catch(e){}
+  }
+
+  // Fetch from proxy in batches of 20
+  const newCA={};
+  showToast("⟳ Fetching corporate actions for "+symbols.length+" stocks...",4000);
+  const batchSize=20;
+  for(var b=0;b<symbols.length;b+=batchSize){
+    const batch=symbols.slice(b,b+batchSize);
+    try{
+      const res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"corpactions",symbols:batch}),30000);
+      if(res&&res.data){
+        for(const sym in res.data) newCA[sym]=res.data[sym];
+      }
+    }catch(e){console.error("Corp actions batch error:",e)}
+  }
+
+  _corpActions=newCA;
+  _corpActionsLoaded=true;
+
+  // Cache to IDB
+  try{await storageAPI.set(cacheKey,JSON.stringify({ts:Date.now(),data:newCA}));}catch(e){}
+  console.log("Corp actions fetched:",Object.keys(newCA).length,"symbols with actions");
+  showToast("✅ Corporate actions loaded",2000);
+}
+
+// Apply split/bonus adjustments to buy trades before FIFO
+// Returns adjusted copy of trades (does NOT mutate originals)
+function applyCorpActions(ledger){
+  if(!_corpActionsLoaded||!Object.keys(_corpActions).length)return ledger;
+  const result=[];
+  for(var i=0;i<ledger.length;i++){
+    const t=ledger[i];
+    if(t.tradeType!=="buy"||getSegCategory(t.detectedSegment)!=="eq"){
+      result.push(t);continue;
+    }
+    const actions=_corpActions[t.symbol]||[];
+    if(!actions.length){result.push(t);continue;}
+    // Compute cumulative adjustment factor for all events AFTER this trade date
+    let factor=1;
+    for(const ev of actions){
+      if(ev.exDate>t.date){  // event happened after this buy → adjust this buy
+        factor*=ev.ratio;
+      }
+    }
+    if(Math.abs(factor-1)<0.0001){result.push(t);continue;}
+    // Clone trade with adjusted qty and price
+    result.push(Object.assign({},t,{
+      quantity:Math.round(t.quantity*factor*1000)/1000,
+      price:Math.round((t.price/factor)*100)/100,
+      _caAdjusted:true,_caFactor:factor
+    }));
+  }
+  return result;
 }
 
 async function fetchPricesViaAngel(positions){
@@ -940,8 +1040,8 @@ function render(){
   const ls=getLedgerStats();const vO=filtered.filter(p=>p.status==="Open").length,vC=filtered.filter(p=>p.status==="Closed").length;
   const app=document.getElementById("app");
   app.innerHTML=`
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v2.0</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="debugLedger()" title="Debug ledger">🔍 Debug</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
+<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v2.1</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="debugLedger()" title="Debug ledger">🔍 Debug</button><button class="btn-sec" onclick="(async()=>{await fetchCorporateActions(true);recomputePositionsFromLedger();render();showToast('✅ Corp actions refreshed');})()" title="Re-fetch split/bonus history for all stocks">⟳ Corp Actions</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
 
 <div class="main-tabs">
 <button class="main-tab ${state.mainView==="positions"?"active":""}" onclick="state.mainView='positions';render()">📊 Positions</button>
