@@ -156,7 +156,7 @@ td{padding:9px 10px;font-size:11px;vertical-align:top}
 // window.storage for Claude artifact mode
 // STORAGE_KEY is FIXED — never change this, or data appears lost
 var isArtifact=typeof window.storage!=="undefined";
-const STORAGE_KEY="trade-console-ledger"; // stable forever
+const STORAGE_KEY="trade-console-ledger-v2"; // stable forever
 
 // --- IndexedDB wrapper ---
 var _idb=null;
@@ -940,7 +940,7 @@ function render(){
   const ls=getLedgerStats();const vO=filtered.filter(p=>p.status==="Open").length,vC=filtered.filter(p=>p.status==="Closed").length;
   const app=document.getElementById("app");
   app.innerHTML=`
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.5</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
+<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.7</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
 
 <div class="main-tabs">
@@ -1044,14 +1044,17 @@ async function clearLedger(){
   state.tab="open";
   state.segTab="all";
   state.mainView="positions";
-  // Delete all storage keys (IDB + legacy localStorage)
-  try{await storageAPI.delete(STORAGE_KEY)}catch(e){}
-  for(var i=0;i<50;i++){try{await storageAPI.delete(STORAGE_KEY+"-l"+i)}catch{}}
-  // Also clean legacy localStorage keys just in case
-  ["trade-console-v7","trade-console-v6"].forEach(function(k){
-    try{localStorage.removeItem(k)}catch{}
-    for(var i=0;i<50;i++){try{localStorage.removeItem(k+"-l"+i)}catch{}}
-  });
+  // Delete ALL known storage keys — current + all previous versions
+  var allKeys=["trade-console-ledger-v2","trade-console-ledger","trade-console-v7","trade-console-v6"];
+  for(var ki=0;ki<allKeys.length;ki++){
+    var k=allKeys[ki];
+    try{await storageAPI.delete(k)}catch(e){}
+    try{localStorage.removeItem(k)}catch(e){}
+    for(var i=0;i<50;i++){
+      try{await storageAPI.delete(k+"-l"+i)}catch(e){}
+      try{localStorage.removeItem(k+"-l"+i)}catch(e){}
+    }
+  }
   render();
   showToast("🗑 All data cleared — upload fresh files");
 }
