@@ -940,8 +940,8 @@ function render(){
   const ls=getLedgerStats();const vO=filtered.filter(p=>p.status==="Open").length,vC=filtered.filter(p=>p.status==="Closed").length;
   const app=document.getElementById("app");
   app.innerHTML=`
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.7</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
+<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.8</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="debugLedger()" title="Debug ledger">🔍 Debug</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
 
 <div class="main-tabs">
 <button class="main-tab ${state.mainView==="positions"?"active":""}" onclick="state.mainView='positions';render()">📊 Positions</button>
@@ -1059,6 +1059,23 @@ async function clearLedger(){
   showToast("🗑 All data cleared — upload fresh files");
 }
 // ===== EXPORT / IMPORT =====
+function debugLedger(){
+  var targets=["SHILCTECH","EMIL","JAGSNPHARM","JAICORPLTD","KSOLVES","CEINSYSTECH"];
+  var out={total:state.tradeLedger.length,isinCoverage:0,problematic:{}};
+  var withISIN=state.tradeLedger.filter(t=>t.isin&&t.isin.length>0).length;
+  out.isinCoverage=withISIN+"/"+state.tradeLedger.length;
+  targets.forEach(function(sym){
+    var trades=state.tradeLedger.filter(t=>t.symbol===sym);
+    var buys=trades.filter(t=>t.tradeType==="buy").reduce((a,t)=>a+t.quantity,0);
+    var sells=trades.filter(t=>t.tradeType==="sell").reduce((a,t)=>a+t.quantity,0);
+    var sampleISIN=trades.length?trades[0].isin:"N/A";
+    out.problematic[sym]={trades:trades.length,buys:buys,sells:sells,net:buys-sells,isin:sampleISIN};
+  });
+  console.log("=== LEDGER DEBUG ===");
+  console.log(JSON.stringify(out,null,2));
+  alert("Debug info in browser console (F12).\n\nISIN coverage: "+out.isinCoverage+"\n\n"+
+    targets.map(s=>{var d=out.problematic[s];return s+": buys="+d.buys+" sells="+d.sells+" net="+d.net+" isin="+d.isin}).join("\n"));
+}
 function exportData(){
   var payload={
     version:"trade-console-ledger-v1",
