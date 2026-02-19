@@ -393,11 +393,29 @@ function addTradesToLedger(newTrades,broker){
 function recomputePositionsFromLedger(){
   if(!state.tradeLedger||!state.tradeLedger.length)return;
   const groups={};
+  // Build ISIN->canonical key map for EQ (handles renamed stocks)
+  const isinKeyMap={};
+  state.tradeLedger.forEach(t=>{
+    if(getSegCategory(t.detectedSegment)==="eq"&&t.isin){
+      if(!isinKeyMap[t.isin])isinKeyMap[t.isin]="EQ|"+t.isin+"|"+t.broker;
+    }
+  });
   state.tradeLedger.forEach(t=>{
     const sc=getSegCategory(t.detectedSegment);
     let key;
-    if(sc==="eq"){key="EQ|"+t.symbol+"|"+t.broker}else{key=sc.toUpperCase()+"|"+t.symbol+"|"+t.broker+"|"+(t.expiryDate||"")}
-    if(!groups[key])groups[key]={symbol:t.symbol,broker:t.broker,segment:t.detectedSegment,segCat:sc,buys:[],sells:[],series:t.series,expiryDate:t.expiryDate||"",exchange:t.exchange||"NSE",contractType:t.contractType,underlying:t.underlying};
+    if(sc==="eq"){
+      // Group by ISIN when available — handles stocks that changed ticker name
+      key=(t.isin&&isinKeyMap[t.isin])?isinKeyMap[t.isin]:"EQ|"+t.symbol+"|"+t.broker;
+    }else{
+      key=sc.toUpperCase()+"|"+t.symbol+"|"+t.broker+"|"+(t.expiryDate||"");
+    }
+    if(!groups[key]){
+      groups[key]={symbol:t.symbol,broker:t.broker,segment:t.detectedSegment,segCat:sc,buys:[],sells:[],series:t.series,expiryDate:t.expiryDate||"",exchange:t.exchange||"NSE",contractType:t.contractType,underlying:t.underlying,isin:t.isin||""};
+    }else{
+      // Always use the most recent symbol name for display (handles renames)
+      if(t.date>=(groups[key]._latestDate||""))groups[key].symbol=t.symbol;
+    }
+    groups[key]._latestDate=t.date>(groups[key]._latestDate||"")?t.date:groups[key]._latestDate;
     if(t.tradeType==="buy")groups[key].buys.push(t);else groups[key].sells.push(t);
   });
   const metaMap={};
