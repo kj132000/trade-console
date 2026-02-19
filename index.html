@@ -325,6 +325,7 @@ async function saveData(){
       // Compress: only essential fields (stable schema — do NOT change field names)
       var mini=slice.map(function(t){
         var m={s:t.symbol,d:t.date,t:t.tradeType,q:t.quantity,p:t.price};
+        if(t.isin)m.i=t.isin;
         if(t.exchange&&t.exchange!=="NSE")m.e=t.exchange;
         if(t.segment&&t.segment!=="EQ")m.sg=t.segment;
         if(t.segCat&&t.segCat!=="eq")m.sc=t.segCat;
