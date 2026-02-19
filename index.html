@@ -272,7 +272,9 @@ async function loadData(){
           }else break;
         }catch(e2){break}
       }
-      console.log("IDB loaded: "+state.positions.length+" pos, "+state.tradeLedger.length+" trades");
+      console.log("IDB loaded: "+state.tradeLedger.length+" trades, recomputing positions...");
+      recomputePositionsFromLedger();
+      console.log("Positions recomputed: "+state.positions.length+" total");
       return;
     }
   }catch(e){console.error("loadData error:",e)}
@@ -938,7 +940,7 @@ function render(){
   const ls=getLedgerStats();const vO=filtered.filter(p=>p.status==="Open").length,vC=filtered.filter(p=>p.status==="Closed").length;
   const app=document.getElementById("app");
   app.innerHTML=`
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.4</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
+<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v1.5</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
 
 <div class="main-tabs">
