@@ -699,65 +699,12 @@ async function handleDrop(files){
 // ===== PRICE REFRESH via Angel One (Google Apps Script Proxy) =====
 var ANGEL_PROXY_URL="https://script.google.com/macros/s/AKfycbyBRVLBnbzp9UdhFi0P9C45brwAiLH_5A2xBmfaIExRUUgfMmh1YVrX7nUFplrhuJw8/exec";
 
-// ===== INSTRUMENT MASTER (fetched once, cached in memory) =====
-var _masterCache=null;
-var _masterLoading=null;
-
-async function getInstrumentMaster(){
-  if(_masterCache)return _masterCache;
-  if(_masterLoading)return _masterLoading;
-  _masterLoading=(async function(){
-    try{
-      // Fetch Angel One instrument master directly — no CORS issue (CDN allows all origins)
-      var r=await fetch("https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json");
-      var data=await r.json();
-      // Build lookup maps for fast access
-      var bySymbolNSE={},bySymbolNFO={},bySymbolMCX={},byNameNSE={};
-      for(var i=0;i<data.length;i++){
-        var inst=data[i];
-        var seg=inst.exch_seg;
-        if(seg==="NSE"){bySymbolNSE[inst.symbol]=inst;if(!byNameNSE[inst.name])byNameNSE[inst.name]=inst;}
-        else if(seg==="NFO")bySymbolNFO[inst.symbol]=inst;
-        else if(seg==="MCX")bySymbolMCX[inst.symbol]=inst;
-      }
-      _masterCache={bySymbolNSE,bySymbolNFO,bySymbolMCX,byNameNSE,raw:data};
-      console.log("Instrument master loaded:",data.length,"instruments");
-      return _masterCache;
-    }catch(e){
-      _masterLoading=null;
-      throw new Error("Failed to load instrument master: "+e.message);
-    }
-  })();
-  return _masterLoading;
-}
-
-function lookupTokenClientSide(symbol, segCat, master){
-  // EQ: try SYMBOL-EQ first, then name match
-  if(segCat==="eq"||segCat==="EQ"){
-    var inst=master.bySymbolNSE[symbol+"-EQ"]||master.bySymbolNSE[symbol+"-BE"]||master.byNameNSE[symbol];
-    if(inst)return{token:inst.token,exchange:"NSE",tradingSymbol:inst.symbol};
-    // BSE fallback
-    for(var i=0;i<master.raw.length;i++){
-      var r=master.raw[i];
-      if(r.exch_seg==="BSE"&&(r.symbol===symbol+"-EQ"||r.name===symbol))
-        return{token:r.token,exchange:"BSE",tradingSymbol:r.symbol};
-    }
-  }
-  // F&O: exact symbol match in NFO
-  if(segCat==="fo"||segCat==="FO"){
-    var inst=master.bySymbolNFO[symbol];
-    if(inst)return{token:inst.token,exchange:"NFO",tradingSymbol:inst.symbol};
-  }
-  // Commodity: MCX
-  if(segCat==="com"||segCat==="COM"){
-    var inst=master.bySymbolMCX[symbol];
-    if(inst)return{token:inst.token,exchange:"MCX",tradingSymbol:inst.symbol};
-  }
-  return null;
-}
+// ===== TOKEN CACHE (resolved via proxy, cached in memory per session) =====
+var _tokenCache={};  // symbol -> {token, exchange, tradingSymbol}
 
 // JSONP helper — injects a <script> tag, no CORS restrictions
-function jsonpRequest(url, payload){
+function jsonpRequest(url, payload, timeoutMs){
+  timeoutMs=timeoutMs||30000;
   return new Promise(function(resolve,reject){
     var cbName="_tc_cb_"+Date.now()+"_"+Math.floor(Math.random()*10000);
     var script=document.createElement("script");
@@ -765,7 +712,7 @@ function jsonpRequest(url, payload){
     var timer=setTimeout(function(){
       if(done)return;done=true;
       cleanup();reject(new Error("JSONP timeout"));
-    },15000);
+    },timeoutMs);
     window[cbName]=function(data){
       if(done)return;done=true;
       cleanup();resolve(data);
@@ -787,51 +734,54 @@ function jsonpRequest(url, payload){
 async function fetchPricesViaAngel(positions){
   if(!positions.length)return{};
 
-  // Step 1: Load instrument master (cached after first load)
-  state.toast="⟳ Loading instrument master...";render();
-  var master;
-  try{
-    master=await getInstrumentMaster();
-  }catch(e){
-    showToast("❌ Could not load instrument master: "+e.message);
-    return{};
-  }
-
-  // Step 2: Resolve tokens client-side — no proxy lookup needed
-  var resolved=[];
+  // Collect unique symbols not yet in token cache
+  var needLookup=[];
   var seen={};
   for(var i=0;i<positions.length;i++){
     var p=positions[i];
     if(seen[p.symbol])continue;
     seen[p.symbol]=true;
-    var segCat=p.segCat||"eq";
-    var info=lookupTokenClientSide(p.symbol,segCat,master);
-    if(info){
-      resolved.push({symbol:p.symbol,token:info.token,exchange:info.exchange,tradingSymbol:info.tradingSymbol});
-    }else{
-      console.warn("No token found for",p.symbol,segCat);
+    if(!_tokenCache[p.symbol]){
+      needLookup.push({symbol:p.symbol,segCat:p.segCat||"eq"});
     }
   }
-  console.log("Resolved",resolved.length+"/"+Object.keys(seen).length,"tokens client-side");
 
-  // Step 3: Batch LTP calls — proxy now only does LTP, no lookup
-  // With no master load in proxy, each batch is fast: 10 symbols * ~300ms API = ~3s
+  // Step 1: Resolve unknown tokens via proxy (Apps Script fetches master, caches 24h)
+  if(needLookup.length>0){
+    state.toast="⟳ Resolving "+needLookup.length+" tokens...";render();
+    for(var b=0;b<needLookup.length;b+=20){
+      var batch=needLookup.slice(b,b+20);
+      try{
+        var res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"lookup",symbols:batch}),55000);
+        if(res&&res.status&&res.tokens){
+          for(var sym in res.tokens)_tokenCache[sym]=res.tokens[sym];
+        }
+      }catch(e){console.error("Token lookup error:",e)}
+    }
+  }
+
+  // Step 2: Build resolved list from cache
+  var resolvedList=[];
+  for(var sym in seen){
+    if(_tokenCache[sym])resolvedList.push(Object.assign({symbol:sym},_tokenCache[sym]));
+    else console.warn("No token for:",sym);
+  }
+
+  // Step 3: LTP calls — proxy just calls Angel LTP, no master load needed
   var allPrices={};
   var batchSize=10;
-  var totalBatches=Math.ceil(resolved.length/batchSize);
-  for(var b=0;b<resolved.length;b+=batchSize){
-    var batch=resolved.slice(b,b+batchSize);
+  var total=Math.ceil(resolvedList.length/batchSize);
+  for(var b=0;b<resolvedList.length;b+=batchSize){
+    var batch=resolvedList.slice(b,b+batchSize);
     var batchNum=Math.floor(b/batchSize)+1;
-    state.toast="⟳ Prices "+batchNum+"/"+totalBatches+"...";render();
+    state.toast="⟳ Prices "+batchNum+"/"+total+"...";render();
     try{
-      var payload=JSON.stringify({action:"ltp",symbols:batch});
-      var batchPrices=await jsonpRequest(ANGEL_PROXY_URL,payload);
-      if(batchPrices&&batchPrices.status&&batchPrices.prices){
-        for(var k in batchPrices.prices)allPrices[k]=batchPrices.prices[k];
+      var res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"ltp",symbols:batch}),20000);
+      if(res&&res.status&&res.prices){
+        for(var k in res.prices)allPrices[k]=res.prices[k];
       }
-    }catch(e){console.error("Batch "+batchNum+" error:",e)}
-    // Small buffer between batches
-    if(b+batchSize<resolved.length)await new Promise(r=>setTimeout(r,500));
+    }catch(e){console.error("LTP Batch "+batchNum+" error:",e)}
+    if(b+batchSize<resolvedList.length)await new Promise(r=>setTimeout(r,300));
   }
   return allPrices;
 }
