@@ -10,11 +10,10 @@
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px;}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
-button{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
-input{font-family:inherit;outline:none}
-input:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,237,.15)}
+button, select{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
+input, select{font-family:inherit;outline:none}
+input:focus, select:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,237,.15)}
 
-/* Layout */
 .container{max-width:1400px;margin:0 auto;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .logo-area{display:flex;align-items:center;gap:12px}
@@ -22,17 +21,15 @@ input:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,
 .title{font-size:20px;font-weight:800;color:var(--white);letter-spacing:2px;font-family:'Outfit',sans-serif}
 .controls{display:flex;gap:10px;align-items:center}
 
-/* Buttons */
 .btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600}
 .btn-sec{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:600}
+.btn-sec.active{background:var(--blue2);color:white;border-color:var(--blue2)}
 
-/* Metrics */
 .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px}
 .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
 .metric-title{font-family:'Outfit',sans-serif;font-size:13px;color:var(--text3);margin-bottom:8px}
 .metric-val{font-size:24px;font-weight:500;color:var(--white)}
 
-/* Table */
 .table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;text-align:left}
 th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3)}
@@ -40,19 +37,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .positive{color:var(--green);font-weight:500}
 .negative{color:var(--red);font-weight:500}
 
-/* Chat UI */
-.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:28px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:white;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100}
-.chat-panel{position:fixed;bottom:90px;right:24px;width:380px;height:500px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:none;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:100;overflow:hidden}
-.chat-header{padding:16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.chat-header h3{font-family:'Outfit',sans-serif;color:var(--white);font-size:15px}
-.chat-body{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.chat-msg{padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5;max-width:85%}
-.chat-msg.user{background:var(--blue2);color:white;align-self:flex-end;border-bottom-right-radius:2px}
-.chat-msg.bot{background:var(--bg3);color:var(--text);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:2px}
-.chat-input-wrap{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg)}
-.chat-input-wrap input{flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);color:var(--white);border-radius:6px;font-size:13px}
-
-/* Settings Panel */
+.tab-container{display:flex;gap:10px;margin-bottom:16px}
 #settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 </style>
 </head>
@@ -65,6 +50,12 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <div class="title">TRADE CONSOLE</div>
         </div>
         <div class="controls">
+            <select id="segFilter" class="btn-sec" onchange="renderUI()">
+                <option value="ALL">All Segments</option>
+                <option value="EQ">Equity</option>
+                <option value="F&O">F&O</option>
+                <option value="MCX">Commodity</option>
+            </select>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload CSV</button>
             <button class="btn-sec" onclick="toggleSettings()">⚙️ Settings</button>
@@ -74,77 +65,55 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
     <div id="settingsPanel">
         <div style="flex:1">
-            <label style="font-size:11px;color:var(--text3);font-family:'Outfit'">Gemini API Key</label>
+            <label style="font-size:11px;color:var(--text3)">Gemini API Key</label>
             <input type="password" id="geminiKey" placeholder="AIzaSy..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
         </div>
         <div style="flex:1">
-            <label style="font-size:11px;color:var(--text3);font-family:'Outfit'">Backend URL</label>
-            <input type="text" id="backendUrl" placeholder="http://localhost:8000" value="http://localhost:8000" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
+            <label style="font-size:11px;color:var(--text3)">Backend URL</label>
+            <input type="text" id="backendUrl" placeholder="https://..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
         </div>
         <button class="btn-pri" onclick="saveSettings()">Save</button>
     </div>
 
     <div class="metrics-grid">
         <div class="metric-card">
-            <div class="metric-title">NET P&L</div>
+            <div class="metric-title" id="lblPnl">NET P&L</div>
             <div class="metric-val" id="valPnl">₹0</div>
         </div>
         <div class="metric-card">
-            <div class="metric-title">INVESTED CAPITAL</div>
+            <div class="metric-title" id="lblInv">INVESTED CAPITAL</div>
             <div class="metric-val" id="valInv">₹0</div>
         </div>
         <div class="metric-card">
-            <div class="metric-title">ACTIVE POSITIONS</div>
+            <div class="metric-title" id="lblPos">TRADES / POSITIONS</div>
             <div class="metric-val" id="valPos">0</div>
         </div>
     </div>
 
+    <div class="tab-container">
+        <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
+        <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
+    </div>
+
     <div class="table-container">
         <table>
-            <thead>
-                <tr>
-                    <th>SYMBOL</th>
-                    <th>SEG</th>
-                    <th>DIR</th>
-                    <th>QTY</th>
-                    <th>AVG PRICE</th>
-                    <th>CMP</th>
-                    <th>P&L</th>
-                    <th>ROI %</th>
-                </tr>
-            </thead>
+            <thead id="tableHead"></thead>
             <tbody id="tableBody">
-                <tr><td colspan="8" style="text-align:center;color:var(--text3)">No data loaded.</td></tr>
+                <tr><td colspan="8" style="text-align:center">No data loaded.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
-<button class="chat-fab" onclick="toggleChat()">✨</button>
-<div class="chat-panel" id="chatPanel">
-    <div class="chat-header">
-        <h3>✨ Gemini AI</h3>
-        <button style="background:none;border:none;color:var(--text3);font-size:16px" onclick="toggleChat()">✕</button>
-    </div>
-    <div class="chat-body" id="chatBody">
-        <div class="chat-msg bot">Hello! I am connected to your live portfolio. Ask me anything about your positions.</div>
-    </div>
-    <div class="chat-input-wrap">
-        <input type="text" id="chatInput" placeholder="Analyze my portfolio..." onkeypress="if(event.key==='Enter') sendChat()">
-        <button class="btn-pri" onclick="sendChat()">Send</button>
-    </div>
-</div>
-
 <script>
-// State Management
 let state = {
-    positions: [],
+    open: [],
+    closed: [],
+    currentTab: 'active',
     apiKey: localStorage.getItem('tc_gemini_key') || '',
-    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
-    chatHistory: []
+    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000'
 };
 
-// Initialization
 document.getElementById('geminiKey').value = state.apiKey;
 document.getElementById('backendUrl').value = state.backendUrl;
 
@@ -161,138 +130,104 @@ function saveSettings() {
     toggleSettings();
 }
 
-// Formatters
+function setTab(tab) {
+    state.currentTab = tab;
+    document.getElementById('tab-active').classList.toggle('active', tab === 'active');
+    document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    renderUI();
+}
+
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
-// 1. Backend Communication (The Bridge)
 async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
-    
     const formData = new FormData();
     for(let f of files) formData.append("files", f);
-
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Uploading to backend...</td></tr>`;
-    
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Uploading...</td></tr>`;
     try {
-        const res = await fetch(`${state.backendUrl}/api/upload`, {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         if(res.ok) fetchPortfolio();
-        else alert("Upload failed.");
-    } catch(e) {
-        alert("Cannot connect to backend: " + state.backendUrl);
-    }
+    } catch(e) { alert("Backend connection failed."); }
 }
 
 async function fetchPortfolio() {
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Syncing with Angel One...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Syncing Data & Live Prices...</td></tr>`;
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
-        if(!res.ok) throw new Error("Backend error");
-        
+        if(!res.ok) throw new Error();
         const data = await res.json();
-        state.positions = data.positions || [];
+        state.open = data.positions.open || [];
+        state.closed = data.positions.closed || [];
         renderUI();
     } catch(e) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red)">Failed to load data. Is the Python server running?</td></tr>`;
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red)">Failed to load data.</td></tr>`;
     }
 }
 
-// 2. Render UI
 function renderUI() {
+    const filter = document.getElementById('segFilter').value;
+    let dataList = state.currentTab === 'active' ? state.open : state.closed;
+    
+    if (filter !== 'ALL') {
+        dataList = dataList.filter(p => p.Segment === filter || (filter==='F&O' && p.Segment.includes('FO')));
+    }
+
     let totalPnl = 0, totalInv = 0;
     let html = '';
 
-    state.positions.forEach(p => {
-        totalPnl += p["P&L"];
-        totalInv += p.Invested;
+    if (state.currentTab === 'active') {
+        document.getElementById('tableHead').innerHTML = `<tr><th>SYMBOL</th><th>SEG</th><th>DIR</th><th>QTY</th><th>AVG PRICE</th><th>CMP</th><th>P&L</th><th>ROI %</th></tr>`;
+        document.getElementById('lblPnl').innerText = 'NET UNREALIZED P&L';
+        document.getElementById('lblInv').innerText = 'INVESTED CAPITAL';
         
-        const pnlClass = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
-        const pnlSign = p["P&L"] > 0 ? '+' : '';
+        dataList.forEach(p => {
+            totalPnl += p["P&L"]; totalInv += p.Invested;
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td>${p.Direction}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
+                <td style="color:var(--white)">${fmtDec(p.CMP)}</td>
+                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
+                <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
+            </tr>`;
+        });
+    } else {
+        document.getElementById('tableHead').innerHTML = `<tr><th>SYMBOL</th><th>SEG</th><th>QTY</th><th>ENTRY PRICE</th><th>EXIT PRICE</th><th>P&L</th><th>EXIT DATE</th></tr>`;
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('lblInv').innerText = 'WIN RATE';
+        
+        let wins = 0;
+        dataList.forEach(p => {
+            totalPnl += p["P&L"];
+            if(p["P&L"] > 0) wins++;
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td>
+                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
+                <td>${p["Exit Date"]}</td>
+            </tr>`;
+        });
+        totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
+    }
 
-        html += `<tr>
-            <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-            <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-            <td>${p.Direction}</td>
-            <td>${p.Qty}</td>
-            <td>${fmtDec(p["Avg Price"])}</td>
-            <td style="color:var(--white)">${fmtDec(p.CMP)}</td>
-            <td class="${pnlClass}">${pnlSign}${fmtMoney(p["P&L"])}</td>
-            <td class="${pnlClass}">${pnlSign}${fmtDec(p["ROI %"])}%</td>
-        </tr>`;
-    });
-
-    if(state.positions.length === 0) html = `<tr><td colspan="8" style="text-align:center">No active positions.</td></tr>`;
-
+    if(!dataList.length) html = `<tr><td colspan="8" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
     const pnlEl = document.getElementById('valPnl');
     pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
     pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
     
-    document.getElementById('valInv').innerText = fmtMoney(totalInv);
-    document.getElementById('valPos').innerText = state.positions.length;
+    document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
+    document.getElementById('valPos').innerText = dataList.length;
 }
 
-// 3. Gemini AI Chat Integration
-function toggleChat() {
-    const p = document.getElementById('chatPanel');
-    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
-}
-
-function appendMsg(role, text) {
-    const box = document.getElementById('chatBody');
-    box.innerHTML += `<div class="chat-msg ${role}">${text}</div>`;
-    box.scrollTop = box.scrollHeight;
-}
-
-async function sendChat() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if(!text) return;
-
-    if(!state.apiKey) {
-        alert("Please set your Gemini API Key in Settings first.");
-        return;
-    }
-
-    appendMsg('user', text);
-    input.value = '';
-    
-    // Save to history
-    state.chatHistory.push({ role: "user", parts: [{ text: text }] });
-
-    // Build Context
-    const sysPrompt = `You are a pro trading assistant. Here is the user's current live portfolio JSON: ${JSON.stringify(state.positions)}. Answer questions accurately based only on this data. Be concise.`;
-
-    try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: sysPrompt }] },
-                contents: state.chatHistory.slice(-10) // Send last 10 messages for memory
-            })
-        });
-
-        const data = await res.json();
-        
-        if (data.error) {
-            appendMsg('bot', "❌ Error: " + data.error.message);
-        } else if (data.candidates && data.candidates[0].content) {
-            const reply = data.candidates[0].content.parts[0].text;
-            appendMsg('bot', reply);
-            state.chatHistory.push({ role: "model", parts: [{ text: reply }] });
-        }
-    } catch(e) {
-        appendMsg('bot', "❌ Network error communicating with Gemini.");
-    }
-}
-
-// Auto-load on open
 if(state.backendUrl) fetchPortfolio();
 </script>
 </body>
