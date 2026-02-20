@@ -7,1263 +7,293 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--purple:#b794f4;--yellow:#ecc94b;--blue2:#2b6cb0}
-body{font-family:'DM Mono','SF Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh}
-::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
-button{cursor:pointer;font-family:inherit;transition:filter .15s}button:hover{filter:brightness(1.15)}
-input,select,textarea{font-family:inherit;outline:none}
-input:focus,select:focus,textarea:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,237,.15)}
-.container{max-width:1500px;margin:0 auto;padding:16px 20px}
-.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
-.logo{width:36px;height:36px;background:linear-gradient(135deg,#2b6cb0,#63b3ed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;box-shadow:0 0 20px rgba(99,179,237,.15)}
-.title{font-size:17px;font-weight:800;color:var(--white);letter-spacing:3px;font-family:'Outfit',sans-serif}
-.subtitle{font-size:11px;color:var(--text2);margin-top:2px}
-.btn-sec{padding:7px 14px;background:var(--bg3);border:1px solid #2d3748;color:#a0aec0;border-radius:6px;font-size:11px;font-weight:600}
-.btn-pri{padding:7px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:11px;font-weight:700}
-.btn-sm{padding:4px 10px;background:var(--bg3);border:1px solid #2d3748;color:#a0aec0;border-radius:4px;font-size:10px;font-weight:600}
-.btn-icon{background:none;border:none;font-size:12px;padding:3px;color:var(--text2);line-height:1}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:16px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
-.card-label{font-size:8px;font-weight:700;color:var(--text2);letter-spacing:1.5px}
-.card-value{font-size:19px;font-weight:800;font-family:'Outfit',sans-serif}
-.card-sub{font-size:10px;color:var(--text3)}
-.upload-zone{border:2px dashed #2d3748;border-radius:10px;padding:24px;text-align:center;margin-bottom:16px;transition:all .3s;cursor:pointer;background:var(--bg2)}
-.upload-zone:hover,.upload-zone.dragover{border-color:var(--blue);background:rgba(99,179,237,.04)}
-.upload-zone h3{color:var(--white);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;margin-bottom:4px}
-.upload-zone p{color:var(--text2);font-size:11px}
-.upload-zone .formats{font-size:10px;color:var(--text3);margin-top:6px}
-.upload-zone input[type=file]{display:none}
-.upload-log{margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:6px;font-size:10px;color:var(--green);display:none;text-align:left;max-height:80px;overflow:auto}
-.ctrl-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
-.tabs{display:flex;gap:3px}
-.tab{padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;font-size:11px}
-.tab.active{background:var(--bg3);border-color:#2d3748;color:var(--white);font-weight:700}
-.filters{display:flex;gap:6px;flex-wrap:wrap}
-.filters input,.filters select{padding:6px 10px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:11px}
-.filters input{width:120px}
-.seg-tabs{display:flex;gap:3px;margin-bottom:12px}
-.seg-tab{padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;font-size:11px;font-weight:600}
-.seg-tab.active{background:var(--bg3);border-color:#2d3748;color:var(--white);font-weight:700}
-.seg-tab .seg-count{font-size:9px;color:var(--text3);margin-left:4px}
-.seg-tab.active .seg-count{color:var(--blue)}
-.seg-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px}
-.seg-dot-eq{background:var(--blue)}.seg-dot-fo{background:var(--purple)}.seg-dot-com{background:var(--yellow)}
-.table-wrap{background:#0d1117;border:1px solid var(--border);border-radius:10px;overflow:auto;margin-bottom:16px}
-table{width:100%;border-collapse:collapse;min-width:1200px}
-thead th{padding:10px;font-size:8px;font-weight:700;letter-spacing:1.2px;border-bottom:1px solid var(--border);user-select:none;white-space:nowrap;background:#0c0f13;color:var(--text2)}
-thead th.sortable{cursor:pointer}thead th.sortable:hover{color:var(--blue)}thead th.active{color:var(--blue)}
-tbody tr{border-bottom:1px solid #1a202c;animation:fadeUp .3s ease}
-tbody tr:hover{background:rgba(99,179,237,.04)}
-td{padding:9px 10px;font-size:11px;vertical-align:top}
-.td-r{text-align:right}
-.mono{font-family:'DM Mono',monospace;font-size:11px}
-.sym-name{font-weight:700;color:var(--white);font-size:13px}
-.sym-note{font-size:9px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
-.sym-pre{font-size:8px;color:var(--text2);font-weight:600}
-.sym-contract{font-size:9px;color:var(--text3);display:block}
-.badge{font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;display:inline-block}
-.badge-z{background:rgba(99,179,237,.08);color:var(--blue)}.badge-m{background:rgba(72,187,120,.08);color:var(--green)}.badge-i{background:rgba(237,137,54,.08);color:var(--orange)}
-.badge-eq{background:rgba(99,179,237,.08);color:var(--blue)}.badge-fo{background:rgba(183,148,244,.08);color:var(--purple)}.badge-com{background:rgba(236,201,75,.08);color:var(--yellow)}
-.status-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px}
-.status-open{background:rgba(72,187,120,.1);color:var(--green)}.status-closed{background:rgba(113,128,150,.1);color:var(--text3)}
-.pnl-pill{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;font-family:'DM Mono',monospace}
-.pnl-pos{background:rgba(72,187,120,.1);color:var(--green)}.pnl-neg{background:rgba(252,129,129,.1);color:var(--red)}
-.cls-badge{padding:3px 9px;border-radius:4px;border:none;font-size:9px;font-weight:700;font-family:inherit}
-.cls-st{background:rgba(237,137,54,.1);color:var(--orange)}.cls-lt{background:rgba(72,187,120,.1);color:var(--green)}.cls-un{background:rgba(113,128,150,.06);color:var(--text2)}
-.margin-tag{display:block;font-size:8px;color:var(--orange)}
-.real-tag{display:block;font-size:8px;color:var(--text3)}
-.type-tag{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px}
-.type-fut{background:rgba(183,148,244,.1);color:var(--purple)}.type-ce{background:rgba(72,187,120,.1);color:var(--green)}.type-pe{background:rgba(252,129,129,.1);color:var(--red)}
-.popup{position:absolute;right:0;top:100%;background:var(--bg3);border:1px solid #2d3748;border-radius:8px;padding:12px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.6)}
-.popup textarea{width:100%;background:var(--bg);border:1px solid #2d3748;color:var(--text);border-radius:6px;padding:8px;font-size:11px;font-family:inherit;resize:vertical;box-sizing:border-box}
-.popup-title{font-size:10px;font-weight:700;color:#a0aec0;margin-bottom:6px}
-.popup-btn{padding:4px 12px;background:var(--blue2);border:none;color:#fff;border-radius:4px;font-size:10px;font-weight:600;font-family:inherit;margin-top:6px}
-.adj-type-btn{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:600;font-family:inherit;cursor:pointer}
-.adj-type-btn.active{border:1px solid var(--blue);background:rgba(99,179,237,.1);color:var(--blue)}
-.adj-type-btn:not(.active){border:1px solid #2d3748;background:transparent;color:var(--text3)}
-.adj-inp{width:100%;padding:5px 8px;background:var(--bg);border:1px solid #2d3748;color:var(--text);border-radius:4px;font-size:11px;font-family:inherit;box-sizing:border-box}
-.adj-lbl{font-size:8px;font-weight:700;color:var(--text2);letter-spacing:1px;display:block;margin-bottom:3px}
-.adj-preview{font-size:10px;color:#a0aec0;margin:4px 0}
-.adj-log{margin-top:8px;border-top:1px solid #2d3748;padding-top:6px}
-.adj-log-title{font-size:8px;color:var(--text2);font-weight:700}
-.adj-log-entry{font-size:9px;color:var(--text3)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);padding:16px}
-.modal{background:var(--bg2);border:1px solid #2d3748;border-radius:12px;width:100%;max-width:580px;max-height:90vh;overflow:auto}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;border-bottom:1px solid var(--border)}
-.modal-header h2{font-size:15px;font-weight:700;color:var(--white);font-family:'Outfit',sans-serif}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:16px 20px}
-.form-group{display:flex;flex-direction:column;gap:3px}
-.form-group.full{grid-column:1/-1}
-.form-label{font-size:8px;font-weight:700;color:var(--text2);letter-spacing:1.2px;text-transform:uppercase}
-.form-input{padding:7px 9px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px}
-.form-hint{font-size:8px;color:var(--text2)}
-.cls-row{display:flex;gap:6px;margin-top:4px}
-.cls-opt{padding:5px 12px;border-radius:4px;font-size:11px;font-family:inherit}
-.cls-opt.active{border:2px solid var(--blue);background:rgba(99,179,237,.08);color:var(--blue);font-weight:700}
-.cls-opt:not(.active){border:1px solid #2d3748;background:transparent;color:var(--text3)}
-.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 16px;border-top:1px solid var(--border)}
-.empty{padding:50px;text-align:center}.empty-icon{font-size:36px;margin-bottom:8px}
-.footer{text-align:center;font-size:9px;color:#2d3748;padding:10px 0}
-.main-tabs{display:flex;gap:3px;margin-bottom:14px}
-.main-tab{padding:8px 18px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:12px;font-weight:600;font-family:'Outfit',sans-serif}
-.main-tab.active{background:linear-gradient(135deg,#2b6cb0,#3182ce);border-color:transparent;color:#fff;font-weight:700}
-.fy-table{width:100%;border-collapse:collapse}
-.fy-table th{padding:10px 12px;font-size:9px;font-weight:700;letter-spacing:1px;border-bottom:2px solid var(--border);color:var(--text2);text-transform:uppercase;background:#0c0f13}
-.fy-table td{padding:10px 12px;font-size:12px;border-bottom:1px solid #1a202c;font-family:'DM Mono',monospace}
-.fy-table tr:hover{background:rgba(99,179,237,.04)}
-.fy-table .fy-header{background:var(--bg3);font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:var(--white);letter-spacing:0}
-.fy-table .seg-row td{font-size:11px;padding:8px 12px}
-.fy-table .total-row{border-top:2px solid var(--border);font-weight:700}
-.fy-table .total-row td{font-size:13px;padding:12px;font-family:'Outfit',sans-serif}
-.fy-grand{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
-.fy-grand-item{text-align:center}
-.fy-grand-label{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:1.5px;margin-bottom:4px}
-.fy-grand-value{font-size:22px;font-weight:800;font-family:'Outfit',sans-serif}
-.toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--green);color:var(--green);padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:200;animation:fadeUp .3s ease;box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:420px}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:28px;height:28px;border:2px solid var(--border);border-top:2px solid var(--blue);border-radius:50%;animation:spin .7s linear infinite;margin:auto}
-.chat-fab{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2b6cb0,#63b3ed);border:none;color:#fff;font-size:22px;box-shadow:0 4px 20px rgba(99,179,237,.35);z-index:300;display:flex;align-items:center;justify-content:center;transition:transform .2s}
-.chat-fab:hover{transform:scale(1.1)}
-.chat-fab .badge-dot{position:absolute;top:6px;right:6px;width:10px;height:10px;background:var(--orange);border-radius:50%;border:2px solid var(--bg)}
-.chat-panel{position:fixed;bottom:20px;right:20px;width:380px;max-height:520px;background:var(--bg2);border:1px solid #2d3748;border-radius:14px;z-index:300;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5);overflow:hidden;animation:fadeUp .25s ease}
-.chat-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg3);border-bottom:1px solid #2d3748}
-.chat-header h3{font-size:13px;font-weight:700;color:var(--white);font-family:'Outfit',sans-serif}
-.chat-header span{font-size:10px;color:var(--text3)}
-.chat-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:280px;max-height:380px}
-.chat-msg{max-width:85%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;animation:fadeUp .2s ease}
-.chat-msg.bot{align-self:flex-start;background:var(--bg3);color:var(--text);border-bottom-left-radius:3px}
-.chat-msg.user{align-self:flex-end;background:var(--blue2);color:#fff;border-bottom-right-radius:3px}
-.chat-msg.system{align-self:center;background:rgba(72,187,120,.1);color:var(--green);font-size:10px;padding:4px 10px;border-radius:6px;font-weight:600}
-.chat-msg .action-btns{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.chat-msg .action-btn{padding:4px 10px;border-radius:4px;border:1px solid #2d3748;background:rgba(99,179,237,.08);color:var(--blue);font-size:10px;font-weight:600;font-family:inherit;cursor:pointer}
-.chat-msg .action-btn:hover{background:rgba(99,179,237,.2)}
-.chat-input-wrap{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #2d3748;background:var(--bg3)}
-.chat-input-wrap input{flex:1;padding:8px 10px;background:var(--bg);border:1px solid #2d3748;color:var(--text);border-radius:8px;font-size:12px;font-family:inherit}
-.chat-input-wrap button{padding:8px 14px;background:var(--blue2);border:none;color:#fff;border-radius:8px;font-size:12px;font-weight:700;font-family:inherit}
-.chat-typing{display:flex;gap:3px;padding:4px 0}.chat-typing span{width:6px;height:6px;background:var(--text3);border-radius:50%;animation:bounce .6s ease infinite}.chat-typing span:nth-child(2){animation-delay:.15s}.chat-typing span:nth-child(3){animation-delay:.3s}
-@keyframes bounce{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+:root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px;}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
+button{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
+input{font-family:inherit;outline:none}
+input:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,237,.15)}
+
+/* Layout */
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,#2b6cb0,#63b3ed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.title{font-size:20px;font-weight:800;color:var(--white);letter-spacing:2px;font-family:'Outfit',sans-serif}
+.controls{display:flex;gap:10px;align-items:center}
+
+/* Buttons */
+.btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600}
+.btn-sec{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:600}
+
+/* Metrics */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
+.metric-title{font-family:'Outfit',sans-serif;font-size:13px;color:var(--text3);margin-bottom:8px}
+.metric-val{font-size:24px;font-weight:500;color:var(--white)}
+
+/* Table */
+.table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;text-align:left}
+th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.positive{color:var(--green);font-weight:500}
+.negative{color:var(--red);font-weight:500}
+
+/* Chat UI */
+.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:28px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:white;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100}
+.chat-panel{position:fixed;bottom:90px;right:24px;width:380px;height:500px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;display:none;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:100;overflow:hidden}
+.chat-header{padding:16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.chat-header h3{font-family:'Outfit',sans-serif;color:var(--white);font-size:15px}
+.chat-body{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.chat-msg{padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5;max-width:85%}
+.chat-msg.user{background:var(--blue2);color:white;align-self:flex-end;border-bottom-right-radius:2px}
+.chat-msg.bot{background:var(--bg3);color:var(--text);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:2px}
+.chat-input-wrap{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg)}
+.chat-input-wrap input{flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);color:var(--white);border-radius:6px;font-size:13px}
+
+/* Settings Panel */
+#settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 </style>
 </head>
 <body>
-<div class="container" id="app"></div>
-<div id="chatFab"></div>
-<div id="chatPanel" style="display:none"></div>
+
+<div class="container">
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo">⚡</div>
+            <div class="title">TRADE CONSOLE</div>
+        </div>
+        <div class="controls">
+            <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
+            <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload CSV</button>
+            <button class="btn-sec" onclick="toggleSettings()">⚙️ Settings</button>
+            <button class="btn-pri" onclick="fetchPortfolio()">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <div id="settingsPanel">
+        <div style="flex:1">
+            <label style="font-size:11px;color:var(--text3);font-family:'Outfit'">Gemini API Key</label>
+            <input type="password" id="geminiKey" placeholder="AIzaSy..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
+        </div>
+        <div style="flex:1">
+            <label style="font-size:11px;color:var(--text3);font-family:'Outfit'">Backend URL</label>
+            <input type="text" id="backendUrl" placeholder="http://localhost:8000" value="http://localhost:8000" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
+        </div>
+        <button class="btn-pri" onclick="saveSettings()">Save</button>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-title">NET P&L</div>
+            <div class="metric-val" id="valPnl">₹0</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">INVESTED CAPITAL</div>
+            <div class="metric-val" id="valInv">₹0</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-title">ACTIVE POSITIONS</div>
+            <div class="metric-val" id="valPos">0</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>SYMBOL</th>
+                    <th>SEG</th>
+                    <th>DIR</th>
+                    <th>QTY</th>
+                    <th>AVG PRICE</th>
+                    <th>CMP</th>
+                    <th>P&L</th>
+                    <th>ROI %</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="8" style="text-align:center;color:var(--text3)">No data loaded.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<button class="chat-fab" onclick="toggleChat()">✨</button>
+<div class="chat-panel" id="chatPanel">
+    <div class="chat-header">
+        <h3>✨ Gemini AI</h3>
+        <button style="background:none;border:none;color:var(--text3);font-size:16px" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <div class="chat-msg bot">Hello! I am connected to your live portfolio. Ask me anything about your positions.</div>
+    </div>
+    <div class="chat-input-wrap">
+        <input type="text" id="chatInput" placeholder="Analyze my portfolio..." onkeypress="if(event.key==='Enter') sendChat()">
+        <button class="btn-pri" onclick="sendChat()">Send</button>
+    </div>
+</div>
+
 <script>
+// State Management
+let state = {
+    positions: [],
+    apiKey: localStorage.getItem('tc_gemini_key') || '',
+    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
+    chatHistory: []
+};
 
-// ===== STORAGE LAYER =====
-// IndexedDB for standalone (large capacity, survives renames/updates)
-// window.storage for Claude artifact mode
-// STORAGE_KEY is FIXED — never change this, or data appears lost
-var isArtifact=typeof window.storage!=="undefined";
-const STORAGE_KEY="trade-console-ledger-v2"; // stable forever
+// Initialization
+document.getElementById('geminiKey').value = state.apiKey;
+document.getElementById('backendUrl').value = state.backendUrl;
 
-// --- IndexedDB wrapper ---
-var _idb=null;
-function openIDB(){
-  if(_idb)return Promise.resolve(_idb);
-  return new Promise(function(res,rej){
-    var req=indexedDB.open("TradeConsoleDB",1);
-    req.onupgradeneeded=function(e){
-      var db=e.target.result;
-      if(!db.objectStoreNames.contains("kv"))db.createObjectStore("kv");
-    };
-    req.onsuccess=function(e){_idb=e.target.result;res(_idb)};
-    req.onerror=function(){rej(req.error)};
-  });
+function toggleSettings() {
+    const p = document.getElementById('settingsPanel');
+    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
 }
-function idbGet(k){return openIDB().then(function(db){return new Promise(function(res,rej){var tx=db.transaction("kv","readonly");var req=tx.objectStore("kv").get(k);req.onsuccess=function(){res(req.result!=null?{value:req.result}:null)};req.onerror=function(){rej(req.error)}})});}
-function idbSet(k,v){return openIDB().then(function(db){return new Promise(function(res,rej){var tx=db.transaction("kv","readwrite");var req=tx.objectStore("kv").put(v,k);req.onsuccess=function(){res({key:k,value:v})};req.onerror=function(){rej(req.error)}})});}
-function idbDel(k){return openIDB().then(function(db){return new Promise(function(res,rej){var tx=db.transaction("kv","readwrite");var req=tx.objectStore("kv").delete(k);req.onsuccess=function(){res({key:k,deleted:true})};req.onerror=function(){rej(req.error)}})});}
 
-var storageAPI={
-  get:async function(k){
-    if(isArtifact){try{return await window.storage.get(k)}catch{return null}}
-    try{return await idbGet(k)}catch{
-      // fallback to localStorage
-      var v=localStorage.getItem(k);return v?{value:v}:null;
+function saveSettings() {
+    state.apiKey = document.getElementById('geminiKey').value;
+    state.backendUrl = document.getElementById('backendUrl').value;
+    localStorage.setItem('tc_gemini_key', state.apiKey);
+    localStorage.setItem('tc_backend_url', state.backendUrl);
+    toggleSettings();
+}
+
+// Formatters
+const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+// 1. Backend Communication (The Bridge)
+async function handleFileUpload(event) {
+    const files = event.target.files;
+    if(!files.length) return;
+    
+    const formData = new FormData();
+    for(let f of files) formData.append("files", f);
+
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Uploading to backend...</td></tr>`;
+    
+    try {
+        const res = await fetch(`${state.backendUrl}/api/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        if(res.ok) fetchPortfolio();
+        else alert("Upload failed.");
+    } catch(e) {
+        alert("Cannot connect to backend: " + state.backendUrl);
     }
-  },
-  set:async function(k,v){
-    if(isArtifact){try{return await window.storage.set(k,v)}catch{return null}}
-    try{return await idbSet(k,v)}catch{
-      try{localStorage.setItem(k,v)}catch{}
-      return{key:k,value:v};
+}
+
+async function fetchPortfolio() {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Syncing with Angel One...</td></tr>`;
+    try {
+        const res = await fetch(`${state.backendUrl}/api/portfolio`);
+        if(!res.ok) throw new Error("Backend error");
+        
+        const data = await res.json();
+        state.positions = data.positions || [];
+        renderUI();
+    } catch(e) {
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red)">Failed to load data. Is the Python server running?</td></tr>`;
     }
-  },
-  delete:async function(k){
-    if(isArtifact){try{return await window.storage.delete(k)}catch{return null}}
-    try{return await idbDel(k)}catch{localStorage.removeItem(k);return{key:k,deleted:true}}
-  }
-};
-const BROKERS=["Zerodha","mStock","IIFL"];
-const ALL_SEGMENTS=["Equity - Delivery","Equity - MTF","Equity - Intraday","Futures","Options","Commodity Futures","Commodity Options"];
-const SEGMENTS_EQ=["Equity - Delivery","Equity - MTF","Equity - Intraday"];
-const SEGMENTS_FO=["Futures","Options"];
-const SEGMENTS_COM=["Commodity Futures","Commodity Options"];
-const CLASSIFICATIONS=["Unclassified","Short-term","Long-term"];
-const MARGIN_DEFAULTS={"Equity - Delivery":100,"Equity - MTF":25,"Equity - Intraday":20,"Futures":15,"Options":100,"Commodity Futures":10,"Commodity Options":100};
-const SERIES_MAP={EQ:"Equity - Delivery",B:"Equity - Delivery",BE:"Equity - Delivery",BZ:"Equity - Delivery",ST:"Equity - Delivery",SM:"Equity - Delivery",M:"Equity - Delivery",MT:"Equity - Delivery",A:"Equity - Delivery",T:"Equity - Delivery",W:"Equity - Delivery"};
+}
 
-// MCX standard lot sizes {underlying: {lotSize, unit, tickSize, tickValue}}
-const MCX_LOT_SIZES={
-  "GOLD":{lot:1,unit:"KG",tick:1,pnlPerTick:1},
-  "GOLDM":{lot:100,unit:"GMS",tick:1,pnlPerTick:100},
-  "GOLDGUINEA":{lot:8,unit:"GMS",tick:1,pnlPerTick:8},
-  "GOLDPETAL":{lot:1,unit:"GMS",tick:1,pnlPerTick:1},
-  "GOLDTEN":{lot:10,unit:"GMS",tick:1,pnlPerTick:10},
-  "SILVER":{lot:30,unit:"KG",tick:1,pnlPerTick:30},
-  "SILVERM":{lot:5,unit:"KG",tick:1,pnlPerTick:5},
-  "SILVERMIC":{lot:1,unit:"KG",tick:1,pnlPerTick:1},
-  "CRUDEOIL":{lot:100,unit:"BBL",tick:1,pnlPerTick:100},
-  "CRUDEOILM":{lot:10,unit:"BBL",tick:1,pnlPerTick:10},
-  "NATURALGAS":{lot:1250,unit:"mmBtu",tick:0.1,pnlPerTick:125},
-  "NATGASMINI":{lot:250,unit:"mmBtu",tick:0.1,pnlPerTick:25},
-  "COPPER":{lot:2500,unit:"KG",tick:0.05,pnlPerTick:125},
-  "ALUMINIUM":{lot:5000,unit:"KG",tick:0.05,pnlPerTick:250},
-  "ALUMINI":{lot:1000,unit:"KG",tick:0.05,pnlPerTick:50},
-  "ZINC":{lot:5000,unit:"KG",tick:0.05,pnlPerTick:250},
-  "ZINCMINI":{lot:1000,unit:"KG",tick:0.05,pnlPerTick:50},
-  "LEAD":{lot:5000,unit:"KG",tick:0.05,pnlPerTick:250},
-  "LEADMINI":{lot:1000,unit:"KG",tick:0.05,pnlPerTick:50},
-  "NICKEL":{lot:1500,unit:"KG",tick:0.1,pnlPerTick:150},
-  "MENTHAOIL":{lot:360,unit:"KG",tick:0.1,pnlPerTick:36},
-  "COTTON":{lot:25,unit:"BALES",tick:0.5,pnlPerTick:12.5},
-  "CARDAMOM":{lot:100,unit:"KG",tick:0.1,pnlPerTick:10},
-};
-function getMCXLotInfo(symbol){const u=extractUnderlying(symbol);return MCX_LOT_SIZES[u]||null}
+// 2. Render UI
+function renderUI() {
+    let totalPnl = 0, totalInv = 0;
+    let html = '';
 
-var _corpActions={};  // symbol -> [{type:"split"|"bonus", exDate:"YYYY-MM-DD", ratio:N}]
-var _corpActionsLoaded=false;
-let state={positions:[],tradeLedger:[],lastUpdate:null,tab:"open",segTab:"all",sort:{k:"pnlPct",d:"desc"},filter:{broker:"All",cls:"All",seg:"All",search:""},showModal:false,editId:null,form:{},notesId:null,adjId:null,adjForm:{type:"split",ratio:"",newPrice:"",newQty:""},pxLoading:{},bulkLoading:false,toast:null,uploadLog:[],uploadBroker:"Zerodha",mainView:"positions",confirmReset:false};
+    state.positions.forEach(p => {
+        totalPnl += p["P&L"];
+        totalInv += p.Invested;
+        
+        const pnlClass = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+        const pnlSign = p["P&L"] > 0 ? '+' : '';
 
-function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-function fmt(v){if(v==null||isNaN(v))return"—";const a=Math.abs(v),s=v<0?"-":"";if(a>=1e7)return s+"₹"+(a/1e7).toFixed(2)+"Cr";if(a>=1e5)return s+"₹"+(a/1e5).toFixed(2)+"L";return(v<0?"-":"")+"₹"+a.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}
-function fp(v){return v==null||isNaN(v)?"—":(v>=0?"+":"")+v.toFixed(2)+"%"}
-function showToast(msg){state.toast=msg;render();setTimeout(()=>{state.toast=null;render()},4000)}
-function calc(p){var q=p.quantity||0,bp=p.buyPrice||0,inv=bp*q,mp=p.marginPct||100,cmp=p.currentPrice||bp,cur=cmp*q;var unr=0;if(p.status==="Open"){unr=p.direction==="Short"?inv-cur:cur-inv}var real=p.realizedPnl||0,tot=p.status==="Closed"?real:unr+real,pct=inv?(unr/inv)*100:0,cap=inv*(mp/100);return{q:q,inv:inv,cur:cur,unr:unr,real:real,tot:tot,pct:pct,cap:cap}}
+        html += `<tr>
+            <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+            <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+            <td>${p.Direction}</td>
+            <td>${p.Qty}</td>
+            <td>${fmtDec(p["Avg Price"])}</td>
+            <td style="color:var(--white)">${fmtDec(p.CMP)}</td>
+            <td class="${pnlClass}">${pnlSign}${fmtMoney(p["P&L"])}</td>
+            <td class="${pnlClass}">${pnlSign}${fmtDec(p["ROI %"])}%</td>
+        </tr>`;
+    });
 
-function detectSegment(t){const seg=(t.segment||"").toUpperCase(),sym=(t.symbol||"").toUpperCase();if(seg==="COM"){if(sym.match(/\d+(CE|PE)$/))return"Commodity Options";return"Commodity Futures"}if(seg==="FO"){if(sym.match(/\d+(CE|PE)$/))return"Options";return"Futures"}return SERIES_MAP[t.series]||"Equity - Delivery"}
-function detectContractType(sym){if(sym.match(/\d+CE$/))return"CE";if(sym.match(/\d+PE$/))return"PE";if(sym.match(/FUT$/))return"FUT";return"EQ"}
-function getSegCategory(seg){if(SEGMENTS_EQ.includes(seg))return"eq";if(SEGMENTS_FO.includes(seg))return"fo";if(SEGMENTS_COM.includes(seg))return"com";return"eq"}
-function extractUnderlying(sym){return sym.replace(/\d{2}(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC).*$/i,"")}
+    if(state.positions.length === 0) html = `<tr><td colspan="8" style="text-align:center">No active positions.</td></tr>`;
 
-async function loadData(){
-  // 1. Try current stable key
-  try{
-    var r=await storageAPI.get(STORAGE_KEY);
-    if(r?.value){
-      var d=JSON.parse(r.value);
-      state.positions=d.pos||[];
-      state.lastUpdate=d.lastUp||null;
-      state.tradeLedger=[];
-      for(var i=0;i<50;i++){
-        try{
-          var cr=await storageAPI.get(STORAGE_KEY+"-l"+i);
-          if(cr?.value){
-            var chunk=JSON.parse(cr.value);
-            if(!chunk.length)break;
-            for(var j=0;j<chunk.length;j++){
-              var t=chunk[j];
-              state.tradeLedger.push({symbol:t.s,date:t.d,tradeType:t.t,quantity:t.q,price:t.p,
-                detectedSegment:t.ds||(t.sc==="fo"?"FO":t.sc==="com"?"COM":"EQ"),
-                exchange:t.e||"NSE",segment:t.sg||"EQ",segCat:t.sc||"eq",orderId:t.o||"",
-                tradeId:t.ti||"",isin:t.i||"",series:t.sr||"",broker:t.b||"Zerodha",
-                expiryDate:t.ex||"",contractType:t.ct||"",underlying:t.u||""});
-            }
-          }else break;
-        }catch(e2){break}
-      }
-      console.log("IDB loaded: "+state.tradeLedger.length+" trades, fetching corp actions...");
-      await fetchCorporateActions(false);
-      recomputePositionsFromLedger();
-      console.log("Positions recomputed: "+state.positions.length+" total");
-      return;
-    }
-  }catch(e){console.error("loadData error:",e)}
+    document.getElementById('tableBody').innerHTML = html;
+    
+    const pnlEl = document.getElementById('valPnl');
+    pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
+    pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+    
+    document.getElementById('valInv').innerText = fmtMoney(totalInv);
+    document.getElementById('valPos').innerText = state.positions.length;
+}
 
-  // 2. Migrate from old localStorage keys (one-time migration)
-  for(var oldKey of["trade-console-v7","trade-console-v6"]){
-    try{
-      var oldVal=localStorage.getItem(oldKey);
-      if(!oldVal) continue;
-      var d=JSON.parse(oldVal);
-      state.positions=d.pos||[];
-      state.lastUpdate=d.lastUp||null;
-      state.tradeLedger=d.ledger||[];
-      if(!state.tradeLedger.length){
-        for(var i=0;i<50;i++){
-          var cv=localStorage.getItem(oldKey+"-l"+i);
-          if(!cv)break;
-          var chunk=JSON.parse(cv);
-          if(!chunk.length)break;
-          for(var j=0;j<chunk.length;j++){
-            var t=chunk[j];
-            state.tradeLedger.push({symbol:t.s,date:t.d,tradeType:t.t,quantity:t.q,price:t.p,
-              detectedSegment:t.ds||(t.sc==="fo"?"FO":t.sc==="com"?"COM":"EQ"),
-              exchange:t.e||"NSE",segment:t.sg||"EQ",segCat:t.sc||"eq",orderId:t.o||"",
-              tradeId:t.ti||"",isin:t.i||"",series:t.sr||"",broker:t.b||"Zerodha",
-              expiryDate:t.ex||"",contractType:t.ct||"",underlying:t.u||""});
-          }
-        }
-      }
-      if(state.positions.length||state.tradeLedger.length){
-        console.log("Migrated from "+oldKey+": "+state.positions.length+" pos, "+state.tradeLedger.length+" trades. Re-saving to IDB...");
-        await saveData();
-        showToast("✅ Data migrated from old storage — "+state.tradeLedger.length+" trades preserved!");
+// 3. Gemini AI Chat Integration
+function toggleChat() {
+    const p = document.getElementById('chatPanel');
+    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function appendMsg(role, text) {
+    const box = document.getElementById('chatBody');
+    box.innerHTML += `<div class="chat-msg ${role}">${text}</div>`;
+    box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if(!text) return;
+
+    if(!state.apiKey) {
+        alert("Please set your Gemini API Key in Settings first.");
         return;
-      }
-    }catch(e){console.error("Migration error for "+oldKey,e)}
-  }
-}
-async function saveData(){
-  try{
-    // Save positions only in main key (no ledger - saves space)
-    var mainData={pos:state.positions,lastUp:state.lastUpdate};
-    await storageAPI.set(STORAGE_KEY,JSON.stringify(mainData));
-    // Save ledger in minimal format chunks
-    var ledger=state.tradeLedger||[];
-    var CHUNK=4000;
-    var chunkIdx=0;
-    for(var i=0;i<ledger.length;i+=CHUNK){
-      var slice=ledger.slice(i,i+CHUNK);
-      // Compress: only essential fields (stable schema — do NOT change field names)
-      var mini=slice.map(function(t){
-        var m={s:t.symbol,d:t.date,t:t.tradeType,q:t.quantity,p:t.price};
-        if(t.isin)m.i=t.isin;
-        if(t.exchange&&t.exchange!=="NSE")m.e=t.exchange;
-        if(t.segment&&t.segment!=="EQ")m.sg=t.segment;
-        if(t.segCat&&t.segCat!=="eq")m.sc=t.segCat;
-        if(t.orderId)m.o=t.orderId;
-        if(t.tradeId)m.ti=t.tradeId;
-        if(t.broker&&t.broker!=="Zerodha")m.b=t.broker;
-        if(t.expiryDate)m.ex=t.expiryDate;
-        if(t.contractType&&t.contractType!=="EQ")m.ct=t.contractType;
-        if(t.underlying&&t.underlying!==t.symbol)m.u=t.underlying;
-        if(t.detectedSegment)m.ds=t.detectedSegment;
-        return m;
-      });
-      await storageAPI.set(STORAGE_KEY+"-l"+chunkIdx,JSON.stringify(mini));
-      chunkIdx++;
-    }
-    // Clear leftover chunks
-    for(var i=chunkIdx;i<chunkIdx+5;i++){
-      try{await storageAPI.set(STORAGE_KEY+"-l"+i,JSON.stringify([]))}catch{break}
-    }
-  }catch(e){console.error("saveData error",e)}
-}
-
-function parseZerodhaTradebook(data){
-  let headerIdx=-1,headers={};
-  for(let i=0;i<data.length;i++){const row=data[i];if(!row)continue;for(let j=0;j<row.length;j++){const cell=String(row[j]||"").toLowerCase().trim().replace(/_/g," ");if(cell==="symbol"){headerIdx=i;row.forEach((h,k)=>{if(h)headers[String(h).toLowerCase().trim().replace(/_/g," ")]=k});break}}if(headerIdx!==-1)break}
-  if(headerIdx===-1)return{error:"Could not find header row with 'Symbol' column"};
-  const h=headers;
-  const trades=[];
-  for(let i=headerIdx+1;i<data.length;i++){
-    const row=data[i];if(!row)continue;
-    const sym=row[h["symbol"]];if(!sym||String(sym).trim()==="")continue;
-    const tt=String(row[h["trade type"]]||"").trim().toLowerCase();
-    if(tt!=="buy"&&tt!=="sell")continue;
-    const trade={symbol:String(sym).trim().toUpperCase(),isin:String(row[h["isin"]]||"").trim(),date:String(row[h["trade date"]]||"").trim().slice(0,10),exchange:String(row[h["exchange"]]||"NSE").trim(),segment:String(row[h["segment"]]||"EQ").trim().toUpperCase(),series:String(row[h["series"]]||"").trim(),tradeType:tt,quantity:parseFloat(row[h["quantity"]])||0,price:parseFloat(row[h["price"]])||0,tradeId:String(row[h["trade id"]]||"").trim(),orderId:String(row[h["order id"]]||"").trim(),orderExecTime:String(row[h["order execution time"]]||"").trim(),expiryDate:String(row[h["expiry date"]]||"").trim().slice(0,10)};
-    trade.detectedSegment=detectSegment(trade);trade.contractType=detectContractType(trade.symbol);trade.underlying=extractUnderlying(trade.symbol);
-    trades.push(trade);
-  }
-  return{trades,count:trades.length};
-}
-
-function addTradesToLedger(newTrades,broker){
-  if(!state.tradeLedger)state.tradeLedger=[];
-  const idKeys=new Set();
-  const altKeys=new Set();
-  state.tradeLedger.forEach(function(t){
-    if(t.tradeId){idKeys.add(t.broker+"|"+t.symbol+"|"+t.segment+"|"+t.tradeId)}
-    else{altKeys.add(t.broker+"|"+t.symbol+"|"+t.date+"|"+t.tradeType+"|"+t.quantity+"|"+t.price+"|"+(t.orderExecTime||""))}
-  });
-  let added=0,dupes=0;
-  newTrades.forEach(function(t){
-    var isDupe=false;
-    if(t.tradeId){
-      var k=broker+"|"+t.symbol+"|"+t.segment+"|"+t.tradeId;
-      isDupe=idKeys.has(k);
-      if(!isDupe){idKeys.add(k)}
-    }else{
-      var k2=broker+"|"+t.symbol+"|"+t.date+"|"+t.tradeType+"|"+t.quantity+"|"+t.price+"|"+(t.orderExecTime||"");
-      isDupe=altKeys.has(k2);
-      if(!isDupe){altKeys.add(k2)}
-    }
-    if(isDupe){dupes++}else{state.tradeLedger.push(Object.assign({},t,{broker:broker}));added++}
-  });
-  return{added:added,dupes:dupes};
-}
-
-function recomputePositionsFromLedger(){
-  if(!state.tradeLedger||!state.tradeLedger.length)return;
-  const ledger=applyCorpActions(state.tradeLedger);  // adjust for splits/bonuses
-  const groups={};
-  // Build ISIN->canonical key map for EQ (handles renamed stocks)
-  const isinKeyMap={};
-  ledger.forEach(t=>{
-    if(getSegCategory(t.detectedSegment)==="eq"&&t.isin){
-      if(!isinKeyMap[t.isin])isinKeyMap[t.isin]="EQ|"+t.isin+"|"+t.broker;
-    }
-  });
-  ledger.forEach(t=>{
-    const sc=getSegCategory(t.detectedSegment);
-    let key;
-    if(sc==="eq"){
-      // Group by ISIN when available — handles stocks that changed ticker name
-      key=(t.isin&&isinKeyMap[t.isin])?isinKeyMap[t.isin]:"EQ|"+t.symbol+"|"+t.broker;
-    }else{
-      key=sc.toUpperCase()+"|"+t.symbol+"|"+t.broker+"|"+(t.expiryDate||"");
-    }
-    if(!groups[key]){
-      groups[key]={symbol:t.symbol,broker:t.broker,segment:t.detectedSegment,segCat:sc,buys:[],sells:[],series:t.series,expiryDate:t.expiryDate||"",exchange:t.exchange||"NSE",contractType:t.contractType,underlying:t.underlying,isin:t.isin||""};
-    }else{
-      // Always use the most recent symbol name for display (handles renames)
-      if(t.date>=(groups[key]._latestDate||""))groups[key].symbol=t.symbol;
-    }
-    groups[key]._latestDate=t.date>(groups[key]._latestDate||"")?t.date:groups[key]._latestDate;
-    if(t.tradeType==="buy")groups[key].buys.push(t);else groups[key].sells.push(t);
-  });
-  // Merge EQ groups with same symbol+broker but different ISINs (face value change / restructure)
-  const symBrokerMap={};
-  Object.keys(groups).forEach(key=>{
-    const g=groups[key];
-    if(g.segCat!=="eq")return;
-    const sb=g.symbol+"|"+g.broker;
-    if(!symBrokerMap[sb]){symBrokerMap[sb]=key;}
-    else if(symBrokerMap[sb]!==key){
-      // Merge this group into the first one
-      const primary=groups[symBrokerMap[sb]];
-      primary.buys=primary.buys.concat(g.buys);
-      primary.sells=primary.sells.concat(g.sells);
-      // Keep latest symbol name and date
-      if((g._latestDate||"")>(primary._latestDate||""))primary.symbol=g.symbol;
-      primary._latestDate=[(g._latestDate||""),(primary._latestDate||"")].sort().pop();
-      delete groups[key];
-    }
-  });
-  const metaMap={};
-  state.positions.forEach(p=>{const mk=p._groupKey||(p.symbol+"|"+p.broker);metaMap[mk]={classification:p.classification,notes:p.notes,currentPrice:p.currentPrice,adjHistory:p.adjHistory,id:p.id,direction:p.direction,manualAdj:(p.adjHistory||[]).length>0}});
-  const newPos=[];
-  Object.keys(groups).sort().forEach(key=>{
-    const g=groups[key];
-    const tbq=g.buys.reduce((a,b)=>a+b.quantity,0),tsq=g.sells.reduce((a,b)=>a+b.quantity,0);
-    const tbv=g.buys.reduce((a,b)=>a+b.quantity*b.price,0),tsv=g.sells.reduce((a,b)=>a+b.quantity*b.price,0);
-    const avgB=tbq?Math.round((tbv/tbq)*100)/100:0,avgS=tsq?Math.round((tsv/tsq)*100)/100:0;
-    const net=tbq-tsq;
-    const firstDate=[...g.buys,...g.sells].reduce((a,b)=>(!a||b.date<a)?b.date:a,"");
-    var sellOnly=tbq===0&&tsq>0;
-    const seg=g.segment,margin=MARGIN_DEFAULTS[seg]||100;
-    let status,qty,bp,rpl,dir;
-    var absNet=Math.abs(net);
-    var preExistQty=0;
-    if(g.segCat==="eq"){
-      if(sellOnly){
-        // Only sells, no buys at all — pre-existing position fully sold
-        status="Closed";qty=Math.round(tsq);bp=0;dir="Long";rpl=tsv;sellOnly=true;preExistQty=Math.round(tsq);
-      }else if(net>0.01){
-        // Buys > sells — open long position
-        status="Open";qty=Math.round(net);bp=avgB;dir="Long";
-        rpl=tsq>0?Math.round((tsv-avgB*tsq)*100)/100:0;
-      }else if(net<-0.01){
-        // Sells > buys — pre-existing qty was sold, plus bought and sold within period
-        // Pre-existing qty = sells - buys; all sold now = Closed
-        preExistQty=Math.round(absNet);
-        status="Closed";qty=Math.round(tsq);bp=0;dir="Long";
-        // Realized P&L: only from matched buy-sell pairs within the tradebook
-        // We can't know the cost basis of pre-existing shares
-        rpl=tbq>0?Math.round((avgS*tbq-tbv)*100)/100:0;
-        sellOnly=false;
-      }else{
-        // net ≈ 0 — fully closed within tradebook period
-        status="Closed";qty=Math.round(tbq);bp=avgB;dir="Long";
-        rpl=Math.round((tsv-tbv)*100)/100;
-      }
-    }else{
-      if(net>0.01){status="Open";qty=Math.round(absNet);bp=avgB;dir="Long";rpl=tsq>0?Math.round((tsv-avgB*Math.min(tsq,tbq))*100)/100:0}
-      else if(net<-0.01){status="Open";qty=Math.round(absNet);bp=avgS;dir="Short";rpl=tbq>0?Math.round((avgS*Math.min(tbq,tsq)-tbv)*100)/100:0}
-      else{status="Closed";qty=Math.round(tbq||tsq);dir=tbq>=tsq?"Long":"Short";bp=avgB||avgS;rpl=(tbq>0&&tsq>0)?Math.round((tsv-tbv)*100)/100:0}
-    }
-    const mk=g.symbol+"|"+g.broker;const meta=metaMap[key]||metaMap[mk]||{};
-    const mcxLot=g.segCat==="com"?getMCXLotInfo(g.symbol):null;
-    newPos.push({id:meta.id||gid(),_groupKey:key,broker:g.broker,symbol:g.symbol,segment:seg,segCat:g.segCat,status,quantity:qty,buyPrice:bp,currentPrice:meta.currentPrice||(status==="Closed"?avgS:null),buyDate:firstDate,classification:meta.classification||"Unclassified",notes:meta.notes||"",marginPct:margin,direction:dir||meta.direction||"Long",avgSellPrice:avgS,realizedPnl:rpl,sellOnly,preExistQty:preExistQty,adjHistory:meta.adjHistory||[],expiryDate:g.expiryDate,exchange:g.exchange,contractType:g.contractType,underlying:g.underlying,totalBuyQty:tbq,totalSellQty:tsq,totalBuyVal:tbv,totalSellVal:tsv,mcxLot});
-  });
-  const manual=state.positions.filter(p=>p._manual);
-  // Auto-close expired F&O/COM
-  var today=new Date().toISOString().slice(0,10);
-  newPos.forEach(function(p){
-    if(p.segCat!=="eq"&&p.status==="Open"&&p.expiryDate&&p.expiryDate<today){
-      p.status="Closed";
-      // Expired worthless or with settlement — P&L is what we have
-      // For unmatched legs, treat as expired at 0
-      if(!p.realizedPnl)p.realizedPnl=0;
-      p.notes=(p.notes?p.notes+" | ":"")+"Auto-closed: expired "+p.expiryDate;
-    }
-  });
-  state.positions=[...newPos,...manual];
-}
-
-// ===== mSTOCK TRADEBOOK PARSER =====
-function parseMStockTradebook(data){
-  // mStock CSV format (Trade History export):
-  // Columns vary — we detect header row then map flexibly
-  // Known column names (case-insensitive):
-  //   Trade Date / Date, Symbol / Scrip Name / Instrument,
-  //   Trade Type / Buy/Sell / B/S / Transaction Type,
-  //   Quantity / Qty, Price / Trade Price / Rate,
-  //   Trade ID / Trade No, Order ID / Order No,
-  //   Series, Exchange, Segment / Product, ISIN
-
-  let headerIdx=-1, headers={};
-  const SYMBOL_KEYS=["symbol","scrip name","instrument","scrip","trading symbol"];
-  const DATE_KEYS=["trade date","date","order date","execution date","transaction date"];
-  const TYPE_KEYS=["trade type","buy/sell","b/s","transaction type","type","buy sell","buysell"];
-  const QTY_KEYS=["quantity","qty","trade qty","traded qty"];
-  const PRICE_KEYS=["price","trade price","rate","avg price","executed price"];
-  const TRADEID_KEYS=["trade id","trade no","trade number","tradeid"];
-  const ORDERID_KEYS=["order id","order no","order number","orderid"];
-  const SEG_KEYS=["segment","product","product type"];
-  const SERIES_KEYS=["series"];
-  const ISIN_KEYS=["isin"];
-  const EXPIRY_KEYS=["expiry","expiry date"];
-  const EXCH_KEYS=["exchange","exch"];
-
-  // Find header row
-  for(let i=0;i<Math.min(data.length,20);i++){
-    const row=data[i];if(!row)continue;
-    const rowStr=row.map(c=>String(c||"").toLowerCase().trim()).join("|");
-    // Look for at least symbol+quantity+price to confirm it's a header
-    const hasSymbol=SYMBOL_KEYS.some(k=>rowStr.includes(k));
-    const hasQty=QTY_KEYS.some(k=>rowStr.includes(k));
-    const hasPrice=PRICE_KEYS.some(k=>rowStr.includes(k));
-    if(hasSymbol&&(hasQty||hasPrice)){
-      headerIdx=i;
-      row.forEach((h,k)=>{if(h)headers[String(h).toLowerCase().trim()]=k});
-      break;
-    }
-  }
-  if(headerIdx===-1)return{error:"Cannot find mStock header row. Expected columns: Symbol, Quantity, Price, Trade Type"};
-
-  // Map flexible column names to indices
-  function findCol(keys){
-    for(const k of keys){for(const h in headers){if(h===k||h.includes(k)||k.includes(h))return headers[h]}}
-    return -1;
-  }
-  const colSym=findCol(SYMBOL_KEYS),colDate=findCol(DATE_KEYS),colType=findCol(TYPE_KEYS);
-  const colQty=findCol(QTY_KEYS),colPrice=findCol(PRICE_KEYS);
-  const colTradeId=findCol(TRADEID_KEYS),colOrderId=findCol(ORDERID_KEYS);
-  const colSeg=findCol(SEG_KEYS),colSeries=findCol(SERIES_KEYS),colISIN=findCol(ISIN_KEYS);
-  const colExpiry=findCol(EXPIRY_KEYS),colExch=findCol(EXCH_KEYS);
-
-  if(colSym===-1||colQty===-1||colPrice===-1)
-    return{error:"mStock CSV missing required columns (Symbol/Qty/Price). Found: "+Object.keys(headers).join(", ")};
-
-  const trades=[];
-  for(let i=headerIdx+1;i<data.length;i++){
-    const row=data[i];if(!row)continue;
-    const sym=colSym>=0?String(row[colSym]||"").trim().toUpperCase():"";
-    if(!sym||sym==="SYMBOL"||sym==="SCRIP NAME")continue;
-
-    const rawType=colType>=0?String(row[colType]||"").trim().toLowerCase():"";
-    let tradeType="";
-    if(rawType.startsWith("b")||rawType==="1")tradeType="buy";
-    else if(rawType.startsWith("s")||rawType==="2")tradeType="sell";
-    else continue; // skip non-trade rows
-
-    const qty=parseFloat(String(row[colQty]||"").replace(/,/g,""))||0;
-    const price=parseFloat(String(row[colPrice]||"").replace(/,/g,""))||0;
-    if(!qty||!price)continue;
-
-    // Normalise date to YYYY-MM-DD
-    let rawDate=colDate>=0?String(row[colDate]||"").trim():"";
-    let date="";
-    if(rawDate){
-      // Handle DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, DD-MMM-YYYY
-      const d1=rawDate.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/);
-      const d2=rawDate.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})/);
-      const d3=rawDate.match(/^(\d{2})[-\/]([A-Za-z]{3})[-\/](\d{4})/);
-      if(d1)date=`${d1[3]}-${d1[2]}-${d1[1]}`;
-      else if(d2)date=rawDate.slice(0,10);
-      else if(d3){
-        const months={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
-        date=`${d3[3]}-${months[d3[2].toLowerCase()]||"01"}-${d3[1]}`;
-      }else date=rawDate.slice(0,10);
     }
 
-    // Segment detection for mStock
-    const segRaw=colSeg>=0?String(row[colSeg]||"").trim().toUpperCase():"";
-    const series=colSeries>=0?String(row[colSeries]||"").trim().toUpperCase():"";
-    const exch=colExch>=0?String(row[colExch]||"MCX").trim().toUpperCase():"NSE";
-    let segment="EQ",detectedSegment="Equity - Delivery";
-    if(segRaw.includes("FO")||segRaw.includes("NFO")||segRaw.includes("F&O")||segRaw==="FUTURES"||segRaw==="OPTIONS"){
-      segment="FO";detectedSegment=sym.match(/\d+(CE|PE)$/)?"Options":"Futures";
-    }else if(segRaw==="MCX"||segRaw.includes("COM")||segRaw.includes("COMMODITY")||exch==="MCX"){
-      segment="COM";detectedSegment=sym.match(/\d+(CE|PE)$/)?"Commodity Options":"Commodity Futures";
-    }else if(segRaw.includes("MTF")||segRaw==="MARGIN"){
-      detectedSegment="Equity - MTF";
-    }else if(segRaw==="INTRADAY"||segRaw==="MIS"){
-      detectedSegment="Equity - Intraday";
-    }else if(series){
-      detectedSegment=SERIES_MAP[series]||"Equity - Delivery";
-    }
+    appendMsg('user', text);
+    input.value = '';
+    
+    // Save to history
+    state.chatHistory.push({ role: "user", parts: [{ text: text }] });
 
-    const expiry=colExpiry>=0?String(row[colExpiry]||"").trim().slice(0,10):"";
-    const isin=colISIN>=0?String(row[colISIN]||"").trim():"";
+    // Build Context
+    const sysPrompt = `You are a pro trading assistant. Here is the user's current live portfolio JSON: ${JSON.stringify(state.positions)}. Answer questions accurately based only on this data. Be concise.`;
 
-    const trade={
-      symbol:sym,isin,date,exchange:exch,segment,series,
-      tradeType,quantity:qty,price,
-      tradeId:colTradeId>=0?String(row[colTradeId]||"").trim():"",
-      orderId:colOrderId>=0?String(row[colOrderId]||"").trim():"",
-      expiryDate:expiry,
-      detectedSegment,
-      contractType:detectContractType(sym),
-      underlying:extractUnderlying(sym)
-    };
-    trades.push(trade);
-  }
-  return{trades,count:trades.length};
-}
+    try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: sysPrompt }] },
+                contents: state.chatHistory.slice(-10) // Send last 10 messages for memory
+            })
+        });
 
-function parseCSVText(text){
-  // Handle BOM
-  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
-  var rows=[];
-  var lines=text.split(/\r?\n/);
-  for(var i=0;i<lines.length;i++){
-    var line=lines[i].replace(/\r$/,"");
-    if(!line.trim()) continue;
-    // Simple CSV split (handles most cases, no quoted commas in Zerodha data)
-    rows.push(line.split(","));
-  }
-  return rows;
-}
-
-function autoDetectBroker(rows){
-  // Look at first few rows for broker fingerprints
-  var sample=rows.slice(0,10).map(function(r){return(r||[]).map(function(c){return String(c||"").toLowerCase()}).join("|")}).join(" ");
-  // Zerodha: has "trade type" and "order execution time" and "isin"
-  if(sample.includes("order execution time")||sample.includes("trade date")&&sample.includes("isin")&&sample.includes("series"))return"zerodha";
-  // mStock: has "scrip name" or "b/s" or "trade price" without zerodha fingerprints
-  if(sample.includes("scrip name")||sample.includes("trade price")||sample.includes("b/s")||sample.includes("transaction type"))return"mstock";
-  // Default: try zerodha first
-  return"zerodha";
-}
-
-function parseFileToTrades(file, brokerOverride){
-  return new Promise(function(resolve,reject){
-    var reader=new FileReader();
-    reader.onload=function(e){
-      try{
-        var text=e.target.result;
-        var rows=parseCSVText(text);
-        var broker=brokerOverride||autoDetectBroker(rows);
-        var result;
-        if(broker==="mstock"){
-          result=parseMStockTradebook(rows);
-          result.detectedBroker="mStock";
-        }else{
-          result=parseZerodhaTradebook(rows);
-          result.detectedBroker="Zerodha";
+        const data = await res.json();
+        
+        if (data.error) {
+            appendMsg('bot', "❌ Error: " + data.error.message);
+        } else if (data.candidates && data.candidates[0].content) {
+            const reply = data.candidates[0].content.parts[0].text;
+            appendMsg('bot', reply);
+            state.chatHistory.push({ role: "model", parts: [{ text: reply }] });
         }
-        resolve(result);
-      }catch(err){reject(err)}
-    };
-    reader.onerror=function(){reject(new Error("File read failed"))};
-    reader.readAsText(file,"utf-8");
-  });
-}
-
-async function handleFiles(e){
-  var fileList=[];
-  for(var i=0;i<e.target.files.length;i++){fileList.push(e.target.files[i])}
-  e.target.value="";
-  if(!fileList.length)return;
-  var broker=state.uploadBroker||"Zerodha";
-  var totalAdded=0,totalDupes=0,totalTrades=0,fileCount=0;
-  var debugEl=document.getElementById("debugLog");
-  if(debugEl)debugEl.textContent="Processing "+fileList.length+" files...\n";
-  if(debugEl)debugEl.style.display="block";
-  for(var fi=0;fi<fileList.length;fi++){
-    var file=fileList[fi];
-    try{
-      if(debugEl)debugEl.textContent+="Parsing: "+file.name+"...\n";
-      // Pass broker override only for non-Zerodha; let auto-detect handle Zerodha
-      var brokerOverride=(broker==="Zerodha"||broker==="mStock"||broker==="IIFL")?broker.toLowerCase().replace("mstock","mstock").replace("zerodha","zerodha").replace("iifl","zerodha"):null;
-      var result=await parseFileToTrades(file, broker==="mStock"?"mstock":broker==="IIFL"?"zerodha":null);
-      if(result.error){if(debugEl)debugEl.textContent+="  ERROR: "+result.error+"\n";continue}
-      if(debugEl)debugEl.textContent+="  Found "+result.count+" trades ["+( result.detectedBroker||broker)+"]\n";
-      var r=addTradesToLedger(result.trades,broker);
-      if(debugEl)debugEl.textContent+="  Added:"+r.added+" Dupes:"+r.dupes+"\n";
-      totalAdded+=r.added;totalDupes+=r.dupes;totalTrades+=result.count;fileCount++;
-      state.uploadLog.push(broker+" | "+file.name+" | "+result.count+" trades ("+r.added+" new, "+r.dupes+" dup)");
-    }catch(err){if(debugEl)debugEl.textContent+="  CATCH: "+err+"\n";console.error(file.name,err)}
-  }
-  if(fileCount>0){
-    try{
-      if(debugEl)debugEl.textContent+="Recomputing positions...\n";
-      recomputePositionsFromLedger();
-      if(debugEl)debugEl.textContent+="Positions: "+state.positions.length+"\n";
-      if(debugEl)debugEl.textContent+="Saving...\n";
-      await saveData();
-      if(debugEl)debugEl.textContent+="Saved. Rendering...\n";
-    }catch(err){if(debugEl)debugEl.textContent+="RECOMPUTE ERROR: "+err+"\n";console.error("recompute",err)}
-  }
-  try{
-    render();
-    showToast("✅ "+fileCount+" files: "+totalTrades+" trades → "+totalAdded+" new, "+totalDupes+" dup. Ledger: "+state.tradeLedger.length+", Positions: "+state.positions.length);
-  }catch(err){
-    document.getElementById("app").innerHTML="<pre style='color:red;padding:20px'>RENDER ERROR: "+err+"\n"+err.stack+"</pre>";
-    console.error("render",err);
-  }
-}
-
-async function handleDrop(files){
-  var fileList=[];for(var i=0;i<files.length;i++){fileList.push(files[i])}
-  if(!fileList.length)return;
-  var broker=state.uploadBroker||"Zerodha";
-  var totalAdded=0,totalDupes=0,totalTrades=0,fileCount=0;
-  for(var fi=0;fi<fileList.length;fi++){
-    var file=fileList[fi];
-    try{
-      var result=await parseFileToTrades(file,broker==="mStock"?"mstock":null);
-      if(result.error){continue}
-      var r=addTradesToLedger(result.trades,broker);
-      totalAdded+=r.added;totalDupes+=r.dupes;totalTrades+=result.count;fileCount++;
-      state.uploadLog.push(broker+" — "+file.name+" — "+result.count+" trades ("+r.added+" new)");
-    }catch(err){console.error(err)}
-  }
-  if(fileCount>0){await fetchCorporateActions(false);recomputePositionsFromLedger();await saveData()}
-  render();
-  if(fileCount>0){showToast("✅ "+fileCount+" files: "+totalAdded+" new trades")}
-}
-
-// ===== PRICE REFRESH via Angel One (Google Apps Script Proxy) =====
-var ANGEL_PROXY_URL="https://script.google.com/macros/s/AKfycbyBRVLBnbzp9UdhFi0P9C45brwAiLH_5A2xBmfaIExRUUgfMmh1YVrX7nUFplrhuJw8/exec";
-
-// ===== TOKEN CACHE (resolved via proxy, cached in memory per session) =====
-var _tokenCache={};  // symbol -> {token, exchange, tradingSymbol}
-
-// JSONP helper — injects a <script> tag, no CORS restrictions
-function jsonpRequest(url, payload, timeoutMs){
-  timeoutMs=timeoutMs||30000;
-  return new Promise(function(resolve,reject){
-    var cbName="_tc_cb_"+Date.now()+"_"+Math.floor(Math.random()*10000);
-    var script=document.createElement("script");
-    var done=false;
-    var timer=setTimeout(function(){
-      if(done)return;done=true;
-      cleanup();reject(new Error("JSONP timeout"));
-    },timeoutMs);
-    window[cbName]=function(data){
-      if(done)return;done=true;
-      cleanup();resolve(data);
-    };
-    function cleanup(){
-      clearTimeout(timer);
-      delete window[cbName];
-      if(script.parentNode)script.parentNode.removeChild(script);
+    } catch(e) {
+        appendMsg('bot', "❌ Network error communicating with Gemini.");
     }
-    script.onerror=function(){
-      if(done)return;done=true;
-      cleanup();reject(new Error("JSONP script error"));
-    };
-    script.src=url+"?callback="+cbName+"&payload="+encodeURIComponent(payload);
-    document.head.appendChild(script);
-  });
 }
 
-// ===== CORPORATE ACTIONS (split/bonus fetch & apply) =====
-async function fetchCorporateActions(forceRefresh){
-  // Get all unique EQ symbols from ledger
-  const symbols=[...new Set(state.tradeLedger
-    .filter(t=>getSegCategory(t.detectedSegment)==="eq")
-    .map(t=>t.symbol))];
-  if(!symbols.length)return;
-
-  // Check cache in IDB (refresh once per day)
-  const cacheKey=STORAGE_KEY+"-ca";
-  if(!forceRefresh){
-    try{
-      const cached=await storageAPI.get(cacheKey);
-      if(cached?.value){
-        const d=JSON.parse(cached.value);
-        if(d.ts&&(Date.now()-d.ts)<86400000){
-          _corpActions=d.data||{};
-          _corpActionsLoaded=true;
-          console.log("Corp actions loaded from cache:",Object.keys(_corpActions).length,"symbols");
-          return;
-        }
-      }
-    }catch(e){}
-  }
-
-  // Fetch from proxy in batches of 20
-  const newCA={};
-  showToast("⟳ Fetching corporate actions for "+symbols.length+" stocks...",4000);
-  const batchSize=20;
-  for(var b=0;b<symbols.length;b+=batchSize){
-    const batch=symbols.slice(b,b+batchSize);
-    try{
-      const res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"corpactions",symbols:batch}),30000);
-      if(res&&res.data){
-        for(const sym in res.data) newCA[sym]=res.data[sym];
-      }
-    }catch(e){console.error("Corp actions batch error:",e)}
-  }
-
-  _corpActions=newCA;
-  _corpActionsLoaded=true;
-
-  // Cache to IDB
-  try{await storageAPI.set(cacheKey,JSON.stringify({ts:Date.now(),data:newCA}));}catch(e){}
-  console.log("Corp actions fetched:",Object.keys(newCA).length,"symbols with actions");
-  showToast("✅ Corporate actions loaded",2000);
-}
-
-// Apply split/bonus adjustments to buy trades before FIFO
-// Returns adjusted copy of trades (does NOT mutate originals)
-function applyCorpActions(ledger){
-  if(!_corpActionsLoaded||!Object.keys(_corpActions).length)return ledger;
-  const result=[];
-  for(var i=0;i<ledger.length;i++){
-    const t=ledger[i];
-    if(t.tradeType!=="buy"||getSegCategory(t.detectedSegment)!=="eq"){
-      result.push(t);continue;
-    }
-    const actions=_corpActions[t.symbol]||[];
-    if(!actions.length){result.push(t);continue;}
-    // Compute cumulative adjustment factor for all events AFTER this trade date
-    let factor=1;
-    for(const ev of actions){
-      if(ev.exDate>t.date){  // event happened after this buy → adjust this buy
-        factor*=ev.ratio;
-      }
-    }
-    if(Math.abs(factor-1)<0.0001){result.push(t);continue;}
-    // Clone trade with adjusted qty and price
-    result.push(Object.assign({},t,{
-      quantity:Math.round(t.quantity*factor*1000)/1000,
-      price:Math.round((t.price/factor)*100)/100,
-      _caAdjusted:true,_caFactor:factor
-    }));
-  }
-  return result;
-}
-
-async function fetchPricesViaAngel(positions){
-  if(!positions.length)return{};
-
-  // Collect unique symbols not yet in token cache
-  var needLookup=[];
-  var seen={};
-  for(var i=0;i<positions.length;i++){
-    var p=positions[i];
-    if(seen[p.symbol])continue;
-    seen[p.symbol]=true;
-    if(!_tokenCache[p.symbol]){
-      needLookup.push({symbol:p.symbol,segCat:p.segCat||"eq"});
-    }
-  }
-
-  // Step 1: Resolve unknown tokens via proxy (Apps Script fetches master, caches 24h)
-  if(needLookup.length>0){
-    state.toast="⟳ Resolving "+needLookup.length+" tokens...";render();
-    for(var b=0;b<needLookup.length;b+=20){
-      var batch=needLookup.slice(b,b+20);
-      try{
-        var res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"lookup",symbols:batch}),55000);
-        if(res&&res.status&&res.tokens){
-          for(var sym in res.tokens)_tokenCache[sym]=res.tokens[sym];
-        }
-      }catch(e){console.error("Token lookup error:",e)}
-    }
-  }
-
-  // Step 2: Build resolved list from cache
-  var resolvedList=[];
-  for(var sym in seen){
-    if(_tokenCache[sym])resolvedList.push(Object.assign({symbol:sym},_tokenCache[sym]));
-    else console.warn("No token for:",sym);
-  }
-
-  // Step 3: LTP calls — proxy just calls Angel LTP, no master load needed
-  var allPrices={};
-  var batchSize=10;
-  var total=Math.ceil(resolvedList.length/batchSize);
-  for(var b=0;b<resolvedList.length;b+=batchSize){
-    var batch=resolvedList.slice(b,b+batchSize);
-    var batchNum=Math.floor(b/batchSize)+1;
-    state.toast="⟳ Prices "+batchNum+"/"+total+"...";render();
-    try{
-      var res=await jsonpRequest(ANGEL_PROXY_URL,JSON.stringify({action:"ltp",symbols:batch}),20000);
-      if(res&&res.status&&res.prices){
-        for(var k in res.prices)allPrices[k]=res.prices[k];
-      }
-    }catch(e){console.error("LTP Batch "+batchNum+" error:",e)}
-    if(b+batchSize<resolvedList.length)await new Promise(r=>setTimeout(r,300));
-  }
-  return allPrices;
-}
-
-async function refreshOne(id){
-  var p=state.positions.find(x=>x.id===id);if(!p)return;
-  state.pxLoading[id]=true;render();
-  var prices=await fetchPricesViaAngel([p]);
-  if(prices[p.symbol]){p.currentPrice=prices[p.symbol];state.lastUpdate=new Date().toISOString();saveData()}
-  state.pxLoading[id]=false;render();
-}
-async function refreshAll(){
-  var open=state.positions.filter(p=>p.status==="Open");if(!open.length)return;
-  state.bulkLoading=true;state.toast="⟳ Fetching from Angel One...";render();
-  var prices=await fetchPricesViaAngel(open);
-  var updated=0;
-  for(var i=0;i<open.length;i++){
-    if(prices[open[i].symbol]){open[i].currentPrice=prices[open[i].symbol];updated++}
-  }
-  state.lastUpdate=new Date().toISOString();state.bulkLoading=false;state.toast=null;
-  saveData();render();
-  showToast("✅ Angel One: "+updated+"/"+open.length+" prices updated");
-}
-
-function applyAdj(id){const p=state.positions.find(x=>x.id===id);if(!p)return;const af=state.adjForm;let np=p.buyPrice,nq=p.quantity;if(af.type==="split"&&af.ratio){const r=parseFloat(af.ratio);np=p.buyPrice/r;nq=Math.round(p.quantity*r)}else if(af.type==="bonus"&&af.ratio){const r=parseFloat(af.ratio);nq=Math.round(p.quantity*(1+r));np=(p.buyPrice*p.quantity)/nq}else if(af.type==="manual"){if(af.newPrice)np=parseFloat(af.newPrice);if(af.newQty)nq=parseInt(af.newQty)}if(!p.adjHistory)p.adjHistory=[];p.adjHistory.push({date:new Date().toISOString().slice(0,10),type:af.type,from:p.quantity+"@"+p.buyPrice.toFixed(2),to:nq+"@"+(Math.round(np*100)/100).toFixed(2)});p.buyPrice=Math.round(np*100)/100;p.quantity=nq;state.adjId=null;state.adjForm={type:"split",ratio:"",newPrice:"",newQty:""};saveData();render();showToast("✅ "+p.symbol+" adjusted")}
-
-function openForm(p){if(p){state.form={...p,buyPrice:String(p.buyPrice),currentPrice:p.currentPrice?String(p.currentPrice):"",quantity:String(p.quantity),marginPct:String(p.marginPct),realizedPnl:String(p.realizedPnl||0),avgSellPrice:String(p.avgSellPrice||0)};state.editId=p.id}else{state.form={broker:"Zerodha",symbol:"",segment:"Equity - Delivery",segCat:"eq",status:"Open",quantity:"",buyPrice:"",currentPrice:"",buyDate:new Date().toISOString().slice(0,10),classification:"Unclassified",notes:"",marginPct:"100",direction:"Long",avgSellPrice:"0",realizedPnl:"0",expiryDate:"",exchange:"NSE",_manual:true,adjHistory:[]};state.editId=null}state.showModal=true;render()}
-function submitForm(){const f=state.form;if(!f.symbol||!f.buyPrice||!f.quantity)return;const p={...f,id:state.editId||gid(),buyPrice:parseFloat(f.buyPrice),currentPrice:f.currentPrice?parseFloat(f.currentPrice):null,quantity:parseInt(f.quantity),marginPct:parseFloat(f.marginPct),realizedPnl:parseFloat(f.realizedPnl)||0,avgSellPrice:parseFloat(f.avgSellPrice)||0,adjHistory:f.adjHistory||[],segCat:getSegCategory(f.segment),_manual:true};if(state.editId)state.positions=state.positions.map(x=>x.id===state.editId?p:x);else state.positions.push(p);state.showModal=false;state.editId=null;saveData();render()}
-
-function getFY(dateStr){
-  // FY runs Apr-Mar. "2024-05-15" → FY2024-25, "2025-02-10" → FY2024-25
-  if(!dateStr)return"Unknown";
-  var parts=dateStr.split("-");
-  var y=parseInt(parts[0]),m=parseInt(parts[1])||4;
-  if(m<4)y=y-1;
-  return"FY"+(y%100)+"-"+(((y+1)%100)<10?"0":"")+((y+1)%100);
-}
-
-function buildFYData(){
-  var fyMap={};
-  // Process all positions for realized P&L (by their trade dates)
-  state.positions.forEach(function(p){
-    var sc=p.segCat||"eq";
-    var m=calc(p);
-    // Realized: use buyDate as proxy for FY
-    var fy=getFY(p.buyDate);
-    if(!fyMap[fy])fyMap[fy]={eq:{real:0,unr:0,count:0},fo:{real:0,unr:0,count:0},com:{real:0,unr:0,count:0}};
-    fyMap[fy][sc].real+=(p.realizedPnl||0);
-    if(p.status==="Open"){fyMap[fy][sc].unr+=m.unr}
-    fyMap[fy][sc].count++;
-  });
-  return fyMap;
-}
-
-function renderFYPnL(){
-  var fyData=buildFYData();
-  var fys=Object.keys(fyData).sort().reverse();
-  if(!fys.length)return'<div class="empty"><div class="empty-icon">📊</div><p style="color:var(--text3)">No P&L data. Upload tradebooks first.</p></div>';
-
-  var grandReal=0,grandUnr=0;
-  var html='<div class="table-wrap"><table class="fy-table"><thead><tr>';
-  html+='<th style="text-align:left">Financial Year / Segment</th>';
-  html+='<th style="text-align:center">Positions</th>';
-  html+='<th style="text-align:right">Realized P&L</th>';
-  html+='<th style="text-align:right">Unrealized P&L</th>';
-  html+='<th style="text-align:right">Total P&L</th>';
-  html+='</tr></thead><tbody>';
-
-  for(var i=0;i<fys.length;i++){
-    var fy=fys[i];
-    var d=fyData[fy];
-    var fyReal=d.eq.real+d.fo.real+d.com.real;
-    var fyUnr=d.eq.unr+d.fo.unr+d.com.unr;
-    var fyTotal=fyReal+fyUnr;
-    var fyCount=d.eq.count+d.fo.count+d.com.count;
-    grandReal+=fyReal;grandUnr+=fyUnr;
-
-    // FY header row
-    var fyColor=fyTotal>=0?"var(--green)":"var(--red)";
-    html+='<tr class="fy-header"><td>📅 '+fy+'</td>';
-    html+='<td style="text-align:center">'+fyCount+'</td>';
-    html+='<td style="text-align:right;color:'+(fyReal>=0?"var(--green)":"var(--red)")+'">'+(fmt(fyReal))+'</td>';
-    html+='<td style="text-align:right;color:'+(fyUnr>=0?"var(--green)":"var(--red)")+'">'+(fyUnr?fmt(fyUnr):"—")+'</td>';
-    html+='<td style="text-align:right;color:'+fyColor+';font-size:15px">'+fmt(fyTotal)+'</td></tr>';
-
-    // Segment rows
-    var segs=[["eq","Equity","seg-dot-eq"],["fo","F&O","seg-dot-fo"],["com","Commodity","seg-dot-com"]];
-    for(var s=0;s<segs.length;s++){
-      var seg=segs[s];var sd=d[seg[0]];
-      if(!sd.count)continue;
-      var segTotal=sd.real+sd.unr;
-      html+='<tr class="seg-row">';
-      html+='<td style="padding-left:28px"><span class="seg-dot '+seg[2]+'"></span>'+seg[1]+'</td>';
-      html+='<td style="text-align:center;color:var(--text3)">'+sd.count+'</td>';
-      html+='<td style="text-align:right;color:'+(sd.real>=0?"var(--green)":"var(--red)")+'">'+fmt(sd.real)+'</td>';
-      html+='<td style="text-align:right;color:'+(sd.unr>=0?"var(--green)":"var(--red)")+'">'+(sd.unr?fmt(sd.unr):"—")+'</td>';
-      html+='<td style="text-align:right;color:'+(segTotal>=0?"var(--green)":"var(--red)")+'">'+fmt(segTotal)+'</td>';
-      html+='</tr>';
-    }
-  }
-
-  // Grand total row
-  var gt=grandReal+grandUnr;
-  html+='<tr class="total-row">';
-  html+='<td>GRAND TOTAL</td><td></td>';
-  html+='<td style="text-align:right;color:'+(grandReal>=0?"var(--green)":"var(--red)")+'">'+fmt(grandReal)+'</td>';
-  html+='<td style="text-align:right;color:'+(grandUnr>=0?"var(--green)":"var(--red)")+'">'+(grandUnr?fmt(grandUnr):"—")+'</td>';
-  html+='<td style="text-align:right;color:'+(gt>=0?"var(--green)":"var(--red)")+'">'+fmt(gt)+'</td>';
-  html+='</tr></tbody></table></div>';
-
-  // Summary cards
-  html+='<div class="fy-grand">';
-  html+='<div class="fy-grand-item"><div class="fy-grand-label">TOTAL REALIZED</div><div class="fy-grand-value" style="color:'+(grandReal>=0?"var(--green)":"var(--red)")+'">'+fmt(grandReal)+'</div></div>';
-  html+='<div class="fy-grand-item"><div class="fy-grand-label">TOTAL UNREALIZED</div><div class="fy-grand-value" style="color:'+(grandUnr>=0?"var(--green)":"var(--red)")+'">'+fmt(grandUnr)+'</div></div>';
-  html+='<div class="fy-grand-item"><div class="fy-grand-label">NET P&L</div><div class="fy-grand-value" style="color:'+(gt>=0?"var(--green)":"var(--red)")+'">'+fmt(gt)+'</div></div>';
-  html+='<div class="fy-grand-item"><div class="fy-grand-label">TOTAL POSITIONS</div><div class="fy-grand-value" style="color:var(--white)">'+state.positions.length+'</div></div>';
-  html+='</div>';
-
-  return html;
-}
-
-function getLedgerStats(){const l=state.tradeLedger||[];if(!l.length)return{total:0,eqCount:0,foCount:0,comCount:0,symbols:0,dateRange:""};const eq=l.filter(t=>getSegCategory(t.detectedSegment)==="eq").length;const fo=l.filter(t=>getSegCategory(t.detectedSegment)==="fo").length;const co=l.filter(t=>getSegCategory(t.detectedSegment)==="com").length;const sy=new Set(l.map(t=>t.symbol)).size;const dr=l.reduce((a,b)=>b.date<a?b.date:a,l[0].date)+" → "+l.reduce((a,b)=>b.date>a?b.date:a,l[0].date);return{total:l.length,eqCount:eq,foCount:fo,comCount:co,symbols:sy,dateRange:dr}}
-
-function render(){
- try{
-  const allPos=state.positions;
-  const eqPos=allPos.filter(p=>(p.segCat||getSegCategory(p.segment))==="eq");
-  const foPos=allPos.filter(p=>(p.segCat||getSegCategory(p.segment))==="fo");
-  const comPos=allPos.filter(p=>(p.segCat||getSegCategory(p.segment))==="com");
-  const oC=allPos.filter(p=>p.status==="Open").length,cC=allPos.filter(p=>p.status==="Closed").length;
-  let visPos=allPos;if(state.segTab==="eq")visPos=eqPos;else if(state.segTab==="fo")visPos=foPos;else if(state.segTab==="com")visPos=comPos;
-  const sm=visPos.reduce((a,p)=>{const m=calc(p);if(p.status==="Open"){a.oI+=m.inv;a.oU+=m.unr;a.oC+=m.cap}a.tR+=m.real;a.tP+=m.tot;return a},{oI:0,oU:0,oC:0,tR:0,tP:0});
-  let filtered=visPos.filter(p=>{if(state.tab==="open"&&p.status!=="Open")return false;if(state.tab==="closed"&&p.status!=="Closed")return false;if(state.filter.seg!=="All"&&(p.segCat||getSegCategory(p.segment))!==state.filter.seg)return false;if(state.filter.broker!=="All"&&p.broker!==state.filter.broker)return false;if(state.filter.cls!=="All"&&p.classification!==state.filter.cls)return false;if(state.filter.search){const q=state.filter.search.toLowerCase();if(!p.symbol.toLowerCase().includes(q)&&!(p.underlying||"").toLowerCase().includes(q))return false}return true});
-  filtered.sort((a,b)=>{if(state.sort.k==="symbol")return state.sort.d==="asc"?a.symbol.localeCompare(b.symbol):b.symbol.localeCompare(a.symbol);const ma=calc(a),mb=calc(b);const m={pnlPct:"pct",pnl:"tot",inv:"inv",cap:"cap",qty:"q"};const diff=ma[m[state.sort.k]||"pct"]-mb[m[state.sort.k]||"pct"];return state.sort.d==="asc"?diff:-diff});
-  const ls=getLedgerStats();const vO=filtered.filter(p=>p.status==="Open").length,vC=filtered.filter(p=>p.status==="Closed").length;
-  const app=document.getElementById("app");
-  app.innerHTML=`
-<div class="header"><div style="display:flex;align-items:center;gap:12px"><div class="logo">₹</div><div><h1 class="title">TRADE CONSOLE <span style="font-size:10px;color:#4a5568;font-weight:400">v2.1</span></h1><p class="subtitle">${oC} open · ${cC} closed · EQ:${eqPos.length} FO:${foPos.length} COM:${comPos.length} · ${state.tradeLedger.length?state.tradeLedger.length.toLocaleString("en-IN")+" trades":"no data"}${state.lastUpdate?` <span style="opacity:.4;margin-left:8px">Prices: ${new Date(state.lastUpdate).toLocaleString("en-IN",{hour:"2-digit",minute:"2-digit",day:"numeric",month:"short"})}</span>`:""}</p></div></div>
-<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sec" onclick="refreshAll()" ${state.bulkLoading?"disabled":""}>${state.bulkLoading?"⟳ Updating...":"⟳ Refresh Prices"}</button><button class="btn-pri" onclick="openForm(null)">+ Add Position</button><button class="btn-sec" onclick="exportData()" title="Backup all data to JSON file">⬇ Export</button><button class="btn-sec" onclick="debugLedger()" title="Debug ledger">🔍 Debug</button><button class="btn-sec" onclick="(async()=>{await fetchCorporateActions(true);recomputePositionsFromLedger();render();showToast('✅ Corp actions refreshed');})()" title="Re-fetch split/bonus history for all stocks">⟳ Corp Actions</button><button class="btn-sec" onclick="importData()" title="Restore from JSON backup">⬆ Import</button>${state.confirmReset?`<button class="btn-sec" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="state.confirmReset=false;clearLedger()">⚠ CONFIRM RESET</button><button class="btn-sec" onclick="state.confirmReset=false;render()">Cancel</button>`:`<button class="btn-sec" style="color:var(--red);border-color:rgba(252,129,129,.3)" onclick="state.confirmReset=true;render()">🗑 Reset</button>`}</div></div>
-
-<div class="main-tabs">
-<button class="main-tab ${state.mainView==="positions"?"active":""}" onclick="state.mainView='positions';render()">📊 Positions</button>
-<button class="main-tab ${state.mainView==="pnl"?"active":""}" onclick="state.mainView='pnl';render()">💰 FY P&L</button>
-</div>
-
-${state.mainView==="pnl"?renderFYPnL():`
-<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch">
-<div class="upload-zone" id="uploadZone" style="flex:1;min-width:280px;margin-bottom:0" onclick="document.getElementById('fileInput').click()">
-<input type="file" id="fileInput" accept=".csv" multiple>
-<h3>📤 Drop Tradebooks or Click to Upload</h3>
-<p>Supports Zerodha CSV tradebooks (EQ/FO/COM). Multiple files aggregate — no duplicates.</p>
-<div class="formats">${ls.total?`📊 Ledger: <strong>${ls.total}</strong> trades · ${ls.symbols} symbols · ${ls.dateRange}`:"Upload your first file to start"}</div>
-${ls.total?`<div style="display:flex;gap:16px;justify-content:center;margin-top:4px;font-size:10px;color:var(--text3)"><span><span class="seg-dot seg-dot-eq"></span>EQ: <strong style="color:var(--white)">${ls.eqCount}</strong></span><span><span class="seg-dot seg-dot-fo"></span>FO: <strong style="color:var(--white)">${ls.foCount}</strong></span><span><span class="seg-dot seg-dot-com"></span>COM: <strong style="color:var(--white)">${ls.comCount}</strong></span></div>`:""}
-<div class="upload-log" id="uploadLog" ${state.uploadLog.length?"style='display:block'":""}>${state.uploadLog.map(l=>"<div>"+l+"</div>").join("")}</div>
-</div>
-<div style="display:flex;flex-direction:column;gap:6px;min-width:130px">
-<label class="card-label" style="padding:4px 0">BROKER FOR UPLOAD</label>
-${BROKERS.map(b=>`<button class="btn-sm" style="${state.uploadBroker===b?"background:var(--blue2);color:#fff;border-color:var(--blue)":""}" onclick="state.uploadBroker='${b}';render()">${b}</button>`).join("")}
-<div style="font-size:9px;color:var(--text2);margin-top:2px">Select before uploading</div>
-${state.tradeLedger?.length?`<button class="btn-sm" style="margin-top:auto;color:var(--red);border-color:rgba(252,129,129,.3)" onclick="clearLedger()">🗑 Clear Ledger</button>`:""}
-</div></div>
-
-<div id="debugLog" style="background:#1a1a2e;border:1px solid #333;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:10px;color:#63b3ed;white-space:pre-wrap;max-height:100px;overflow:auto;display:none"></div>
-
-<div class="seg-tabs">
-<button class="seg-tab ${state.segTab==="all"?"active":""}" onclick="state.segTab='all';render()">All<span class="seg-count">${allPos.length}</span></button>
-<button class="seg-tab ${state.segTab==="eq"?"active":""}" onclick="state.segTab='eq';render()"><span class="seg-dot seg-dot-eq"></span>Equity<span class="seg-count">${eqPos.length}</span></button>
-<button class="seg-tab ${state.segTab==="fo"?"active":""}" onclick="state.segTab='fo';render()"><span class="seg-dot seg-dot-fo"></span>F&O<span class="seg-count">${foPos.length}</span></button>
-<button class="seg-tab ${state.segTab==="com"?"active":""}" onclick="state.segTab='com';render()"><span class="seg-dot seg-dot-com"></span>Commodity<span class="seg-count">${comPos.length}</span></button>
-</div>
-
-<div class="cards">
-<div class="card"><span class="card-label">INVESTED</span><span class="card-value" style="color:var(--white)">${fmt(sm.oI)}</span></div>
-<div class="card"><span class="card-label">UNREALIZED P&L</span><span class="card-value" style="color:${sm.oU>=0?"var(--green)":"var(--red)"}">${fmt(sm.oU)}</span>${sm.oI?`<span class="card-sub">${fp((sm.oU/sm.oI)*100)}</span>`:""}</div>
-<div class="card"><span class="card-label">REALIZED P&L</span><span class="card-value" style="color:${sm.tR>=0?"var(--green)":"var(--red)"}">${fmt(sm.tR)}</span></div>
-<div class="card" style="border-left:3px solid ${sm.tP>=0?"var(--green)":"var(--red)"}"><span class="card-label">TOTAL P&L</span><span class="card-value" style="color:${sm.tP>=0?"var(--green)":"var(--red)"}">${fmt(sm.tP)}</span></div>
-<div class="card"><span class="card-label">CAPITAL DEPLOYED</span><span class="card-value" style="color:var(--white)">${fmt(sm.oC)}</span>${sm.oC?`<span class="card-sub">ROI ${fp((sm.oU/sm.oC)*100)}</span>`:""}</div>
-</div>
-
-<div class="ctrl-bar">
-<div class="tabs">${[["open","Open ("+vO+")"],["closed","Closed ("+vC+")"],["all","All ("+filtered.length+")"]].map(([k,l])=>`<button class="tab ${state.tab===k?"active":""}" onclick="state.tab='${k}';render()">${l}</button>`).join("")}</div>
-<div class="filters">
-<input placeholder="Search..." value="${state.filter.search}" oninput="state.filter.search=this.value;render()">
-<select onchange="state.filter.seg=this.value;render()"><option value="All" ${state.filter.seg==="All"?"selected":""}>All Segments</option><option value="eq" ${state.filter.seg==="eq"?"selected":""}>Equity</option><option value="fo" ${state.filter.seg==="fo"?"selected":""}>F&O</option><option value="com" ${state.filter.seg==="com"?"selected":""}>Commodity</option></select>
-<select onchange="state.filter.broker=this.value;render()"><option value="All" ${state.filter.broker==="All"?"selected":""}>All Brokers</option>${BROKERS.map(b=>`<option ${state.filter.broker===b?"selected":""}>${b}</option>`).join("")}</select>
-<select onchange="state.filter.cls=this.value;render()"><option value="All" ${state.filter.cls==="All"?"selected":""}>All Classes</option>${CLASSIFICATIONS.map(c=>`<option ${state.filter.cls===c?"selected":""}>${c}</option>`).join("")}</select>
-</div></div>
-
-<div class="table-wrap">
-${filtered.length===0?`<div class="empty"><div class="empty-icon">📊</div><p style="color:var(--text3)">No positions. ${state.positions.length===0?"Upload tradebooks to start.":""}</p></div>`:`
-<table><thead><tr>
-${[{k:"symbol",l:"SYMBOL"},{l:"SEG"},{l:"BROKER"},{l:"STATUS"},{l:"DIR"},{k:"qty",l:"QTY"},{k:"inv",l:"INVESTED"},{l:"AVG PRICE"},{l:"CMP"},{k:"pnl",l:"P&L"},{k:"pnlPct",l:"GAIN%"},{l:"EXPIRY/CAP"},{l:"CLASS"},{l:""}].map((h,i)=>{const align=i>=5&&i<=11?"right":"left";const cls=h.k?"sortable":"";const act=state.sort.k===h.k?"active":"";const arrow=state.sort.k===h.k?(state.sort.d==="asc"?" ↑":" ↓"):"";return`<th class="${cls} ${act}" style="text-align:${align}" ${h.k?`onclick="state.sort=state.sort.k==='${h.k}'&&state.sort.d==='desc'?{k:'${h.k}',d:'asc'}:{k:'${h.k}',d:'desc'};render()"`:""} >${h.l}${arrow}</th>`}).join("")}
-</tr></thead><tbody>
-${filtered.map(p=>{const m=calc(p);const isP=p.status==="Open"?m.unr>=0:(p.realizedPnl||0)>=0;const dPnl=p.status==="Open"?m.unr:(p.realizedPnl||0);const dPct=m.inv?(dPnl/m.inv)*100:0;const bCls=p.broker==="Zerodha"?"badge-z":p.broker==="mStock"?"badge-m":"badge-i";const sCls=p.status==="Open"?"status-open":"status-closed";const pCls=isP?"pnl-pos":"pnl-neg";const cCls=p.classification==="Short-term"?"cls-st":p.classification==="Long-term"?"cls-lt":"cls-un";const cTxt=p.classification==="Short-term"?"ST":p.classification==="Long-term"?"LT":"—";const sc=p.segCat||getSegCategory(p.segment);const segBadge=sc==="eq"?"badge-eq":sc==="fo"?"badge-fo":"badge-com";const segLbl=sc==="eq"?"EQ":sc==="fo"?"FO":"COM";const ctBadge=p.contractType==="CE"?"type-ce":p.contractType==="PE"?"type-pe":p.contractType==="FUT"?"type-fut":"";const dirC=p.direction==="Short"?"var(--red)":"var(--green)";
-return`<tr>
-<td><span class="sym-name">${sc!=="eq"?(p.underlying||p.symbol):p.symbol}</span>${sc!=="eq"&&p.contractType?`<span class="type-tag ${ctBadge}">${p.contractType}</span>`:""}${sc!=="eq"?`<span class="sym-contract">${p.symbol}</span>`:""}${p.mcxLot?`<span style="font-size:8px;color:var(--yellow)">Lot: ${p.mcxLot.lot} ${p.mcxLot.unit}</span>`:""}${(p.sellOnly||p.preExistQty)?`<span class="sym-pre">PRE-EXISTING${p.preExistQty?" ("+p.preExistQty+" inferred)":""}</span>`:""}${p.notes?`<span class="sym-note">${p.notes}</span>`:""}</td>
-<td><span class="badge ${segBadge}">${segLbl}</span></td>
-<td><span class="badge ${bCls}">${p.broker}</span></td>
-<td><span class="status-badge ${sCls}">${p.status}</span></td>
-<td style="color:${dirC};font-weight:600;font-size:10px">${p.direction==="Short"?"SHORT":"LONG"}</td>
-<td class="td-r"><span class="mono">${m.q.toLocaleString("en-IN")}</span></td>
-<td class="td-r"><span class="mono">${fmt(m.inv)}</span></td>
-<td class="td-r"><span class="mono">${fmt(p.buyPrice)}</span></td>
-<td class="td-r">${p.status==="Open"?`<span class="mono">${p.currentPrice?fmt(p.currentPrice):"—"}</span> <button class="btn-icon" onclick="refreshOne('${p.id}')" ${state.pxLoading[p.id]?"disabled":""}>${state.pxLoading[p.id]?"·":"⟳"}</button>`:`<span class="mono" style="color:var(--text2)">${fmt(p.avgSellPrice)}</span>`}</td>
-<td class="td-r" style="color:${isP?"var(--green)":"var(--red)"};font-weight:600"><span class="mono">${fmt(dPnl)}</span>${p.status==="Open"&&p.realizedPnl?`<span class="real-tag">Real: ${fmt(p.realizedPnl)}</span>`:""}</td>
-<td class="td-r"><span class="pnl-pill ${pCls}">${fp(dPct)}</span></td>
-<td class="td-r">${(sc!=="eq"&&p.expiryDate)?`<span style="font-size:10px;color:var(--purple)">${p.expiryDate}</span>`:`<span class="mono">${fmt(m.cap)}</span>${p.marginPct<100?`<span class="margin-tag">${p.marginPct}% margin</span>`:""}`}</td>
-<td><button class="cls-badge ${cCls}" onclick="cycleClass('${p.id}')">${cTxt}</button></td>
-<td style="position:relative"><div style="display:flex;gap:2px"><button class="btn-icon" onclick="toggleNotes('${p.id}')">📝</button>${sc==="eq"?`<button class="btn-icon" onclick="toggleAdj('${p.id}')" title="Split/Bonus">⚙️</button>`:""}<button class="btn-icon" onclick="openForm(state.positions.find(x=>x.id==='${p.id}'))">✏️</button><button class="btn-icon" style="color:var(--red)" onclick="deletePos('${p.id}')">✕</button></div>${state.notesId===p.id?renderNotesPopup(p):""}${state.adjId===p.id?renderAdjPopup(p):""}</td>
-</tr>`}).join("")}
-</tbody></table>`}
-</div>
-`}
-<div class="footer">Aggregate mode — every upload adds to ledger, positions recomputed from full data · EQ / F&O / Commodity</div>
-${state.showModal?renderModal():""}
-${state.toast?`<div class="toast">${state.toast}</div>`:""}`;
-
-  const uz=document.getElementById("uploadZone");
-  if(uz){uz.addEventListener("dragover",e=>{e.preventDefault();uz.classList.add("dragover")});uz.addEventListener("dragleave",()=>uz.classList.remove("dragover"));uz.addEventListener("drop",e=>{e.preventDefault();uz.classList.remove("dragover");handleDrop(e.dataTransfer.files)})}
-  var fi=document.getElementById("fileInput");
-  if(fi){fi.addEventListener("change",function(e){handleFiles(e)})}
- }catch(renderErr){
-   document.getElementById("app").innerHTML="<pre style='color:#fc8181;padding:20px;font-size:12px'>RENDER ERROR:\n"+renderErr+"\n\n"+renderErr.stack+"\n\nPositions: "+state.positions.length+"\nLedger: "+(state.tradeLedger||[]).length+"</pre>";
-   console.error("render error",renderErr);
- }
-}
-
-function renderNotesPopup(p){return`<div class="popup" style="width:220px"><div class="popup-title">TRADE NOTES</div><textarea id="notes_${p.id}" rows="3" oninput="updateNotes('${p.id}',this.value)">${p.notes||""}</textarea><button class="popup-btn" onclick="state.notesId=null;render()">Done</button></div>`}
-function renderAdjPopup(p){const af=state.adjForm;let preview="";if(af.type==="split"&&af.ratio){const r=parseFloat(af.ratio);preview="Preview: "+Math.round(p.quantity*r)+" @ ₹"+(p.buyPrice/r).toFixed(2)}else if(af.type==="bonus"&&af.ratio){const r=parseFloat(af.ratio);const nq=Math.round(p.quantity*(1+r));preview="Preview: "+nq+" @ ₹"+((p.buyPrice*p.quantity)/nq).toFixed(2)}return`<div class="popup" style="width:280px"><div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:8px">⚙️ PRICE ADJUSTMENT</div><div style="display:flex;gap:4px;margin-bottom:8px">${["split","bonus","manual"].map(t=>`<button class="adj-type-btn ${af.type===t?"active":""}" onclick="state.adjForm.type='${t}';render()">${t==="split"?"Split":t==="bonus"?"Bonus":"Manual"}</button>`).join("")}</div>${af.type==="split"?`<div><label class="adj-lbl">Split Ratio (e.g. 10 for 10:1)</label><input class="adj-inp" type="number" value="${af.ratio}" oninput="state.adjForm.ratio=this.value;render()"></div>${preview?`<p class="adj-preview">${preview}</p>`:""}`:""} ${af.type==="bonus"?`<div><label class="adj-lbl">Bonus Ratio (e.g. 1 for 1:1)</label><input class="adj-inp" type="number" step="0.5" value="${af.ratio}" oninput="state.adjForm.ratio=this.value;render()"></div>${preview?`<p class="adj-preview">${preview}</p>`:""}`:""} ${af.type==="manual"?`<div style="display:flex;flex-direction:column;gap:6px"><div><label class="adj-lbl">New Avg Price</label><input class="adj-inp" type="number" value="${af.newPrice}" oninput="state.adjForm.newPrice=this.value" placeholder="${p.buyPrice}"></div><div><label class="adj-lbl">New Quantity</label><input class="adj-inp" type="number" value="${af.newQty}" oninput="state.adjForm.newQty=this.value" placeholder="${p.quantity}"></div></div>`:""}<div style="display:flex;gap:6px;margin-top:8px"><button class="popup-btn" onclick="applyAdj('${p.id}')">Apply</button><button class="popup-btn" style="background:#2d3748" onclick="state.adjId=null;render()">Cancel</button></div>${(p.adjHistory||[]).length?`<div class="adj-log"><div class="adj-log-title">LOG</div>${p.adjHistory.map(h=>`<div class="adj-log-entry">${h.date} ${h.type}: ${h.from} → ${h.to}</div>`).join("")}</div>`:""}</div>`}
-
-function renderModal(){const f=state.form;return`<div class="modal-overlay" onclick="state.showModal=false;state.editId=null;render()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-header"><h2>${state.editId?"Edit":"Add"} Position</h2><button class="btn-icon" style="font-size:18px;color:var(--text3)" onclick="state.showModal=false;state.editId=null;render()">✕</button></div><div class="form-grid">${[["Broker","select",BROKERS,"broker"],["Segment","select",ALL_SEGMENTS,"segment"],["Symbol","text",null,"symbol"],["Status","select",["Open","Closed"],"status"],["Direction","select",["Long","Short"],"direction"],["Quantity","number",null,"quantity"],["Avg Buy Price","number",null,"buyPrice"],["Current Price","number",null,"currentPrice"],["Buy Date","date",null,"buyDate"],["Margin %","number",null,"marginPct"],["Avg Sell Price","number",null,"avgSellPrice"],["Realized P&L","number",null,"realizedPnl"],["Expiry Date","date",null,"expiryDate"],["Exchange","select",["NSE","BSE","MCX"],"exchange"]].map(([l,t,opts,k])=>{const val=f[k]||"";return`<div class="form-group"><label class="form-label">${l}</label>${t==="select"?`<select class="form-input" onchange="state.form.${k}=this.value;${k==="segment"?`state.form.marginPct=String(MARGIN_DEFAULTS[this.value]||100);`:""}render()">${opts.map(o=>`<option ${val===o?"selected":""}>${o}</option>`).join("")}</select>`:`<input class="form-input" type="${t}" ${t==="number"?'step="0.05"':""} value="${val}" oninput="state.form.${k}=${k==="symbol"?"this.value.toUpperCase()":"this.value"}"${k==="currentPrice"?` placeholder="Auto-fetch"`:""}/>`}</div>`}).join("")}<div class="form-group full"><label class="form-label">CLASSIFICATION</label><div class="cls-row">${CLASSIFICATIONS.map(c=>`<button class="cls-opt ${f.classification===c?"active":""}" onclick="state.form.classification='${c}';render()">${c}</button>`).join("")}</div></div><div class="form-group full"><label class="form-label">NOTES</label><textarea class="form-input" style="min-height:50px" oninput="state.form.notes=this.value">${f.notes||""}</textarea></div></div><div class="modal-footer"><button class="btn-sec" onclick="state.showModal=false;state.editId=null;render()">Cancel</button><button class="btn-pri" onclick="submitForm()" ${!f.symbol||!f.buyPrice||!f.quantity?"disabled":""}>${state.editId?"Update":"Add"}</button></div></div></div>`}
-
-function cycleClass(id){const c=["Unclassified","Short-term","Long-term"];const p=state.positions.find(x=>x.id===id);if(p){p.classification=c[(c.indexOf(p.classification)+1)%3];saveData();render()}}
-async function clearLedger(){
-  state.tradeLedger=[];
-  state.positions=[];
-  state.uploadLog=[];
-  state.lastUpdate=null;
-  state.tab="open";
-  state.segTab="all";
-  state.mainView="positions";
-  // Nuclear option: delete entire IDB database to guarantee clean slate
-  if(_idb){_idb.close();_idb=null;}
-  await new Promise(function(res){
-    var req=indexedDB.deleteDatabase("TradeConsoleDB");
-    req.onsuccess=res;req.onerror=res;req.onblocked=res;
-  });
-  // Also wipe all localStorage variants
-  ["trade-console-ledger-v2","trade-console-ledger","trade-console-v7","trade-console-v6"].forEach(function(k){
-    try{localStorage.removeItem(k)}catch(e){}
-    for(var i=0;i<50;i++){try{localStorage.removeItem(k+"-l"+i)}catch(e){}}
-  });
-  render();
-  showToast("🗑 All data cleared — upload fresh files");
-}
-// ===== EXPORT / IMPORT =====
-function debugLedger(){
-  var targets=["SHILCTECH","EMIL","JAGSNPHARM","JAICORPLTD","KSOLVES","CEINSYSTECH"];
-  var out={total:state.tradeLedger.length,isinCoverage:0,problematic:{}};
-  var withISIN=state.tradeLedger.filter(t=>t.isin&&t.isin.length>0).length;
-  out.isinCoverage=withISIN+"/"+state.tradeLedger.length;
-  targets.forEach(function(sym){
-    var trades=state.tradeLedger.filter(t=>t.symbol===sym);
-    var buys=trades.filter(t=>t.tradeType==="buy").reduce((a,t)=>a+t.quantity,0);
-    var sells=trades.filter(t=>t.tradeType==="sell").reduce((a,t)=>a+t.quantity,0);
-    var sampleISIN=trades.length?trades[0].isin:"N/A";
-    out.problematic[sym]={trades:trades.length,buys:buys,sells:sells,net:buys-sells,isin:sampleISIN};
-  });
-  console.log("=== LEDGER DEBUG ===");
-  console.log(JSON.stringify(out,null,2));
-  alert("Debug info in browser console (F12).\n\nISIN coverage: "+out.isinCoverage+"\n\n"+
-    targets.map(s=>{var d=out.problematic[s];return s+": buys="+d.buys+" sells="+d.sells+" net="+d.net+" isin="+d.isin}).join("\n"));
-}
-function exportData(){
-  var payload={
-    version:"trade-console-ledger-v1",
-    exportedAt:new Date().toISOString(),
-    positions:state.positions,
-    tradeLedger:state.tradeLedger,
-    lastUpdate:state.lastUpdate
-  };
-  var blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement("a");
-  a.href=url;
-  var date=new Date().toISOString().slice(0,10);
-  a.download="trade-console-backup-"+date+".json";
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("✅ Backup exported — "+state.tradeLedger.length+" trades, "+state.positions.length+" positions");
-}
-
-function importData(){
-  var input=document.createElement("input");
-  input.type="file";
-  input.accept=".json";
-  input.onchange=async function(e){
-    var file=e.target.files[0];
-    if(!file)return;
-    var reader=new FileReader();
-    reader.onload=async function(ev){
-      try{
-        var d=JSON.parse(ev.target.result);
-        if(!d.version||!d.version.startsWith("trade-console-ledger")){
-          showToast("❌ Invalid backup file");return;
-        }
-        var importedLedger=d.tradeLedger||[];
-        var importedPos=d.positions||[];
-        // Merge — deduplicate by tradeId or alt key
-        var added=0;
-        if(importedLedger.length){
-          var idKeys=new Set();
-          var altKeys=new Set();
-          state.tradeLedger.forEach(function(t){
-            if(t.tradeId)idKeys.add(t.broker+"|"+t.symbol+"|"+t.segment+"|"+t.tradeId);
-            else altKeys.add(t.broker+"|"+t.symbol+"|"+t.date+"|"+t.tradeType+"|"+t.quantity+"|"+t.price);
-          });
-          importedLedger.forEach(function(t){
-            var isDupe=false;
-            if(t.tradeId){var k=t.broker+"|"+t.symbol+"|"+t.segment+"|"+t.tradeId;isDupe=idKeys.has(k);if(!isDupe)idKeys.add(k)}
-            else{var k=t.broker+"|"+t.symbol+"|"+t.date+"|"+t.tradeType+"|"+t.quantity+"|"+t.price;isDupe=altKeys.has(k);if(!isDupe)altKeys.add(k)}
-            if(!isDupe){state.tradeLedger.push(t);added++}
-          });
-          if(added>0)recomputePositionsFromLedger();
-        } else if(importedPos.length){
-          // Positions-only backup
-          state.positions=importedPos;
-        }
-        state.lastUpdate=d.lastUpdate||state.lastUpdate;
-        await saveData();
-        render();
-        showToast("✅ Imported: "+added+" new trades, "+state.positions.length+" total positions");
-      }catch(err){showToast("❌ Import failed: "+err.message)}
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
-
-function toggleNotes(id){state.notesId=state.notesId===id?null:id;state.adjId=null;render()}
-function toggleAdj(id){state.adjId=state.adjId===id?null:id;state.notesId=null;state.adjForm={type:"split",ratio:"",newPrice:"",newQty:""};render()}
-function updateNotes(id,v){const p=state.positions.find(x=>x.id===id);if(p){p.notes=v;saveData()}}
-function deletePos(id){if(confirm("Delete?")){state.positions=state.positions.filter(x=>x.id!==id);saveData();render()}}
-
-let chatState={open:false,messages:[],typing:false,pendingQuestions:[],initialized:false};
-function buildPortfolioContext(){const open=state.positions.filter(p=>p.status==="Open");const closed=state.positions.filter(p=>p.status==="Closed");const sm=state.positions.reduce((a,p)=>{const m=calc(p);if(p.status==="Open"){a.oI+=m.inv;a.oU+=m.unr}a.tR+=m.real;return a},{oI:0,oU:0,tR:0});let ctx="PORTFOLIO: Open:"+open.length+" Closed:"+closed.length+" Invested:"+fmt(sm.oI)+" Unreal:"+fmt(sm.oU)+" Real:"+fmt(sm.tR)+"\nOPEN:\n";open.forEach(p=>{const m=calc(p);ctx+=p.symbol+" ("+p.broker+","+p.segment+","+p.direction+"): "+m.q+"@₹"+p.buyPrice+" CMP:"+(p.currentPrice?"₹"+p.currentPrice:"N/A")+" P&L:"+fmt(m.unr)+(p.expiryDate?" Exp:"+p.expiryDate:"")+"\n"});return ctx}
-
-function initChat(){if(chatState.initialized)return;chatState.initialized=true;chatState.messages.push({role:"bot",text:"Hey Keshav! 👋 Portfolio assistant ready — EQ, F&O, Commodity."});const open=state.positions.filter(p=>p.status==="Open");const noP=open.filter(p=>!p.currentPrice);if(noP.length>0){chatState.messages.push({role:"bot",text:noP.length+" open without prices. Refresh?",options:["Yes","No"],questionId:"fetch_prices"})}renderChat()}
-function handleQuickAction(qId,choice){chatState.messages.push({role:"user",text:choice});if(qId==="fetch_prices"&&choice==="Yes"){chatState.messages.push({role:"bot",text:"Refreshing..."});renderChat();refreshAll().then(()=>{chatState.messages.push({role:"system",text:"✅ Done!"});renderChat()})}else{chatState.messages.push({role:"bot",text:"OK!"});renderChat()}}
-
-async function sendChatMessage(text){if(!text.trim())return;chatState.messages.push({role:"user",text:text.trim()});chatState.typing=true;renderChat();const sys="You are a portfolio assistant. EQ/FO/COM data available. Be concise. Use ₹.\n"+buildPortfolioContext();try{var apiKey=localStorage.getItem("tc_api_key")||"";
-if(!apiKey){chatState.messages.push({role:"bot",text:"⚠️ No API key set. Click ⚙️ in the chat header to add your Anthropic API key."});chatState.typing=false;renderChat();return}
-const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:sys,messages:chatState.messages.filter(m=>m.role==="user"||m.role==="assistant").slice(-10).map(m=>({role:m.role==="bot"?"assistant":m.role,content:m.text}))})});const d=await r.json();if(d.error){chatState.messages.push({role:"bot",text:"❌ API error: "+d.error.message});chatState.typing=false;renderChat();return}const reply=d.content?.map(i=>i.text||"").filter(Boolean).join(" ").trim()||"Error";chatState.messages.push({role:"bot",text:reply})}catch{chatState.messages.push({role:"bot",text:"Connection error."})}chatState.typing=false;renderChat()}
-
-function toggleChat(){chatState.open=!chatState.open;if(chatState.open)initChat();renderChat()}
-function saveApiKey(){var k=document.getElementById("apiKeyInput");if(k&&k.value.trim()){localStorage.setItem("tc_api_key",k.value.trim());document.getElementById("apiKeyPanel").style.display="none";showToast("✅ API key saved")}}
-function toggleApiKeyPanel(){var p=document.getElementById("apiKeyPanel");if(p)p.style.display=p.style.display==="none"?"block":"none"}
-function renderChat(){const fab=document.getElementById("chatFab");const panel=document.getElementById("chatPanel");fab.innerHTML=chatState.open?"":(`<button class="chat-fab" onclick="toggleChat()">💬</button>`);if(!chatState.open){panel.style.display="none";return}panel.style.display="flex";panel.innerHTML=`<div class="chat-panel"><div class="chat-header"><div><h3>💬 Assistant</h3><span>${state.positions.filter(p=>p.status==="Open").length} open</span></div><div style="display:flex;gap:6px;align-items:center"><button class="btn-icon" style="font-size:14px;color:var(--text3)" onclick="toggleApiKeyPanel()" title="Set API Key">⚙️</button><button class="btn-icon" style="font-size:16px;color:var(--text3)" onclick="toggleChat()">✕</button></div></div><div id="apiKeyPanel" style="display:none;padding:10px 14px;background:var(--bg);border-bottom:1px solid #2d3748;font-size:11px"><div style="margin-bottom:6px;color:var(--text3)">Anthropic API Key (stored in browser only)</div><div style="display:flex;gap:6px"><input id="apiKeyInput" type="password" placeholder="sk-ant-..." value="${localStorage.getItem('tc_api_key')||''}" style="flex:1;padding:6px 8px;background:var(--bg2);border:1px solid #2d3748;color:var(--text);border-radius:6px;font-size:11px;font-family:inherit"><button onclick="saveApiKey()" style="padding:6px 12px;background:var(--blue2);border:none;color:#fff;border-radius:6px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer">Save</button></div></div><div class="chat-body" id="chatBody">${chatState.messages.map(m=>{if(m.role==="system")return`<div class="chat-msg system">${m.text}</div>`;let h=`<div class="chat-msg ${m.role==="user"?"user":"bot"}">${m.text}`;if(m.options){h+=`<div class="action-btns">${m.options.map(o=>`<button class="action-btn" onclick="handleQuickAction('${m.questionId}','${o}')">${o}</button>`).join("")}</div>`}h+="</div>";return h}).join("")}${chatState.typing?'<div class="chat-msg bot"><div class="chat-typing"><span></span><span></span><span></span></div></div>':""}</div><div class="chat-input-wrap"><input id="chatInput" placeholder="Ask about portfolio..." onkeydown="if(event.key==='Enter'){sendChatMessage(this.value);this.value=''}"><button onclick="const i=document.getElementById('chatInput');sendChatMessage(i.value);i.value=''">Send</button></div></div>`;setTimeout(()=>{const b=document.getElementById("chatBody");if(b)b.scrollTop=b.scrollHeight},50)}
-
-(async()=>{await loadData();render();renderChat()})();
-
+// Auto-load on open
+if(state.backendUrl) fetchPortfolio();
 </script>
 </body>
 </html>
