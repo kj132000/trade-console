@@ -12,7 +12,6 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
 button, select{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
 input, select{font-family:inherit;outline:none}
-input:focus, select:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2px rgba(99,179,237,.15)}
 
 .container{max-width:1400px;margin:0 auto;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
@@ -32,7 +31,8 @@ input:focus, select:focus{border-color:var(--blue)!important;box-shadow:0 0 0 2p
 
 .table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;text-align:left}
-th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3)}
+th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;user-select:none;}
+th:hover{color:var(--white)}
 td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
 .positive{color:var(--green);font-weight:500}
 .negative{color:var(--red);font-weight:500}
@@ -50,12 +50,17 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <div class="title">TRADE CONSOLE</div>
         </div>
         <div class="controls">
+            <select id="brokerFilter" class="btn-sec" onchange="renderUI()">
+                <option value="ALL">All Brokers</option>
+            </select>
             <select id="segFilter" class="btn-sec" onchange="renderUI()">
                 <option value="ALL">All Segments</option>
                 <option value="EQ">Equity</option>
                 <option value="F&O">F&O</option>
                 <option value="MCX">Commodity</option>
             </select>
+
+            <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear Ledger</button>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload CSV</button>
             <button class="btn-sec" onclick="toggleSettings()">⚙️ Settings</button>
@@ -99,7 +104,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <table>
             <thead id="tableHead"></thead>
             <tbody id="tableBody">
-                <tr><td colspan="8" style="text-align:center">No data loaded.</td></tr>
+                <tr><td colspan="9" style="text-align:center">No data loaded.</td></tr>
             </tbody>
         </table>
     </div>
@@ -110,6 +115,8 @@ let state = {
     open: [],
     closed: [],
     currentTab: 'active',
+    sortCol: 'Symbol',
+    sortAsc: true,
     apiKey: localStorage.getItem('tc_gemini_key') || '',
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000'
 };
@@ -137,15 +144,31 @@ function setTab(tab) {
     renderUI();
 }
 
+function handleSort(col) {
+    if (state.sortCol === col) state.sortAsc = !state.sortAsc;
+    else { state.sortCol = col; state.sortAsc = true; }
+    renderUI();
+}
+
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+async function clearLedger() {
+    if(!confirm("Are you sure you want to permanently delete all trade data?")) return;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Clearing Ledger...</td></tr>`;
+    try {
+        await fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' });
+        state.open = []; state.closed = [];
+        renderUI();
+    } catch(e) { alert("Failed to clear data."); }
+}
 
 async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
     const formData = new FormData();
     for(let f of files) formData.append("files", f);
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Uploading...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Uploading & Appending...</td></tr>`;
     try {
         const res = await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         if(res.ok) fetchPortfolio();
@@ -153,32 +176,66 @@ async function handleFileUpload(event) {
 }
 
 async function fetchPortfolio() {
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center">Syncing Data & Live Prices...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Syncing Data & Live Prices...</td></tr>`;
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
         if(!res.ok) throw new Error();
         const data = await res.json();
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
+        populateBrokerDropdown();
         renderUI();
     } catch(e) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red)">Failed to load data.</td></tr>`;
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red)">Failed to load data.</td></tr>`;
     }
 }
 
-function renderUI() {
-    const filter = document.getElementById('segFilter').value;
-    let dataList = state.currentTab === 'active' ? state.open : state.closed;
-    
-    if (filter !== 'ALL') {
-        dataList = dataList.filter(p => p.Segment === filter || (filter==='F&O' && p.Segment.includes('FO')));
-    }
+function populateBrokerDropdown() {
+    const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker)]);
+    const select = document.getElementById('brokerFilter');
+    const currentVal = select.value;
+    select.innerHTML = '<option value="ALL">All Brokers</option>';
+    allBrokers.forEach(b => {
+        if(b) select.innerHTML += `<option value="${b}">${b}</option>`;
+    });
+    select.value = currentVal;
+}
 
+function renderUI() {
+    const bFilter = document.getElementById('brokerFilter').value;
+    const sFilter = document.getElementById('segFilter').value;
+    
+    let dataList = [...(state.currentTab === 'active' ? state.open : state.closed)];
+    
+    // Filters
+    if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
+    if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+
+    // Sorting
+    dataList.sort((a, b) => {
+        let valA = a[state.sortCol] || '';
+        let valB = b[state.sortCol] || '';
+        if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+        if (valA < valB) return state.sortAsc ? -1 : 1;
+        if (valA > valB) return state.sortAsc ? 1 : -1;
+        return 0;
+    });
+
+    const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0;
     let html = '';
 
     if (state.currentTab === 'active') {
-        document.getElementById('tableHead').innerHTML = `<tr><th>SYMBOL</th><th>SEG</th><th>DIR</th><th>QTY</th><th>AVG PRICE</th><th>CMP</th><th>P&L</th><th>ROI %</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
+            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
+            <th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th>
+            <th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th>
+            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
+            <th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th>
+        </tr>`;
         document.getElementById('lblPnl').innerText = 'NET UNREALIZED P&L';
         document.getElementById('lblInv').innerText = 'INVESTED CAPITAL';
         
@@ -188,15 +245,25 @@ function renderUI() {
             const sgn = p["P&L"] > 0 ? '+' : '';
             html += `<tr>
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
                 <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-                <td>${p.Direction}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
+                <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
                 <td style="color:var(--white)">${fmtDec(p.CMP)}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
             </tr>`;
         });
     } else {
-        document.getElementById('tableHead').innerHTML = `<tr><th>SYMBOL</th><th>SEG</th><th>QTY</th><th>ENTRY PRICE</th><th>EXIT PRICE</th><th>P&L</th><th>EXIT DATE</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
+            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
+            <th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th>
+            <th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th>
+            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
+            <th onclick="handleSort('Exit Date')">DATE${thIcon('Exit Date')}</th>
+        </tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
         
@@ -208,6 +275,7 @@ function renderUI() {
             const sgn = p["P&L"] > 0 ? '+' : '';
             html += `<tr>
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
                 <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
@@ -217,7 +285,7 @@ function renderUI() {
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
     }
 
-    if(!dataList.length) html = `<tr><td colspan="8" style="text-align:center">No data found.</td></tr>`;
+    if(!dataList.length) html = `<tr><td colspan="9" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
     const pnlEl = document.getElementById('valPnl');
