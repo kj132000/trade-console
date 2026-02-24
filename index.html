@@ -39,6 +39,12 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 .tab-container{display:flex;gap:10px;margin-bottom:16px}
 #settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
+
+/* New Terminal Styles */
+.terminal-wrapper{background:#000;border:1px solid #333;border-radius:8px;margin-top:24px;overflow:hidden;}
+.terminal-header{background:#111;padding:8px 16px;font-family:'Outfit';font-size:12px;color:#888;display:flex;justify-content:space-between;cursor:pointer;}
+.terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
+.log-line{margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -108,6 +114,16 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             </tbody>
         </table>
     </div>
+
+    <div class="terminal-wrapper">
+        <div class="terminal-header" onclick="toggleTerminal()">
+            <span>>_ SYSTEM LOGS</span>
+            <span id="termToggleBtn">▼</span>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+            <div class="log-line">System initialized. Awaiting commands...</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -118,6 +134,7 @@ let state = {
     sortCol: 'Symbol',
     sortAsc: true,
     fetchingPrices: false, 
+    isPollingLogs: false,
     apiKey: localStorage.getItem('tc_gemini_key') || '',
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000'
 };
@@ -151,17 +168,61 @@ function handleSort(col) {
     renderUI();
 }
 
+function toggleTerminal() {
+    const body = document.getElementById('terminalBody');
+    const btn = document.getElementById('termToggleBtn');
+    if(body.style.display === 'none') {
+        body.style.display = 'block';
+        btn.innerText = '▼';
+    } else {
+        body.style.display = 'none';
+        btn.innerText = '▲';
+    }
+}
+
+// ⚡ Terminal Logging Logic
+function appendLog(text) {
+    const tb = document.getElementById('terminalBody');
+    tb.innerHTML += `<div class="log-line">${text}</div>`;
+    tb.scrollTop = tb.scrollHeight;
+}
+
+async function pollLogs() {
+    if(!state.isPollingLogs) return;
+    try {
+        const res = await fetch(`${state.backendUrl}/api/logs`);
+        if(res.ok) {
+            const data = await res.json();
+            data.logs.forEach(log => appendLog(log));
+        }
+    } catch(e){}
+    setTimeout(pollLogs, 500); // Check every half-second
+}
+
+function startLogPolling() {
+    if(!state.isPollingLogs) {
+        state.isPollingLogs = true;
+        pollLogs();
+    }
+}
+
+function stopLogPolling() {
+    setTimeout(() => { state.isPollingLogs = false; }, 2000); // Let final logs arrive before stopping
+}
+
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
 async function clearLedger() {
     if(!confirm("Are you sure you want to permanently delete all trade data?")) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Clearing Ledger...</td></tr>`;
+    startLogPolling();
     try {
         await fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' });
         state.open = []; state.closed = [];
         renderUI();
     } catch(e) { alert("Failed to clear data."); }
+    stopLogPolling();
 }
 
 async function handleFileUpload(event) {
@@ -170,6 +231,7 @@ async function handleFileUpload(event) {
     const formData = new FormData();
     for(let f of files) formData.append("files", f);
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Uploading & Appending...</td></tr>`;
+    startLogPolling();
     try {
         const res = await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         if(res.ok) fetchPortfolio();
@@ -178,6 +240,7 @@ async function handleFileUpload(event) {
 
 async function fetchPortfolio() {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center">Calculating Positions...</td></tr>`;
+    startLogPolling();
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
         if(!res.ok) throw new Error();
@@ -190,9 +253,12 @@ async function fetchPortfolio() {
         
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
+        } else {
+            stopLogPolling();
         }
     } catch(e) {
         document.getElementById('tableBody').innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red)">Failed to load data.</td></tr>`;
+        stopLogPolling();
     }
 }
 
@@ -224,6 +290,7 @@ async function fetchLivePrices(token_map) {
     } finally {
         state.fetchingPrices = false;
         renderUI(); 
+        stopLogPolling();
     }
 }
 
