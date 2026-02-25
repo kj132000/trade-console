@@ -150,10 +150,11 @@ function initDB() {
 
 async function saveFileToBrowser(filename, textContent) {
     const db = await initDB();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, "readwrite");
         tx.objectStore(STORE_NAME).put(textContent, filename);
         tx.oncomplete = resolve;
+        tx.onerror = reject;
     });
 }
 
@@ -256,21 +257,34 @@ async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
     
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Browser & Cloud...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving data... (May take ~45s if Cloud server is waking up)</td></tr>`;
     startLogPolling();
     
-    for(let f of files) {
-        const text = await f.text();
-        await saveFileToBrowser(f.name, text);
-    }
-    
-    const formData = new FormData();
-    for(let f of files) formData.append("files", f);
-    
     try {
+        for(let f of files) {
+            try {
+                const text = await f.text();
+                await saveFileToBrowser(f.name, text);
+            } catch (dbErr) {
+                console.warn("Could not save to browser (Privacy mode active?). Skipping local backup.", dbErr);
+            }
+        }
+        
+        const formData = new FormData();
+        for(let f of files) formData.append("files", f);
+        
         const res = await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
-        if(res.ok) fetchPortfolio();
-    } catch(e) { alert("Backend upload failed."); }
+        
+        if(res.ok) {
+            fetchPortfolio();
+        } else {
+            throw new Error(`Server returned status: ${res.status}`);
+        }
+    } catch(e) { 
+        alert("Upload failed. Make sure your Backend URL is correct and the server is running.");
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Upload Error. Please check settings.</td></tr>`;
+        stopLogPolling();
+    }
 }
 
 async function fetchPortfolio() {
