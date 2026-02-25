@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trade Console</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
@@ -44,6 +45,11 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .terminal-header{background:#111;padding:8px 16px;font-family:'Outfit';font-size:12px;color:#888;display:flex;justify-content:space-between;cursor:pointer;}
 .terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
 .log-line{margin-bottom:4px;}
+
+/* Drive Status Button */
+#driveBtn{background:#1a73e8;border:none;color:white;display:flex;align-items:center;gap:6px;}
+#driveBtn:hover{background:#1557b0}
+#driveBtn.synced{background:var(--green);pointer-events:none;}
 </style>
 </head>
 <body>
@@ -64,20 +70,21 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
                 <option value="F&O">F&O</option>
                 <option value="MCX">Commodity</option>
             </select>
+            
+            <button id="driveBtn" class="btn-sec" onclick="authGoogleDrive()">
+                <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
+                <span id="driveBtnText">Connect Drive</span>
+            </button>
 
-            <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear Ledger</button>
+            <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
-            <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload CSV</button>
-            <button class="btn-sec" onclick="toggleSettings()">⚙️ Settings</button>
+            <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
+            <button class="btn-sec" onclick="toggleSettings()">⚙️</button>
             <button class="btn-pri" onclick="fetchPortfolio()">🔄 Refresh</button>
         </div>
     </div>
 
     <div id="settingsPanel">
-        <div style="flex:1">
-            <label style="font-size:11px;color:var(--text3)">Gemini API Key</label>
-            <input type="password" id="geminiKey" placeholder="AIzaSy..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
-        </div>
         <div style="flex:1">
             <label style="font-size:11px;color:var(--text3)">Backend URL</label>
             <input type="text" id="backendUrl" placeholder="https://..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
@@ -126,74 +133,147 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 </div>
 
 <script>
+// --- Global State ---
 let state = {
     open: [], closed: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
-    apiKey: localStorage.getItem('tc_gemini_key') || '',
-    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000'
+    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
+    driveToken: null, driveFolderId: null
 };
 
-document.getElementById('geminiKey').value = state.apiKey;
 document.getElementById('backendUrl').value = state.backendUrl;
+const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
 
-const DB_NAME = "TradeConsoleDB";
-const STORE_NAME = "csvFiles";
+// --- Google Drive API Logic ---
+let tokenClient;
+window.onload = function() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+                state.driveToken = tokenResponse.access_token;
+                const btn = document.getElementById('driveBtn');
+                btn.classList.add('synced');
+                document.getElementById('driveBtnText').innerText = "Drive Synced";
+                appendLog("✅ Connected to Google Drive.");
+                getOrCreateFolder(); // Setup folder in background
+            }
+        },
+    });
+};
 
-function initDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME); };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject("IndexedDB error");
+function authGoogleDrive() {
+    tokenClient.requestAccessToken();
+}
+
+async function getOrCreateFolder() {
+    if (state.driveFolderId) return state.driveFolderId;
+    if (!state.driveToken) return null;
+
+    try {
+        const q = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
+            headers: { Authorization: `Bearer ${state.driveToken}` }
+        });
+        const data = await res.json();
+        
+        if (data.files && data.files.length > 0) {
+            state.driveFolderId = data.files[0].id;
+        } else {
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })
+            });
+            const createData = await createRes.json();
+            state.driveFolderId = createData.id;
+        }
+        return state.driveFolderId;
+    } catch(e) { console.error("Drive Folder Error", e); return null; }
+}
+
+async function uploadFileToDrive(filename, content) {
+    const folderId = await getOrCreateFolder();
+    if (!folderId) return;
+
+    // 1. Check if file exists to update or create
+    const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
+        headers: { Authorization: `Bearer ${state.driveToken}` }
+    });
+    const searchData = await searchRes.json();
+    
+    let fileId;
+    if (searchData.files && searchData.files.length > 0) {
+        fileId = searchData.files[0].id;
+    } else {
+        // Create empty file metadata
+        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: filename, parents: [folderId] })
+        });
+        const metaData = await metaRes.json();
+        fileId = metaData.id;
+    }
+
+    // 2. Upload the raw text content
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' },
+        body: content
     });
 }
 
-async function saveFileToBrowser(filename, textContent) {
-    const db = await initDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).put(textContent, filename);
-        tx.oncomplete = resolve;
-        tx.onerror = reject;
+async function downloadAllFromDrive() {
+    const folderId = await getOrCreateFolder();
+    if (!folderId) return [];
+    
+    appendLog("Scanning Google Drive for backup files...");
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, {
+        headers: { Authorization: `Bearer ${state.driveToken}` }
     });
+    const listData = await listRes.json();
+    
+    const files = [];
+    if (listData.files) {
+        for (let file of listData.files) {
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+                headers: { Authorization: `Bearer ${state.driveToken}` }
+            });
+            const content = await fileRes.text();
+            files.push({ filename: file.name, content: content });
+        }
+    }
+    return files;
 }
 
-async function loadFilesFromBrowser() {
-    const db = await initDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.getAll();
-        const keysReq = store.getAllKeys();
-        req.onsuccess = () => {
-            keysReq.onsuccess = () => {
-                const files = [];
-                for(let i=0; i<req.result.length; i++) {
-                    files.push({ filename: keysReq.result[i], content: req.result[i] });
-                }
-                resolve(files);
-            };
-        };
+async function clearDriveFiles() {
+    const folderId = await getOrCreateFolder();
+    if (!folderId) return;
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, {
+        headers: { Authorization: `Bearer ${state.driveToken}` }
     });
+    const listData = await listRes.json();
+    if (listData.files) {
+        for (let file of listData.files) {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${state.driveToken}` }
+            });
+        }
+    }
 }
+// ------------------------------
 
-async function clearBrowserFiles() {
-    const db = await initDB();
-    return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        tx.objectStore(STORE_NAME).clear();
-        tx.oncomplete = resolve;
-    });
-}
-
+// --- UI & Basic Setup ---
 function toggleSettings() {
     const p = document.getElementById('settingsPanel');
     p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
 }
 function saveSettings() {
-    state.apiKey = document.getElementById('geminiKey').value;
     state.backendUrl = document.getElementById('backendUrl').value;
-    localStorage.setItem('tc_gemini_key', state.apiKey);
     localStorage.setItem('tc_backend_url', state.backendUrl);
     toggleSettings();
 }
@@ -240,13 +320,14 @@ function stopLogPolling() {
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
+// --- Core Actions ---
 async function clearLedger() {
-    if(!confirm("Permanently delete all data from Cloud and Browser?")) return;
+    if(!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Clearing Ledger...</td></tr>`;
     startLogPolling();
     try {
         await fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' });
-        await clearBrowserFiles();
+        if(state.driveToken) await clearDriveFiles();
         state.open = []; state.closed = [];
         renderUI();
     } catch(e) { alert("Failed to clear data."); }
@@ -257,32 +338,27 @@ async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
     
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving data... (May take ~45s if Cloud server is waking up)</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
     startLogPolling();
     
     try {
-        for(let f of files) {
-            try {
+        // 1. Upload to Render for immediate processing
+        const formData = new FormData();
+        for(let f of files) formData.append("files", f);
+        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        
+        // 2. Backup to Google Drive (if logged in)
+        if(state.driveToken) {
+            appendLog("Backing up CSVs to Google Drive...");
+            for(let f of files) {
                 const text = await f.text();
-                await saveFileToBrowser(f.name, text);
-            } catch (dbErr) {
-                console.warn("Could not save to browser (Privacy mode active?). Skipping local backup.", dbErr);
+                await uploadFileToDrive(f.name, text);
             }
         }
         
-        const formData = new FormData();
-        for(let f of files) formData.append("files", f);
-        
-        const res = await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
-        
-        if(res.ok) {
-            fetchPortfolio();
-        } else {
-            throw new Error(`Server returned status: ${res.status}`);
-        }
+        fetchPortfolio();
     } catch(e) { 
-        alert("Upload failed. Make sure your Backend URL is correct and the server is running.");
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Upload Error. Please check settings.</td></tr>`;
+        alert("Upload failed.");
         stopLogPolling();
     }
 }
@@ -295,16 +371,34 @@ async function fetchPortfolio() {
         if(!res.ok) throw new Error();
         const data = await res.json();
         
+        // ⚡ ZERO-COST CLOUD RESTORE
         if (data.positions.open.length === 0 && data.positions.closed.length === 0) {
-            const localFiles = await loadFilesFromBrowser();
-            if (localFiles.length > 0) {
-                appendLog("Cloud reset detected. Restoring files from browser memory...");
-                await fetch(`${state.backendUrl}/api/restore`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(localFiles)
-                });
-                return fetchPortfolio();
+            if (state.driveToken) {
+                appendLog("Cloud reset detected. Pulling files from Google Drive...");
+                const driveFiles = await downloadAllFromDrive();
+                
+                if (driveFiles.length > 0) {
+                    const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
+                    const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
+                    
+                    if (cacheFile) {
+                        await fetch(`${state.backendUrl}/api/restore_cache`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: cacheFile.content
+                        });
+                    }
+                    if (csvFiles.length > 0) {
+                        await fetch(`${state.backendUrl}/api/restore`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(csvFiles)
+                        });
+                    }
+                    return fetchPortfolio(); // Run again now that server has the files
+                }
+            } else {
+                appendLog("Server is empty. Connect Google Drive to auto-restore.");
             }
         }
         
@@ -313,13 +407,25 @@ async function fetchPortfolio() {
         populateBrokerDropdown();
         renderUI(); 
         
+        // ⚡ CACHE BACKUP TO DRIVE
+        if (state.driveToken) {
+            const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
+            if (cacheRes.ok) {
+                const cacheData = await cacheRes.json();
+                if (Object.keys(cacheData).length > 0) {
+                    await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
+                    appendLog("Corporate Cache successfully secured in Google Drive.");
+                }
+            }
+        }
+        
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
         } else {
             stopLogPolling();
         }
     } catch(e) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Failed to load data.</td></tr>`;
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Failed to load data. Is server running?</td></tr>`;
         stopLogPolling();
     }
 }
@@ -353,6 +459,7 @@ async function fetchLivePrices(token_map) {
     }
 }
 
+// --- Rendering Logic ---
 function populateBrokerDropdown() {
     const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker)]);
     const select = document.getElementById('brokerFilter');
