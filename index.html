@@ -46,7 +46,6 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
 .log-line{margin-bottom:4px;}
 
-/* Drive Status Button */
 #driveBtn{background:#1a73e8;border:none;color:white;display:flex;align-items:center;gap:6px;}
 #driveBtn:hover{background:#1557b0}
 #driveBtn.synced{background:var(--green);pointer-events:none;}
@@ -110,6 +109,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
         <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
     </div>
 
     <div class="table-container">
@@ -133,9 +133,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 </div>
 
 <script>
-// --- Global State ---
 let state = {
-    open: [], closed: [], currentTab: 'active',
+    open: [], closed: [], corp: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null
@@ -144,7 +143,6 @@ let state = {
 document.getElementById('backendUrl').value = state.backendUrl;
 const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
 
-// --- Google Drive API Logic ---
 let tokenClient;
 window.onload = function() {
     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -157,15 +155,13 @@ window.onload = function() {
                 btn.classList.add('synced');
                 document.getElementById('driveBtnText').innerText = "Drive Synced";
                 appendLog("✅ Connected to Google Drive.");
-                getOrCreateFolder(); // Setup folder in background
+                getOrCreateFolder(); 
             }
         },
     });
 };
 
-function authGoogleDrive() {
-    tokenClient.requestAccessToken();
-}
+function authGoogleDrive() { tokenClient.requestAccessToken(); }
 
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
@@ -190,14 +186,13 @@ async function getOrCreateFolder() {
             state.driveFolderId = createData.id;
         }
         return state.driveFolderId;
-    } catch(e) { console.error("Drive Folder Error", e); return null; }
+    } catch(e) { return null; }
 }
 
 async function uploadFileToDrive(filename, content) {
     const folderId = await getOrCreateFolder();
     if (!folderId) return;
 
-    // 1. Check if file exists to update or create
     const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
     const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
         headers: { Authorization: `Bearer ${state.driveToken}` }
@@ -208,7 +203,6 @@ async function uploadFileToDrive(filename, content) {
     if (searchData.files && searchData.files.length > 0) {
         fileId = searchData.files[0].id;
     } else {
-        // Create empty file metadata
         const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
             method: 'POST',
             headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
@@ -218,7 +212,6 @@ async function uploadFileToDrive(filename, content) {
         fileId = metaData.id;
     }
 
-    // 2. Upload the raw text content
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' },
@@ -252,22 +245,13 @@ async function downloadAllFromDrive() {
 async function clearDriveFiles() {
     const folderId = await getOrCreateFolder();
     if (!folderId) return;
-    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${state.driveToken}` }
     });
-    const listData = await listRes.json();
-    if (listData.files) {
-        for (let file of listData.files) {
-            await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${state.driveToken}` }
-            });
-        }
-    }
+    state.driveFolderId = null; 
 }
-// ------------------------------
 
-// --- UI & Basic Setup ---
 function toggleSettings() {
     const p = document.getElementById('settingsPanel');
     p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
@@ -281,6 +265,7 @@ function setTab(tab) {
     state.currentTab = tab;
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
     renderUI();
 }
 function handleSort(col) {
@@ -320,16 +305,17 @@ function stopLogPolling() {
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
-// --- Core Actions ---
 async function clearLedger() {
     if(!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Clearing Ledger...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger... (Waking up server, please wait ~45s)</td></tr>`;
     startLogPolling();
     try {
-        await fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' });
-        if(state.driveToken) await clearDriveFiles();
-        state.open = []; state.closed = [];
+        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn("Server wipe delay", e));
+        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn("Drive wipe delay", e)) : Promise.resolve();
+        await Promise.all([p1, p2]);
+        state.open = []; state.closed = []; state.corp = [];
         renderUI();
+        appendLog("✅ Ledger and Google Drive Cache completely wiped.");
     } catch(e) { alert("Failed to clear data."); }
     stopLogPolling();
 }
@@ -342,12 +328,10 @@ async function handleFileUpload(event) {
     startLogPolling();
     
     try {
-        // 1. Upload to Render for immediate processing
         const formData = new FormData();
         for(let f of files) formData.append("files", f);
         await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         
-        // 2. Backup to Google Drive (if logged in)
         if(state.driveToken) {
             appendLog("Backing up CSVs to Google Drive...");
             for(let f of files) {
@@ -355,7 +339,6 @@ async function handleFileUpload(event) {
                 await uploadFileToDrive(f.name, text);
             }
         }
-        
         fetchPortfolio();
     } catch(e) { 
         alert("Upload failed.");
@@ -371,7 +354,6 @@ async function fetchPortfolio() {
         if(!res.ok) throw new Error();
         const data = await res.json();
         
-        // ⚡ ZERO-COST CLOUD RESTORE
         if (data.positions.open.length === 0 && data.positions.closed.length === 0) {
             if (state.driveToken) {
                 appendLog("Cloud reset detected. Pulling files from Google Drive...");
@@ -395,7 +377,7 @@ async function fetchPortfolio() {
                             body: JSON.stringify(csvFiles)
                         });
                     }
-                    return fetchPortfolio(); // Run again now that server has the files
+                    return fetchPortfolio(); 
                 }
             } else {
                 appendLog("Server is empty. Connect Google Drive to auto-restore.");
@@ -404,10 +386,11 @@ async function fetchPortfolio() {
         
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
+        state.corp = data.positions.corp_actions || [];
+        
         populateBrokerDropdown();
         renderUI(); 
         
-        // ⚡ CACHE BACKUP TO DRIVE
         if (state.driveToken) {
             const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
             if (cacheRes.ok) {
@@ -459,7 +442,6 @@ async function fetchLivePrices(token_map) {
     }
 }
 
-// --- Rendering Logic ---
 function populateBrokerDropdown() {
     const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker)]);
     const select = document.getElementById('brokerFilter');
@@ -473,10 +455,15 @@ function renderUI() {
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
     
-    let dataList = [...(state.currentTab === 'active' ? state.open : state.closed)];
+    let dataList = [];
+    if (state.currentTab === 'active') dataList = [...state.open];
+    else if (state.currentTab === 'closed') dataList = [...state.closed];
+    else dataList = [...state.corp];
     
-    if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
-    if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+    if (state.currentTab !== 'corp') {
+        if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
+        if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+    }
 
     dataList.sort((a, b) => {
         let valA = a[state.sortCol] || ''; let valB = b[state.sortCol] || '';
@@ -526,7 +513,7 @@ function renderUI() {
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
             </tr>`;
         });
-    } else {
+    } else if (state.currentTab === 'closed') {
         document.getElementById('tableHead').innerHTML = `<tr>
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
             <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
@@ -558,17 +545,40 @@ function renderUI() {
             </tr>`;
         });
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
+    } else {
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th>
+            <th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th>
+        </tr>`;
+        document.getElementById('lblPnl').innerText = 'APPLIED ACTIONS';
+        document.getElementById('lblInv').innerText = '-';
+        
+        dataList.forEach(p => {
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td>${p.Date}</td>
+                <td style="color:var(--blue);font-weight:600">${p.Ratio}x</td>
+            </tr>`;
+        });
     }
 
     if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
-    const pnlEl = document.getElementById('valPnl');
-    pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
-    pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-    
-    document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
-    document.getElementById('valPos').innerText = dataList.length;
+    if (state.currentTab === 'corp') {
+        const pnlEl = document.getElementById('valPnl');
+        pnlEl.innerText = dataList.length;
+        pnlEl.className = 'metric-val';
+        document.getElementById('valInv').innerText = '-';
+        document.getElementById('valPos').innerText = dataList.length;
+    } else {
+        const pnlEl = document.getElementById('valPnl');
+        pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
+        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
+        document.getElementById('valPos').innerText = dataList.length;
+    }
 }
 
 if(state.backendUrl) fetchPortfolio();
