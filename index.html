@@ -46,14 +46,43 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
 .log-line{margin-bottom:4px;}
 
-#driveBtn{background:#1a73e8;border:none;color:white;display:flex;align-items:center;gap:6px;}
-#driveBtn:hover{background:#1557b0}
-#driveBtn.synced{background:var(--green);pointer-events:none;}
+#driveBtnHeader{background:var(--green);border:none;color:white;display:flex;align-items:center;gap:6px;pointer-events:none;}
+
+/* --- LOGIN GATE STYLES --- */
+.login-gate {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+}
+.login-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 40px; text-align: center; max-width: 400px; width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.login-btn {
+    width: 100%; padding: 12px; background: #1a73e8; color: white; border: none;
+    border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px;
+}
+.login-btn:hover { background: #1557b0; }
 </style>
 </head>
 <body>
 
-<div class="container">
+<div id="loginGate" class="login-gate">
+    <div class="login-card">
+        <div class="logo" style="margin: 0 auto 20px; width: 50px; height: 50px; font-size: 24px;">⚡</div>
+        <h1 class="title" style="margin-bottom: 12px;">TRADE CONSOLE</h1>
+        <p style="color: var(--text3); font-size: 14px; line-height: 1.5;">Your trading data is securely stored and synced via your personal Google Drive account.</p>
+        
+        <button class="login-btn" onclick="authGoogleDrive()">
+            <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
+            Connect Google Drive
+        </button>
+    </div>
+</div>
+
+<div id="appContainer" class="container" style="display: none;">
     <div class="header">
         <div class="logo-area">
             <div class="logo">⚡</div>
@@ -70,9 +99,9 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
                 <option value="MCX">Commodity</option>
             </select>
             
-            <button id="driveBtn" class="btn-sec" onclick="authGoogleDrive()">
+            <button id="driveBtnHeader" class="btn-sec">
                 <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
-                <span id="driveBtnText">Connect Drive</span>
+                Drive Synced
             </button>
 
             <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
@@ -127,7 +156,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <span id="termToggleBtn">▼</span>
         </div>
         <div class="terminal-body" id="terminalBody">
-            <div class="log-line">System initialized. Awaiting commands...</div>
+            <div class="log-line">System initialized. Awaiting secure Google Drive connection...</div>
         </div>
     </div>
 </div>
@@ -151,11 +180,16 @@ window.onload = function() {
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 state.driveToken = tokenResponse.access_token;
-                const btn = document.getElementById('driveBtn');
-                btn.classList.add('synced');
-                document.getElementById('driveBtnText').innerText = "Drive Synced";
+                
+                // ⚡ HIDE GATE, SHOW APP
+                document.getElementById('loginGate').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
                 appendLog("✅ Connected to Google Drive.");
-                getOrCreateFolder(); 
+                
+                // ⚡ SECURELY INITIALIZE FOLDER THEN FETCH
+                getOrCreateFolder().then(() => {
+                    fetchPortfolio();
+                });
             }
         },
     });
@@ -580,8 +614,6 @@ function renderUI() {
         document.getElementById('valPos').innerText = dataList.length;
     }
 }
-
-if(state.backendUrl) fetchPortfolio();
 </script>
 </body>
 </html>
