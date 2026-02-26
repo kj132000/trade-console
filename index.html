@@ -11,7 +11,7 @@
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px;}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
-button, select{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
+button, select, input{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
 input, select{font-family:inherit;outline:none}
 
 .container{max-width:1400px;margin:0 auto;padding:20px}
@@ -24,6 +24,7 @@ input, select{font-family:inherit;outline:none}
 .btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600}
 .btn-sec{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:600}
 .btn-sec.active{background:var(--blue2);color:white;border-color:var(--blue2)}
+.btn-del{background:transparent;border:none;color:var(--red);font-weight:800;font-size:14px;cursor:pointer;}
 
 .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px}
 .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
@@ -48,7 +49,6 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 #driveBtnHeader{background:var(--green);border:none;color:white;display:flex;align-items:center;gap:6px;pointer-events:none;}
 
-/* --- LOGIN GATE STYLES --- */
 .login-gate {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: var(--bg); z-index: 9999;
@@ -65,6 +65,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px;
 }
 .login-btn:hover { background: #1557b0; }
+
+#corpInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
 </style>
 </head>
 <body>
@@ -74,7 +76,6 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <div class="logo" style="margin: 0 auto 20px; width: 50px; height: 50px; font-size: 24px;">⚡</div>
         <h1 class="title" style="margin-bottom: 12px;">TRADE CONSOLE</h1>
         <p style="color: var(--text3); font-size: 14px; line-height: 1.5;">Your trading data is securely stored and synced via your personal Google Drive account.</p>
-        
         <button class="login-btn" onclick="authGoogleDrive()">
             <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
             Connect Google Drive
@@ -89,6 +90,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <div class="title">TRADE CONSOLE</div>
         </div>
         <div class="controls">
+            <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="renderUI()" style="width:140px; text-transform:uppercase;">
+            
             <select id="brokerFilter" class="btn-sec" onchange="renderUI()">
                 <option value="ALL">All Brokers</option>
             </select>
@@ -141,6 +144,13 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
     </div>
 
+    <div id="corpInsertBar">
+        <input type="text" id="newCorpSym" placeholder="SYMBOL (e.g. NPST)" class="btn-sec" style="flex:1; text-transform: uppercase;">
+        <input type="date" id="newCorpDate" class="btn-sec" style="flex:1" title="Ex-Date">
+        <input type="number" id="newCorpRatio" placeholder="Ratio Multiplier (e.g. 3.0)" class="btn-sec" step="0.1" style="flex:1">
+        <button class="btn-pri" onclick="insertCorpAction()">+ Add Split</button>
+    </div>
+
     <div class="table-container">
         <table>
             <thead id="tableHead"></thead>
@@ -163,14 +173,14 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], corp: [], currentTab: 'active',
+    open: [], closed: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null
 };
 
 document.getElementById('backendUrl').value = state.backendUrl;
-const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // <-- PASTE ID HERE
 
 let tokenClient;
 window.onload = function() {
@@ -180,16 +190,10 @@ window.onload = function() {
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 state.driveToken = tokenResponse.access_token;
-                
-                // ⚡ HIDE GATE, SHOW APP
                 document.getElementById('loginGate').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
                 appendLog("✅ Connected to Google Drive.");
-                
-                // ⚡ SECURELY INITIALIZE FOLDER THEN FETCH
-                getOrCreateFolder().then(() => {
-                    fetchPortfolio();
-                });
+                getOrCreateFolder().then(() => fetchPortfolio());
             }
         },
     });
@@ -203,14 +207,11 @@ async function getOrCreateFolder() {
 
     try {
         const q = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
-            headers: { Authorization: `Bearer ${state.driveToken}` }
-        });
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
         const data = await res.json();
         
-        if (data.files && data.files.length > 0) {
-            state.driveFolderId = data.files[0].id;
-        } else {
+        if (data.files && data.files.length > 0) state.driveFolderId = data.files[0].id;
+        else {
             const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
@@ -228,15 +229,12 @@ async function uploadFileToDrive(filename, content) {
     if (!folderId) return;
 
     const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
-        headers: { Authorization: `Bearer ${state.driveToken}` }
-    });
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
     const searchData = await searchRes.json();
     
     let fileId;
-    if (searchData.files && searchData.files.length > 0) {
-        fileId = searchData.files[0].id;
-    } else {
+    if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
+    else {
         const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
             method: 'POST',
             headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
@@ -258,17 +256,13 @@ async function downloadAllFromDrive() {
     if (!folderId) return [];
     
     appendLog("Scanning Google Drive for backup files...");
-    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, {
-        headers: { Authorization: `Bearer ${state.driveToken}` }
-    });
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
     const listData = await listRes.json();
     
     const files = [];
     if (listData.files) {
         for (let file of listData.files) {
-            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-                headers: { Authorization: `Bearer ${state.driveToken}` }
-            });
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
             const content = await fileRes.text();
             files.push({ filename: file.name, content: content });
         }
@@ -300,6 +294,7 @@ function setTab(tab) {
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
+    document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
     renderUI();
 }
 function handleSort(col) {
@@ -341,13 +336,14 @@ const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigi
 
 async function clearLedger() {
     if(!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger... (Waking up server, please wait ~45s)</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     startLogPolling();
     try {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn("Server wipe delay", e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn("Drive wipe delay", e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; state.corp = [];
+        state.open = []; state.closed = []; 
+        localStorage.removeItem('tc_corp_cache');
         renderUI();
         appendLog("✅ Ledger and Google Drive Cache completely wiped.");
     } catch(e) { alert("Failed to clear data."); }
@@ -357,10 +353,8 @@ async function clearLedger() {
 async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
-    
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
     startLogPolling();
-    
     try {
         const formData = new FormData();
         for(let f of files) formData.append("files", f);
@@ -374,10 +368,7 @@ async function handleFileUpload(event) {
             }
         }
         fetchPortfolio();
-    } catch(e) { 
-        alert("Upload failed.");
-        stopLogPolling();
-    }
+    } catch(e) { alert("Upload failed."); stopLogPolling(); }
 }
 
 async function fetchPortfolio() {
@@ -392,71 +383,57 @@ async function fetchPortfolio() {
             if (state.driveToken) {
                 appendLog("Cloud reset detected. Pulling files from Google Drive...");
                 const driveFiles = await downloadAllFromDrive();
-                
                 if (driveFiles.length > 0) {
                     const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
                     const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
                     
                     if (cacheFile) {
                         await fetch(`${state.backendUrl}/api/restore_cache`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: cacheFile.content
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content
                         });
+                        localStorage.setItem('tc_corp_cache', cacheFile.content);
                     }
                     if (csvFiles.length > 0) {
                         await fetch(`${state.backendUrl}/api/restore`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(csvFiles)
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles)
                         });
                     }
                     return fetchPortfolio(); 
                 }
-            } else {
-                appendLog("Server is empty. Connect Google Drive to auto-restore.");
             }
         }
         
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
-        state.corp = data.positions.corp_actions || [];
-        
         populateBrokerDropdown();
-        renderUI(); 
         
         if (state.driveToken) {
             const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
             if (cacheRes.ok) {
                 const cacheData = await cacheRes.json();
                 if (Object.keys(cacheData).length > 0) {
+                    localStorage.setItem('tc_corp_cache', JSON.stringify(cacheData));
                     await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
-                    appendLog("Corporate Cache successfully secured in Google Drive.");
                 }
             }
         }
+        
+        renderUI(); 
         
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
         } else {
             stopLogPolling();
         }
-    } catch(e) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--red)">Failed to load data. Is server running?</td></tr>`;
-        stopLogPolling();
-    }
+    } catch(e) { stopLogPolling(); }
 }
 
 async function fetchLivePrices(token_map) {
-    state.fetchingPrices = true;
-    renderUI(); 
+    state.fetchingPrices = true; renderUI(); 
     try {
         const res = await fetch(`${state.backendUrl}/api/live_prices`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token_map: token_map })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: token_map })
         });
-        
         if (res.ok) {
             const prices = await res.json();
             state.open.forEach(p => {
@@ -468,11 +445,45 @@ async function fetchLivePrices(token_map) {
                 }
             });
         }
-    } catch (e) { console.error(e); } 
-    finally {
-        state.fetchingPrices = false;
-        renderUI(); 
-        stopLogPolling();
+    } catch (e) {} finally { state.fetchingPrices = false; renderUI(); stopLogPolling(); }
+}
+
+// --- NEW CRUD ACTIONS FOR CORPORATE CACHE ---
+async function syncCacheAndRefresh(cache) {
+    localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
+    startLogPolling();
+    try {
+        await fetch(`${state.backendUrl}/api/restore_cache`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache)
+        });
+        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        fetchPortfolio();
+    } catch(e) { stopLogPolling(); }
+}
+
+function insertCorpAction() {
+    const sym = document.getElementById('newCorpSym').value.toUpperCase();
+    const date = document.getElementById('newCorpDate').value; 
+    const ratio = parseFloat(document.getElementById('newCorpRatio').value);
+    if(!sym || !date || !ratio) return alert("Fill all fields");
+
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(!cache[sym]) cache[sym] = [];
+    cache[sym].push({date: date, ratio: ratio});
+    
+    document.getElementById('newCorpSym').value = '';
+    document.getElementById('newCorpDate').value = '';
+    document.getElementById('newCorpRatio').value = '';
+    syncCacheAndRefresh(cache);
+}
+
+function deleteCorpAction(sym, idx) {
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(cache[sym]) {
+        cache[sym].splice(idx, 1);
+        // Important: Leave it as [] so Yahoo skips checking it
+        syncCacheAndRefresh(cache);
     }
 }
 
@@ -488,12 +499,25 @@ function populateBrokerDropdown() {
 function renderUI() {
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
     
     let dataList = [];
     if (state.currentTab === 'active') dataList = [...state.open];
     else if (state.currentTab === 'closed') dataList = [...state.closed];
-    else dataList = [...state.corp];
+    else {
+        let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+        for (let sym of Object.keys(cache)) {
+            let actions = cache[sym];
+            actions.forEach((act, idx) => {
+                dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio, _idx: idx });
+            });
+        }
+    }
     
+    if (searchFilter) {
+        dataList = dataList.filter(p => p.Symbol.toUpperCase().includes(searchFilter));
+    }
+
     if (state.currentTab !== 'corp') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
@@ -584,8 +608,9 @@ function renderUI() {
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
             <th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th>
             <th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th>
+            <th>ACTION</th>
         </tr>`;
-        document.getElementById('lblPnl').innerText = 'APPLIED ACTIONS';
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
         document.getElementById('lblInv').innerText = '-';
         
         dataList.forEach(p => {
@@ -593,6 +618,7 @@ function renderUI() {
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
                 <td>${p.Date}</td>
                 <td style="color:var(--blue);font-weight:600">${p.Ratio}x</td>
+                <td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', ${p._idx})">[X] Delete</button></td>
             </tr>`;
         });
     }
