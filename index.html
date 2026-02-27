@@ -173,14 +173,14 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], currentTab: 'active',
+    open: [], closed: [], corp: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null
 };
 
 document.getElementById('backendUrl').value = state.backendUrl;
-const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // <-- PASTE ID HERE
+const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
 
 let tokenClient;
 window.onload = function() {
@@ -342,7 +342,7 @@ async function clearLedger() {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn("Server wipe delay", e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn("Drive wipe delay", e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = [];
+        state.open = []; state.closed = []; state.corp = [];
         localStorage.removeItem('tc_corp_cache');
         renderUI();
         appendLog("✅ Ledger and Google Drive Cache completely wiped.");
@@ -505,7 +505,7 @@ function renderUI() {
     if (state.currentTab === 'active') dataList = [...state.open];
     else if (state.currentTab === 'closed') dataList = [...state.closed];
     else {
-        // THE FIX: Pull directly from Raw Cache to act as a proper Editor
+        // Pull directly from Raw Cache to act as a proper Editor
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
         for (let sym of Object.keys(cache)) {
             let actions = cache[sym];
