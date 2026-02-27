@@ -342,7 +342,7 @@ async function clearLedger() {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn("Server wipe delay", e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn("Drive wipe delay", e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; 
+        state.open = []; state.closed = [];
         localStorage.removeItem('tc_corp_cache');
         renderUI();
         appendLog("✅ Ledger and Google Drive Cache completely wiped.");
@@ -405,6 +405,7 @@ async function fetchPortfolio() {
         
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
+        
         populateBrokerDropdown();
         
         if (state.driveToken) {
@@ -448,7 +449,7 @@ async function fetchLivePrices(token_map) {
     } catch (e) {} finally { state.fetchingPrices = false; renderUI(); stopLogPolling(); }
 }
 
-// --- NEW CRUD ACTIONS FOR CORPORATE CACHE ---
+// --- CRUD CACHE MANAGEMENT ---
 async function syncCacheAndRefresh(cache) {
     localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
@@ -458,15 +459,15 @@ async function syncCacheAndRefresh(cache) {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache)
         });
         if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
-        fetchPortfolio();
+        fetchPortfolio(); // Recalculate ledger!
     } catch(e) { stopLogPolling(); }
 }
 
 function insertCorpAction() {
-    const sym = document.getElementById('newCorpSym').value.toUpperCase();
+    const sym = document.getElementById('newCorpSym').value.toUpperCase().trim();
     const date = document.getElementById('newCorpDate').value; 
     const ratio = parseFloat(document.getElementById('newCorpRatio').value);
-    if(!sym || !date || !ratio) return alert("Fill all fields");
+    if(!sym || !date || !ratio) return alert("Please fill all fields.");
 
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
     if(!cache[sym]) cache[sym] = [];
@@ -478,11 +479,10 @@ function insertCorpAction() {
     syncCacheAndRefresh(cache);
 }
 
-function deleteCorpAction(sym, idx) {
+function deleteCorpAction(sym, dateStr) {
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
     if(cache[sym]) {
-        cache[sym].splice(idx, 1);
-        // Important: Leave it as [] so Yahoo skips checking it
+        cache[sym] = cache[sym].filter(a => a.date !== dateStr);
         syncCacheAndRefresh(cache);
     }
 }
@@ -505,11 +505,12 @@ function renderUI() {
     if (state.currentTab === 'active') dataList = [...state.open];
     else if (state.currentTab === 'closed') dataList = [...state.closed];
     else {
+        // THE FIX: Pull directly from Raw Cache to act as a proper Editor
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
         for (let sym of Object.keys(cache)) {
             let actions = cache[sym];
-            actions.forEach((act, idx) => {
-                dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio, _idx: idx });
+            actions.forEach((act) => {
+                dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio });
             });
         }
     }
@@ -547,10 +548,7 @@ function renderUI() {
             <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
             <th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th>
         </tr>`;
-        
-        document.getElementById('lblPnl').innerHTML = state.fetchingPrices 
-            ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' 
-            : 'NET UNREALIZED P&L';
+        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' : 'NET UNREALIZED P&L';
         document.getElementById('lblInv').innerText = 'MARGIN / INVESTED';
         
         dataList.forEach(p => {
@@ -576,11 +574,12 @@ function renderUI() {
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
             <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
             <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
+            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
             <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
             <th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th>
             <th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th>
             <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
-            <th onclick="handleSort('Exit Date')">DATE${thIcon('Exit Date')}</th>
+            <th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th>
         </tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
@@ -597,9 +596,10 @@ function renderUI() {
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
                 <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
                 <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+                <td style="color:var(--orange);font-weight:600">${p.FY}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
-                <td>${p["Exit Date"]}</td>
+                <td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td>
             </tr>`;
         });
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
@@ -618,7 +618,7 @@ function renderUI() {
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
                 <td>${p.Date}</td>
                 <td style="color:var(--blue);font-weight:600">${p.Ratio}x</td>
-                <td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', ${p._idx})">[X] Delete</button></td>
+                <td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td>
             </tr>`;
         });
     }
