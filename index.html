@@ -141,6 +141,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
         <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-fy" class="btn-sec" onclick="setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
     </div>
 
@@ -289,19 +290,27 @@ function saveSettings() {
     localStorage.setItem('tc_backend_url', state.backendUrl);
     toggleSettings();
 }
+
 function setTab(tab) {
     state.currentTab = tab;
+    // Set smart default sorts based on the tab
+    if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
+    else { state.sortCol = 'Symbol'; state.sortAsc = true; }
+    
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
     renderUI();
 }
+
 function handleSort(col) {
     if (state.sortCol === col) state.sortAsc = !state.sortAsc;
     else { state.sortCol = col; state.sortAsc = true; }
     renderUI();
 }
+
 function toggleTerminal() {
     const body = document.getElementById('terminalBody');
     const btn = document.getElementById('termToggleBtn');
@@ -405,6 +414,7 @@ async function fetchPortfolio() {
         
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
+        state.corp = data.positions.corp_actions || []; 
         
         populateBrokerDropdown();
         
@@ -449,7 +459,6 @@ async function fetchLivePrices(token_map) {
     } catch (e) {} finally { state.fetchingPrices = false; renderUI(); stopLogPolling(); }
 }
 
-// --- CRUD CACHE MANAGEMENT ---
 async function syncCacheAndRefresh(cache) {
     localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
@@ -459,7 +468,7 @@ async function syncCacheAndRefresh(cache) {
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache)
         });
         if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
-        fetchPortfolio(); // Recalculate ledger!
+        fetchPortfolio();
     } catch(e) { stopLogPolling(); }
 }
 
@@ -502,10 +511,42 @@ function renderUI() {
     const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
     
     let dataList = [];
-    if (state.currentTab === 'active') dataList = [...state.open];
-    else if (state.currentTab === 'closed') dataList = [...state.closed];
+    
+    // --- BUILD THE DATA LISTS ---
+    if (state.currentTab === 'active') {
+        dataList = [...state.open];
+    } 
+    else if (state.currentTab === 'closed') {
+        dataList = [...state.closed];
+    } 
+    else if (state.currentTab === 'fy') {
+        // Automatically calculate current Financial Year (India: Apr 1 - Mar 31)
+        const d = new Date();
+        const y = d.getFullYear();
+        const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
+        
+        let summaryMap = {};
+        
+        // Aggregate Realized (Historical & Current)
+        state.closed.forEach(p => {
+            const key = p.FY + "_" + p.Broker + "_" + p.Segment;
+            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
+            summaryMap[key].Realized += (p["P&L"] || 0);
+        });
+        
+        // Aggregate Unrealized (Strictly mapped to Current FY)
+        state.open.forEach(p => {
+            const key = currentFY + "_" + p.Broker + "_" + p.Segment;
+            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
+            summaryMap[key].Unrealized += (p["P&L"] || 0);
+        });
+        
+        dataList = Object.values(summaryMap).map(p => { 
+            p.Total = p.Realized + p.Unrealized; 
+            return p; 
+        });
+    }
     else {
-        // Pull directly from Raw Cache to act as a proper Editor
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
         for (let sym of Object.keys(cache)) {
             let actions = cache[sym];
@@ -515,8 +556,9 @@ function renderUI() {
         }
     }
     
-    if (searchFilter) {
-        dataList = dataList.filter(p => p.Symbol.toUpperCase().includes(searchFilter));
+    // --- APPLY FILTERS ---
+    if (searchFilter && state.currentTab !== 'fy') {
+        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
     }
 
     if (state.currentTab !== 'corp') {
@@ -524,8 +566,10 @@ function renderUI() {
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
 
+    // --- SORT ENGINE ---
     dataList.sort((a, b) => {
-        let valA = a[state.sortCol] || ''; let valB = b[state.sortCol] || '';
+        let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : ''; 
+        let valB = b[state.sortCol] !== undefined ? b[state.sortCol] : '';
         if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
         if (valA < valB) return state.sortAsc ? -1 : 1;
         if (valA > valB) return state.sortAsc ? 1 : -1;
@@ -535,6 +579,7 @@ function renderUI() {
     const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0; let html = '';
 
+    // --- RENDER TABLES ---
     if (state.currentTab === 'active') {
         document.getElementById('tableHead').innerHTML = `<tr>
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
@@ -569,7 +614,8 @@ function renderUI() {
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
             </tr>`;
         });
-    } else if (state.currentTab === 'closed') {
+    } 
+    else if (state.currentTab === 'closed') {
         document.getElementById('tableHead').innerHTML = `<tr>
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
             <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
@@ -603,7 +649,48 @@ function renderUI() {
             </tr>`;
         });
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
-    } else {
+    } 
+    else if (state.currentTab === 'fy') {
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>
+            <th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th>
+            <th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th>
+            <th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th>
+        </tr>`;
+        
+        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED';
+        document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
+        
+        let totReal = 0, totUnreal = 0;
+        dataList.forEach(p => {
+            totReal += p.Realized;
+            totUnreal += p.Unrealized;
+            
+            const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
+            const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
+            const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
+            
+            const rSgn = p.Realized > 0 ? '+' : '';
+            const uSgn = p.Unrealized > 0 ? '+' : '';
+            const tSgn = p.Total > 0 ? '+' : '';
+            
+            html += `<tr>
+                <td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>
+                <td style="color:var(--white);font-weight:600">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td class="${rCls}">${rSgn}${fmtMoney(p.Realized)}</td>
+                <td class="${uCls}">${uSgn}${fmtMoney(p.Unrealized)}</td>
+                <td class="${tCls}" style="font-weight:800">${tSgn}${fmtMoney(p.Total)}</td>
+            </tr>`;
+        });
+        
+        // Pass totals out for the metric cards below
+        totalPnl = totReal;
+        totalInv = totUnreal;
+    }
+    else {
         document.getElementById('tableHead').innerHTML = `<tr>
             <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
             <th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th>
@@ -626,18 +713,39 @@ function renderUI() {
     if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
+    // --- METRIC CARDS UPDATER ---
     if (state.currentTab === 'corp') {
         const pnlEl = document.getElementById('valPnl');
         pnlEl.innerText = dataList.length;
         pnlEl.className = 'metric-val';
         document.getElementById('valInv').innerText = '-';
         document.getElementById('valPos').innerText = dataList.length;
-    } else {
+        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+    } 
+    else if (state.currentTab === 'fy') {
+        const pnlEl = document.getElementById('valPnl');
+        pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
+        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        
+        const invEl = document.getElementById('valInv');
+        invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv);
+        invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
+        
+        const combined = totalPnl + totalInv;
+        const posEl = document.getElementById('valPos');
+        posEl.innerText = (combined>0?'+':'') + fmtMoney(combined);
+        posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
+        document.getElementById('lblPos').innerText = 'COMBINED P&L';
+    } 
+    else {
         const pnlEl = document.getElementById('valPnl');
         pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
         pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
         document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
+        document.getElementById('valInv').className = 'metric-val';
         document.getElementById('valPos').innerText = dataList.length;
+        document.getElementById('valPos').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
     }
 }
 </script>
