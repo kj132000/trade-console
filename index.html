@@ -6,7 +6,8 @@
 <title>Trade Console</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px;}
@@ -128,6 +129,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
         <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-log" class="btn-sec" onclick="setTab('log')">TRADE LOG</button>
         <button id="tab-chart" class="btn-sec" onclick="setTab('chart')">📈 P&L TRACKER</button>
         <button id="tab-fy" class="btn-sec" onclick="setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
@@ -168,7 +170,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], corp: [], currentTab: 'active',
+    open: [], closed: [], corp: [], trade_log: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null,
@@ -269,10 +271,12 @@ function saveSettings() {
 function setTab(tab) {
     state.currentTab = tab;
     if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
+    else if (tab === 'log') { state.sortCol = 'Date'; state.sortAsc = false; }
     else if (tab !== 'chart') { state.sortCol = 'Symbol'; state.sortAsc = true; }
     
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    document.getElementById('tab-log').classList.toggle('active', tab === 'log');
     document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
     document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
@@ -328,7 +332,7 @@ async function clearLedger() {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; state.corp = [];
+        state.open = []; state.closed = []; state.corp = []; state.trade_log = [];
         localStorage.removeItem('tc_corp_cache');
         renderUI();
         appendLog("✅ Ledger and Google Drive Cache completely wiped.");
@@ -361,7 +365,7 @@ async function fetchPortfolio() {
         if(!res.ok) throw new Error();
         const data = await res.json();
         
-        if (data.positions.open.length === 0 && data.positions.closed.length === 0) {
+        if (data.positions.open.length === 0 && data.positions.closed.length === 0 && data.positions.trade_log.length === 0) {
             if (state.driveToken) {
                 appendLog("Cloud reset detected. Pulling files from Google Drive...");
                 const driveFiles = await downloadAllFromDrive();
@@ -384,6 +388,7 @@ async function fetchPortfolio() {
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
         state.corp = data.positions.corp_actions || []; 
+        state.trade_log = data.positions.trade_log || [];
         
         populateBrokerDropdown();
         
@@ -425,7 +430,6 @@ async function fetchLivePrices(token_map) {
     } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); }
 }
 
-// --- P&L TRACKER ENGINE (CHART.JS) ---
 function populateChartDropdowns() {
     const allFYs = new Set([...state.closed.map(p=>p.FY)].filter(Boolean));
     const allBrokers = new Set([...state.closed.map(p=>p.Broker)].filter(Boolean));
@@ -433,7 +437,6 @@ function populateChartDropdowns() {
     const fySelect = document.getElementById('fyChartFilter');
     const brkSelect = document.getElementById('brokerChartFilter');
     
-    // Auto-select the most recent FY by default
     const sortedFYs = Array.from(allFYs).sort().reverse();
     if(fySelect.options.length === 0 && sortedFYs.length > 0) {
         sortedFYs.forEach(fy => fySelect.innerHTML += `<option value="${fy}">${fy}</option>`);
@@ -452,12 +455,10 @@ function renderChart() {
     
     if(!fyFilter) return;
 
-    // Filter closed trades strictly to the selected constraints
     let filteredTrades = state.closed.filter(p => p.FY === fyFilter);
     if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
     if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
 
-    // Sort chronologically by Exit Date
     filteredTrades.sort((a, b) => new Date(a["Exit Date"]) - new Date(b["Exit Date"]));
 
     let dailyAgg = {};
@@ -467,18 +468,15 @@ function renderChart() {
         dailyAgg[d] += p["P&L"];
     });
 
-    // Create the Timeline and Cumulative Curve
     const dates = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
     let cumulativeData = [];
     let runningTotal = 0;
     
-    // Always start the chart at Zero (MTM principle)
     dates.forEach(d => {
         runningTotal += dailyAgg[d];
         cumulativeData.push({ x: d, y: runningTotal });
     });
 
-    // Update Metric Cards to reflect the Chart bounds
     document.getElementById('lblPnl').innerText = `${fyFilter} REALIZED P&L`;
     const pnlEl = document.getElementById('valPnl');
     pnlEl.innerText = (runningTotal>0?'+':'') + fmtMoney(runningTotal);
@@ -490,7 +488,6 @@ function renderChart() {
     const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
     document.getElementById('valPos').innerText = fmtMoney(peak);
 
-    // Draw the Chart!
     const ctx = document.getElementById('pnlChart').getContext('2d');
     if (state.pnlChartInstance) { state.pnlChartInstance.destroy(); }
 
@@ -569,7 +566,7 @@ function populateBrokerDropdown() {
 }
 
 function renderUI() {
-    if(state.currentTab === 'chart') return; // Chart handles its own rendering
+    if(state.currentTab === 'chart') return; 
     
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
@@ -578,6 +575,7 @@ function renderUI() {
     let dataList = [];
     if (state.currentTab === 'active') dataList = [...state.open];
     else if (state.currentTab === 'closed') dataList = [...state.closed];
+    else if (state.currentTab === 'log') dataList = [...state.trade_log];
     else if (state.currentTab === 'fy') {
         const d = new Date(); const y = d.getFullYear();
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
@@ -644,6 +642,18 @@ function renderUI() {
         });
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
     } 
+    else if (state.currentTab === 'log') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
+        document.getElementById('lblPnl').innerText = 'TOTAL BUY VOL';
+        document.getElementById('lblInv').innerText = 'TOTAL SELL VOL';
+        let buyV = 0, sellV = 0;
+        dataList.forEach(p => {
+            if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
+            const dirColor = p.Direction === 'Buy' ? 'color:var(--green)' : 'color:var(--red)';
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Date}</td><td>${p.Qty}</td><td>${fmtDec(p.Price)}</td><td style="color:var(--orange);font-weight:600">${p.FY}</td></tr>`;
+        });
+        totalPnl = buyV; totalInv = sellV;
+    }
     else if (state.currentTab === 'fy') {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th><th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
         document.getElementById('lblPnl').innerText = 'TOTAL REALIZED'; document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
@@ -673,6 +683,10 @@ function renderUI() {
         const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
         const invEl = document.getElementById('valInv'); invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv); invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
         const combined = totalPnl + totalInv; const posEl = document.getElementById('valPos'); posEl.innerText = (combined>0?'+':'') + fmtMoney(combined); posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : ''); document.getElementById('lblPos').innerText = 'COMBINED P&L';
+    } else if (state.currentTab === 'log') {
+        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = fmtMoney(totalPnl); pnlEl.className = 'metric-val';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'TRADING DAYS';
     } else {
         const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
         document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv; document.getElementById('valInv').className = 'metric-val';
