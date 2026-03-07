@@ -6,7 +6,7 @@
 <title>Trade Console</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px;}
@@ -67,6 +67,10 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .login-btn:hover { background: #1557b0; }
 
 #corpInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
+
+/* P&L Tracker UI */
+#chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
+.chart-controls{display:flex; gap:10px; margin-bottom: 20px;}
 </style>
 </head>
 <body>
@@ -91,22 +95,14 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         </div>
         <div class="controls">
             <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="renderUI()" style="width:140px; text-transform:uppercase;">
-            
-            <select id="brokerFilter" class="btn-sec" onchange="renderUI()">
-                <option value="ALL">All Brokers</option>
-            </select>
+            <select id="brokerFilter" class="btn-sec" onchange="renderUI()"><option value="ALL">All Brokers</option></select>
             <select id="segFilter" class="btn-sec" onchange="renderUI()">
                 <option value="ALL">All Segments</option>
                 <option value="EQ">Equity</option>
                 <option value="F&O">F&O</option>
                 <option value="MCX">Commodity</option>
             </select>
-            
-            <button id="driveBtnHeader" class="btn-sec">
-                <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
-                Drive Synced
-            </button>
-
+            <button id="driveBtnHeader" class="btn-sec"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg> Drive Synced</button>
             <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
@@ -124,25 +120,33 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     </div>
 
     <div class="metrics-grid">
-        <div class="metric-card">
-            <div class="metric-title" id="lblPnl">NET P&L</div>
-            <div class="metric-val" id="valPnl">₹0</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title" id="lblInv">INVESTED CAPITAL</div>
-            <div class="metric-val" id="valInv">₹0</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title" id="lblPos">TRADES / POSITIONS</div>
-            <div class="metric-val" id="valPos">0</div>
-        </div>
+        <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED CAPITAL</div><div class="metric-val" id="valInv">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
     </div>
 
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
         <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-chart" class="btn-sec" onclick="setTab('chart')">📈 P&L TRACKER</button>
         <button id="tab-fy" class="btn-sec" onclick="setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
+    </div>
+
+    <div id="chartContainer">
+        <div class="chart-controls">
+            <select id="fyChartFilter" class="btn-sec" onchange="renderChart()"></select>
+            <select id="brokerChartFilter" class="btn-sec" onchange="renderChart()"><option value="ALL">All Brokers</option></select>
+            <select id="segChartFilter" class="btn-sec" onchange="renderChart()">
+                <option value="ALL">All Segments</option>
+                <option value="EQ">Equity</option>
+                <option value="F&O">F&O</option>
+                <option value="MCX">Commodity</option>
+            </select>
+        </div>
+        <div style="height: 400px; width: 100%; position: relative;">
+            <canvas id="pnlChart"></canvas>
+        </div>
     </div>
 
     <div id="corpInsertBar">
@@ -153,22 +157,12 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     </div>
 
     <div class="table-container">
-        <table>
-            <thead id="tableHead"></thead>
-            <tbody id="tableBody">
-                <tr><td colspan="10" style="text-align:center">No data loaded.</td></tr>
-            </tbody>
-        </table>
+        <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" style="text-align:center">No data loaded.</td></tr></tbody></table>
     </div>
 
     <div class="terminal-wrapper">
-        <div class="terminal-header" onclick="toggleTerminal()">
-            <span>>_ SYSTEM LOGS</span>
-            <span id="termToggleBtn">▼</span>
-        </div>
-        <div class="terminal-body" id="terminalBody">
-            <div class="log-line">System initialized. Awaiting secure Google Drive connection...</div>
-        </div>
+        <div class="terminal-header" onclick="toggleTerminal()"><span>>_ SYSTEM LOGS</span><span id="termToggleBtn">▼</span></div>
+        <div class="terminal-body" id="terminalBody"><div class="log-line">System initialized. Awaiting secure Google Drive connection...</div></div>
     </div>
 </div>
 
@@ -177,7 +171,8 @@ let state = {
     open: [], closed: [], corp: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
-    driveToken: null, driveFolderId: null
+    driveToken: null, driveFolderId: null,
+    pnlChartInstance: null 
 };
 
 document.getElementById('backendUrl').value = state.backendUrl;
@@ -202,22 +197,17 @@ window.onload = function() {
 
 function authGoogleDrive() { tokenClient.requestAccessToken(); }
 
+// --- DRIVE SYNC LOGIC ---
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
     if (!state.driveToken) return null;
-
     try {
         const q = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
         const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
         const data = await res.json();
-        
         if (data.files && data.files.length > 0) state.driveFolderId = data.files[0].id;
         else {
-            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })
-            });
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })});
             const createData = await createRes.json();
             state.driveFolderId = createData.id;
         }
@@ -228,38 +218,25 @@ async function getOrCreateFolder() {
 async function uploadFileToDrive(filename, content) {
     const folderId = await getOrCreateFolder();
     if (!folderId) return;
-
     const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
     const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
     const searchData = await searchRes.json();
-    
     let fileId;
     if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
     else {
-        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: filename, parents: [folderId] })
-        });
+        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: filename, parents: [folderId] })});
         const metaData = await metaRes.json();
         fileId = metaData.id;
     }
-
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' },
-        body: content
-    });
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
 }
 
 async function downloadAllFromDrive() {
     const folderId = await getOrCreateFolder();
     if (!folderId) return [];
-    
     appendLog("Scanning Google Drive for backup files...");
     const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
     const listData = await listRes.json();
-    
     const files = [];
     if (listData.files) {
         for (let file of listData.files) {
@@ -274,10 +251,7 @@ async function downloadAllFromDrive() {
 async function clearDriveFiles() {
     const folderId = await getOrCreateFolder();
     if (!folderId) return;
-    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${state.driveToken}` }
-    });
+    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
     state.driveFolderId = null; 
 }
 
@@ -291,18 +265,28 @@ function saveSettings() {
     toggleSettings();
 }
 
+// --- TAB CONTROLLER ---
 function setTab(tab) {
     state.currentTab = tab;
-    // Set smart default sorts based on the tab
     if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
-    else { state.sortCol = 'Symbol'; state.sortAsc = true; }
+    else if (tab !== 'chart') { state.sortCol = 'Symbol'; state.sortAsc = true; }
     
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
     document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
+    document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
+    
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
-    renderUI();
+    document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
+    document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
+
+    if (tab === 'chart') {
+        populateChartDropdowns();
+        renderChart();
+    } else {
+        renderUI();
+    }
 }
 
 function handleSort(col) {
@@ -326,19 +310,12 @@ async function pollLogs() {
     if(!state.isPollingLogs) return;
     try {
         const res = await fetch(`${state.backendUrl}/api/logs`);
-        if(res.ok) {
-            const data = await res.json();
-            data.logs.forEach(log => appendLog(log));
-        }
+        if(res.ok) { const data = await res.json(); data.logs.forEach(log => appendLog(log)); }
     } catch(e){}
     setTimeout(pollLogs, 500);
 }
-function startLogPolling() {
-    if(!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); }
-}
-function stopLogPolling() {
-    setTimeout(() => { state.isPollingLogs = false; }, 2000);
-}
+function startLogPolling() { if(!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); } }
+function stopLogPolling() { setTimeout(() => { state.isPollingLogs = false; }, 2000); }
 
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -348,8 +325,8 @@ async function clearLedger() {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     startLogPolling();
     try {
-        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn("Server wipe delay", e));
-        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn("Drive wipe delay", e)) : Promise.resolve();
+        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
+        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
         state.open = []; state.closed = []; state.corp = [];
         localStorage.removeItem('tc_corp_cache');
@@ -368,13 +345,9 @@ async function handleFileUpload(event) {
         const formData = new FormData();
         for(let f of files) formData.append("files", f);
         await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
-        
         if(state.driveToken) {
             appendLog("Backing up CSVs to Google Drive...");
-            for(let f of files) {
-                const text = await f.text();
-                await uploadFileToDrive(f.name, text);
-            }
+            for(let f of files) { const text = await f.text(); await uploadFileToDrive(f.name, text); }
         }
         fetchPortfolio();
     } catch(e) { alert("Upload failed."); stopLogPolling(); }
@@ -397,15 +370,11 @@ async function fetchPortfolio() {
                     const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
                     
                     if (cacheFile) {
-                        await fetch(`${state.backendUrl}/api/restore_cache`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content
-                        });
+                        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
                         localStorage.setItem('tc_corp_cache', cacheFile.content);
                     }
                     if (csvFiles.length > 0) {
-                        await fetch(`${state.backendUrl}/api/restore`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles)
-                        });
+                        await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
                     }
                     return fetchPortfolio(); 
                 }
@@ -429,22 +398,19 @@ async function fetchPortfolio() {
             }
         }
         
-        renderUI(); 
+        if (state.currentTab === 'chart') { populateChartDropdowns(); renderChart(); } 
+        else { renderUI(); }
         
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
-        } else {
-            stopLogPolling();
-        }
+        } else { stopLogPolling(); }
     } catch(e) { stopLogPolling(); }
 }
 
 async function fetchLivePrices(token_map) {
-    state.fetchingPrices = true; renderUI(); 
+    state.fetchingPrices = true; if(state.currentTab !== 'chart') renderUI(); 
     try {
-        const res = await fetch(`${state.backendUrl}/api/live_prices`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: token_map })
-        });
+        const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: token_map }) });
         if (res.ok) {
             const prices = await res.json();
             state.open.forEach(p => {
@@ -456,20 +422,112 @@ async function fetchLivePrices(token_map) {
                 }
             });
         }
-    } catch (e) {} finally { state.fetchingPrices = false; renderUI(); stopLogPolling(); }
+    } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); }
 }
 
-async function syncCacheAndRefresh(cache) {
-    localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
-    startLogPolling();
-    try {
-        await fetch(`${state.backendUrl}/api/restore_cache`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache)
-        });
-        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
-        fetchPortfolio();
-    } catch(e) { stopLogPolling(); }
+// --- P&L TRACKER ENGINE (CHART.JS) ---
+function populateChartDropdowns() {
+    const allFYs = new Set([...state.closed.map(p=>p.FY)].filter(Boolean));
+    const allBrokers = new Set([...state.closed.map(p=>p.Broker)].filter(Boolean));
+    
+    const fySelect = document.getElementById('fyChartFilter');
+    const brkSelect = document.getElementById('brokerChartFilter');
+    
+    // Auto-select the most recent FY by default
+    const sortedFYs = Array.from(allFYs).sort().reverse();
+    if(fySelect.options.length === 0 && sortedFYs.length > 0) {
+        sortedFYs.forEach(fy => fySelect.innerHTML += `<option value="${fy}">${fy}</option>`);
+    }
+
+    const currBrk = brkSelect.value;
+    brkSelect.innerHTML = '<option value="ALL">All Brokers</option>';
+    allBrokers.forEach(b => brkSelect.innerHTML += `<option value="${b}">${b}</option>`);
+    brkSelect.value = currBrk;
+}
+
+function renderChart() {
+    const fyFilter = document.getElementById('fyChartFilter').value;
+    const brkFilter = document.getElementById('brokerChartFilter').value;
+    const segFilter = document.getElementById('segChartFilter').value;
+    
+    if(!fyFilter) return;
+
+    // Filter closed trades strictly to the selected constraints
+    let filteredTrades = state.closed.filter(p => p.FY === fyFilter);
+    if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
+    if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
+
+    // Sort chronologically by Exit Date
+    filteredTrades.sort((a, b) => new Date(a["Exit Date"]) - new Date(b["Exit Date"]));
+
+    let dailyAgg = {};
+    filteredTrades.forEach(p => {
+        const d = p["Exit Date"];
+        if(!dailyAgg[d]) dailyAgg[d] = 0;
+        dailyAgg[d] += p["P&L"];
+    });
+
+    // Create the Timeline and Cumulative Curve
+    const dates = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
+    let cumulativeData = [];
+    let runningTotal = 0;
+    
+    // Always start the chart at Zero (MTM principle)
+    dates.forEach(d => {
+        runningTotal += dailyAgg[d];
+        cumulativeData.push({ x: d, y: runningTotal });
+    });
+
+    // Update Metric Cards to reflect the Chart bounds
+    document.getElementById('lblPnl').innerText = `${fyFilter} REALIZED P&L`;
+    const pnlEl = document.getElementById('valPnl');
+    pnlEl.innerText = (runningTotal>0?'+':'') + fmtMoney(runningTotal);
+    pnlEl.className = 'metric-val ' + (runningTotal > 0 ? 'positive' : runningTotal < 0 ? 'negative' : '');
+    
+    document.getElementById('lblInv').innerText = 'CLOSED TRADES';
+    document.getElementById('valInv').innerText = filteredTrades.length;
+    document.getElementById('lblPos').innerText = 'PEAK P&L';
+    const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
+    document.getElementById('valPos').innerText = fmtMoney(peak);
+
+    // Draw the Chart!
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    if (state.pnlChartInstance) { state.pnlChartInstance.destroy(); }
+
+    state.pnlChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Cumulative Realized P&L',
+                data: cumulativeData.map(d => d.y),
+                borderColor: '#48bb78',
+                backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) { return '₹ ' + context.parsed.y.toLocaleString('en-IN'); }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } },
+                y: { ticks: { color: '#cbd5e0', callback: function(value) { return '₹ ' + value.toLocaleString('en-IN'); } }, grid: { color: '#1e2533' } }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
 }
 
 function insertCorpAction() {
@@ -481,19 +539,24 @@ function insertCorpAction() {
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
     if(!cache[sym]) cache[sym] = [];
     cache[sym].push({date: date, ratio: ratio});
-    
-    document.getElementById('newCorpSym').value = '';
-    document.getElementById('newCorpDate').value = '';
-    document.getElementById('newCorpRatio').value = '';
+    document.getElementById('newCorpSym').value = ''; document.getElementById('newCorpDate').value = ''; document.getElementById('newCorpRatio').value = '';
     syncCacheAndRefresh(cache);
 }
 
 function deleteCorpAction(sym, dateStr) {
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-    if(cache[sym]) {
-        cache[sym] = cache[sym].filter(a => a.date !== dateStr);
-        syncCacheAndRefresh(cache);
-    }
+    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); syncCacheAndRefresh(cache); }
+}
+
+async function syncCacheAndRefresh(cache) {
+    localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
+    startLogPolling();
+    try {
+        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
+        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        fetchPortfolio();
+    } catch(e) { stopLogPolling(); }
 }
 
 function populateBrokerDropdown() {
@@ -506,67 +569,42 @@ function populateBrokerDropdown() {
 }
 
 function renderUI() {
+    if(state.currentTab === 'chart') return; // Chart handles its own rendering
+    
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
     const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
     
     let dataList = [];
-    
-    // --- BUILD THE DATA LISTS ---
-    if (state.currentTab === 'active') {
-        dataList = [...state.open];
-    } 
-    else if (state.currentTab === 'closed') {
-        dataList = [...state.closed];
-    } 
+    if (state.currentTab === 'active') dataList = [...state.open];
+    else if (state.currentTab === 'closed') dataList = [...state.closed];
     else if (state.currentTab === 'fy') {
-        // Automatically calculate current Financial Year (India: Apr 1 - Mar 31)
-        const d = new Date();
-        const y = d.getFullYear();
+        const d = new Date(); const y = d.getFullYear();
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
-        
         let summaryMap = {};
-        
-        // Aggregate Realized (Historical & Current)
         state.closed.forEach(p => {
             const key = p.FY + "_" + p.Broker + "_" + p.Segment;
             if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
             summaryMap[key].Realized += (p["P&L"] || 0);
         });
-        
-        // Aggregate Unrealized (Strictly mapped to Current FY)
         state.open.forEach(p => {
             const key = currentFY + "_" + p.Broker + "_" + p.Segment;
             if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
             summaryMap[key].Unrealized += (p["P&L"] || 0);
         });
-        
-        dataList = Object.values(summaryMap).map(p => { 
-            p.Total = p.Realized + p.Unrealized; 
-            return p; 
-        });
+        dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
     }
     else {
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-        for (let sym of Object.keys(cache)) {
-            let actions = cache[sym];
-            actions.forEach((act) => {
-                dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio });
-            });
-        }
+        for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
     }
     
-    // --- APPLY FILTERS ---
-    if (searchFilter && state.currentTab !== 'fy') {
-        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
-    }
-
+    if (searchFilter && state.currentTab !== 'fy') dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
     if (state.currentTab !== 'corp') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
 
-    // --- SORT ENGINE ---
     dataList.sort((a, b) => {
         let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : ''; 
         let valB = b[state.sortCol] !== undefined ? b[state.sortCol] : '';
@@ -579,173 +617,66 @@ function renderUI() {
     const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0; let html = '';
 
-    // --- RENDER TABLES ---
     if (state.currentTab === 'active') {
-        document.getElementById('tableHead').innerHTML = `<tr>
-            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
-            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
-            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
-            <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
-            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
-            <th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th>
-            <th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th>
-            <th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th>
-            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
-            <th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th>
-        </tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
         document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' : 'NET UNREALIZED P&L';
         document.getElementById('lblInv').innerText = 'MARGIN / INVESTED';
-        
         dataList.forEach(p => {
             totalPnl += p["P&L"]; totalInv += p.Invested;
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
             const displayCmp = (state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
-            
-            html += `<tr>
-                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
-                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-                <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
-                <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested)}</td>
-                <td style="color:var(--white)">${displayCmp}</td>
-                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
-                <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
-            </tr>`;
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
         });
     } 
     else if (state.currentTab === 'closed') {
-        document.getElementById('tableHead').innerHTML = `<tr>
-            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
-            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
-            <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
-            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
-            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
-            <th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th>
-            <th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th>
-            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
-            <th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th>
-        </tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
-        
         let wins = 0;
         dataList.forEach(p => {
-            totalPnl += p["P&L"];
-            if(p["P&L"] > 0) wins++;
+            totalPnl += p["P&L"]; if(p["P&L"] > 0) wins++;
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
-            
-            html += `<tr>
-                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-                <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
-                <td style="color:var(--orange);font-weight:600">${p.FY}</td>
-                <td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td>
-                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
-                <td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td>
-            </tr>`;
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
         });
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
     } 
     else if (state.currentTab === 'fy') {
-        document.getElementById('tableHead').innerHTML = `<tr>
-            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
-            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
-            <th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>
-            <th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th>
-            <th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th>
-            <th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th>
-        </tr>`;
-        
-        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED';
-        document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
-        
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th><th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
+        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED'; document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
         let totReal = 0, totUnreal = 0;
         dataList.forEach(p => {
-            totReal += p.Realized;
-            totUnreal += p.Unrealized;
-            
+            totReal += p.Realized; totUnreal += p.Unrealized;
             const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
             const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
             const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
-            
-            const rSgn = p.Realized > 0 ? '+' : '';
-            const uSgn = p.Unrealized > 0 ? '+' : '';
-            const tSgn = p.Total > 0 ? '+' : '';
-            
-            html += `<tr>
-                <td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>
-                <td style="color:var(--white);font-weight:600">${p.Broker}</td>
-                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-                <td class="${rCls}">${rSgn}${fmtMoney(p.Realized)}</td>
-                <td class="${uCls}">${uSgn}${fmtMoney(p.Unrealized)}</td>
-                <td class="${tCls}" style="font-weight:800">${tSgn}${fmtMoney(p.Total)}</td>
-            </tr>`;
+            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td><td style="color:var(--white);font-weight:600">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
         });
-        
-        // Pass totals out for the metric cards below
-        totalPnl = totReal;
-        totalInv = totUnreal;
+        totalPnl = totReal; totalInv = totUnreal;
     }
     else {
-        document.getElementById('tableHead').innerHTML = `<tr>
-            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
-            <th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th>
-            <th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th>
-            <th>ACTION</th>
-        </tr>`;
-        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
-        document.getElementById('lblInv').innerText = '-';
-        
-        dataList.forEach(p => {
-            html += `<tr>
-                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-                <td>${p.Date}</td>
-                <td style="color:var(--blue);font-weight:600">${p.Ratio}x</td>
-                <td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td>
-            </tr>`;
-        });
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS'; document.getElementById('lblInv').innerText = '-';
+        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
     }
 
     if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
-    // --- METRIC CARDS UPDATER ---
     if (state.currentTab === 'corp') {
-        const pnlEl = document.getElementById('valPnl');
-        pnlEl.innerText = dataList.length;
-        pnlEl.className = 'metric-val';
-        document.getElementById('valInv').innerText = '-';
-        document.getElementById('valPos').innerText = dataList.length;
-        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
-    } 
-    else if (state.currentTab === 'fy') {
-        const pnlEl = document.getElementById('valPnl');
-        pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
-        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        
-        const invEl = document.getElementById('valInv');
-        invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv);
-        invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
-        
-        const combined = totalPnl + totalInv;
-        const posEl = document.getElementById('valPos');
-        posEl.innerText = (combined>0?'+':'') + fmtMoney(combined);
-        posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
-        document.getElementById('lblPos').innerText = 'COMBINED P&L';
-    } 
-    else {
-        const pnlEl = document.getElementById('valPnl');
-        pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl);
-        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
-        document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('valPos').innerText = dataList.length;
-        document.getElementById('valPos').className = 'metric-val';
-        document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
+        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = dataList.length; pnlEl.className = 'metric-val';
+        document.getElementById('valInv').innerText = '-'; document.getElementById('valPos').innerText = dataList.length; document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+    } else if (state.currentTab === 'fy') {
+        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        const invEl = document.getElementById('valInv'); invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv); invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
+        const combined = totalPnl + totalInv; const posEl = document.getElementById('valPos'); posEl.innerText = (combined>0?'+':'') + fmtMoney(combined); posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : ''); document.getElementById('lblPos').innerText = 'COMBINED P&L';
+    } else {
+        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv; document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
     }
 }
 </script>
