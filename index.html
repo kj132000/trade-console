@@ -69,7 +69,6 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 #corpInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
 
-/* P&L Tracker UI */
 #chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
 .chart-controls{display:flex; gap:10px; margin-bottom: 20px;}
 </style>
@@ -199,13 +198,13 @@ window.onload = function() {
 
 function authGoogleDrive() { tokenClient.requestAccessToken(); }
 
-// --- DRIVE SYNC LOGIC ---
+// --- ENHANCED DRIVE SYNC LOGIC ---
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
     if (!state.driveToken) return null;
     try {
-        const q = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+        const query = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
         const data = await res.json();
         if (data.files && data.files.length > 0) state.driveFolderId = data.files[0].id;
         else {
@@ -220,8 +219,8 @@ async function getOrCreateFolder() {
 async function uploadFileToDrive(filename, content) {
     const folderId = await getOrCreateFolder();
     if (!folderId) return;
-    const q = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+    const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
     const searchData = await searchRes.json();
     let fileId;
     if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
@@ -237,15 +236,28 @@ async function downloadAllFromDrive() {
     const folderId = await getOrCreateFolder();
     if (!folderId) return [];
     appendLog("Scanning Google Drive for backup files...");
-    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+    
+    // STRICT URL ENCODING TO PREVENT BROWSER CACHE/PLUS SIGN BUGS
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+    
+    if (!listRes.ok) {
+        appendLog(`❌ Drive API Error: ${listRes.status}`);
+        return [];
+    }
+
     const listData = await listRes.json();
     const files = [];
-    if (listData.files) {
+    if (listData.files && listData.files.length > 0) {
+        appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
         for (let file of listData.files) {
             const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
             const content = await fileRes.text();
             files.push({ filename: file.name, content: content });
         }
+        appendLog("✅ All files securely downloaded from Drive.");
+    } else {
+        appendLog("⚠️ Drive folder is empty.");
     }
     return files;
 }
@@ -365,22 +377,34 @@ async function fetchPortfolio() {
         if(!res.ok) throw new Error();
         const data = await res.json();
         
-        if (data.positions.open.length === 0 && data.positions.closed.length === 0 && data.positions.trade_log.length === 0) {
+        // --- BULLETPROOF AUTO-RESTORE TRIGGER ---
+        if ((!data.positions.open || data.positions.open.length === 0) && 
+            (!data.positions.closed || data.positions.closed.length === 0) && 
+            (!data.positions.trade_log || data.positions.trade_log.length === 0)) {
+            
             if (state.driveToken) {
-                appendLog("Cloud reset detected. Pulling files from Google Drive...");
-                const driveFiles = await downloadAllFromDrive();
-                if (driveFiles.length > 0) {
-                    const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
-                    const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
-                    
-                    if (cacheFile) {
-                        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
-                        localStorage.setItem('tc_corp_cache', cacheFile.content);
+                appendLog("Cloud reset detected. Initiating automated rescue sequence...");
+                try {
+                    const driveFiles = await downloadAllFromDrive();
+                    if (driveFiles.length > 0) {
+                        const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
+                        const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
+                        
+                        if (cacheFile) {
+                            await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
+                            localStorage.setItem('tc_corp_cache', cacheFile.content);
+                        }
+                        if (csvFiles.length > 0) {
+                            appendLog("Pushing files to Render server memory...");
+                            await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
+                        }
+                        appendLog("✅ Render server jumpstarted! Recalculating...");
+                        return fetchPortfolio(); 
+                    } else {
+                        appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
                     }
-                    if (csvFiles.length > 0) {
-                        await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
-                    }
-                    return fetchPortfolio(); 
+                } catch(restoreErr) {
+                    appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
                 }
             }
         }
@@ -409,7 +433,7 @@ async function fetchPortfolio() {
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
         } else { stopLogPolling(); }
-    } catch(e) { stopLogPolling(); }
+    } catch(e) { stopLogPolling(); appendLog(`❌ Fetch Error: ${e.message}`); }
 }
 
 async function fetchLivePrices(token_map) {
