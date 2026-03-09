@@ -613,7 +613,6 @@ document.getElementById('tableBody').addEventListener('change', function(e) {
 });
 
 function renderUI() {
-    // ⚡ INSTANT CHART RENDERING FIX
     if(state.currentTab === 'chart') {
         renderChart();
         return; 
@@ -686,7 +685,6 @@ function renderUI() {
         });
     } 
     else if (state.currentTab === 'closed') {
-        // Added DAYS column
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
@@ -716,9 +714,6 @@ function renderUI() {
                 <select class="strategy-select" data-compkey="${compKey}">
                     <option value="">- Select Tag -</option>
                     <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
-                    <option value="VCP" ${currTag==='VCP'?'selected':''}>VCP</option>
-                    <option value="Stage 2 Breakout" ${currTag==='Stage 2 Breakout'?'selected':''}>Stage 2 Breakout</option>
-                    <option value="Momentum Breakout" ${currTag==='Momentum Breakout'?'selected':''}>Momentum Breakout</option>
                     <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
                     <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
                     <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
