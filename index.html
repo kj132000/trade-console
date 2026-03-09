@@ -327,8 +327,7 @@ function setTab(tab) {
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
     document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
 
-    if (tab === 'chart') { renderChart(); } 
-    else { renderUI(); }
+    renderUI(); 
 }
 
 function handleSort(col) {
@@ -481,8 +480,7 @@ async function fetchPortfolio() {
             }
         }
         
-        if (state.currentTab === 'chart') { renderChart(); } 
-        else { renderUI(); }
+        renderUI();
         
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
@@ -547,7 +545,6 @@ function renderChart() {
     const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
     document.getElementById('valPos').innerText = fmtMoney(peak);
 
-    // Dynamic Chart Colors based on Final P&L
     const finalPnl = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1].y : 0;
     const chartLineColor = finalPnl >= 0 ? '#48bb78' : '#fc8181';
     const chartBgColor = finalPnl >= 0 ? 'rgba(72, 187, 120, 0.1)' : 'rgba(252, 129, 129, 0.1)';
@@ -609,7 +606,6 @@ async function syncCacheAndRefresh(cache) {
     } catch(e) { stopLogPolling(); }
 }
 
-// Delegate Strategy Dropdown logic to prevent inline HTML breaking
 document.getElementById('tableBody').addEventListener('change', function(e) {
     if(e.target && e.target.classList.contains('strategy-select')) {
         saveStrategyTag(e.target.dataset.compkey, e.target.value);
@@ -617,7 +613,11 @@ document.getElementById('tableBody').addEventListener('change', function(e) {
 });
 
 function renderUI() {
-    if(state.currentTab === 'chart') return; 
+    // ⚡ INSTANT CHART RENDERING FIX
+    if(state.currentTab === 'chart') {
+        renderChart();
+        return; 
+    }
     
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
@@ -686,7 +686,8 @@ function renderUI() {
         });
     } 
     else if (state.currentTab === 'closed') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        // Added DAYS column
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
         
@@ -710,18 +711,22 @@ function renderUI() {
             const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
             const currTag = stratTags[compKey] || '';
             
-            // Updated dropdown to use data attributes for safer event delegation
             html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
             <td>
                 <select class="strategy-select" data-compkey="${compKey}">
                     <option value="">- Select Tag -</option>
                     <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
+                    <option value="VCP" ${currTag==='VCP'?'selected':''}>VCP</option>
+                    <option value="Stage 2 Breakout" ${currTag==='Stage 2 Breakout'?'selected':''}>Stage 2 Breakout</option>
+                    <option value="Momentum Breakout" ${currTag==='Momentum Breakout'?'selected':''}>Momentum Breakout</option>
                     <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
                     <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
                     <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
+                    <option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option>
+                    <option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option>
                 </select>
             </td>
-            <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
+            <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td>${holdDays.toFixed(0)}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
         });
         
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
