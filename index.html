@@ -9,66 +9,80 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
-body.light-mode {--bg:#f7fafc;--bg2:#ffffff;--bg3:#edf2f7;--border:#e2e8f0;--text:#2d3748;--text2:#4a5568;--text3:#718096;--white:#1a202c;}
-body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px; transition: background 0.3s, color 0.3s;}
+:root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0;--purple:#9f7aea}
+body.light-mode{--bg:#f7fafc;--bg2:#ffffff;--bg3:#edf2f7;--border:#e2e8f0;--text:#2d3748;--text2:#4a5568;--text3:#718096;--white:#1a202c}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;transition:background .3s,color .3s}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
-button, select, input{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
-input, select{font-family:inherit;outline:none}
+button,select,input{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
+input,select{font-family:inherit;outline:none}
 
 .container{max-width:1400px;margin:0 auto;padding:20px}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .logo-area{display:flex;align-items:center;gap:12px}
 .logo{width:40px;height:40px;background:linear-gradient(135deg,#2b6cb0,#63b3ed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
 .title{font-size:20px;font-weight:800;color:var(--white);letter-spacing:2px;font-family:'Outfit',sans-serif}
-.controls{display:flex;gap:10px;align-items:center; flex-wrap: wrap;}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
-.btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600; display:flex; align-items:center; gap:6px;}
+.btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
 .btn-sec{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:600}
 .btn-sec.active{background:var(--blue2);color:white;border-color:var(--blue2)}
-.btn-del{background:transparent;border:none;color:var(--red);font-weight:800;font-size:14px;cursor:pointer;}
+.btn-del{background:transparent;border:none;color:var(--red);font-weight:800;font-size:14px;cursor:pointer}
+
+/* Token expiry banner */
+#tokenBanner{display:none;background:rgba(237,137,54,0.15);border:1px solid rgba(237,137,54,0.4);border-radius:6px;padding:10px 16px;margin-bottom:16px;color:var(--orange);font-family:'Outfit';font-size:13px;display:none;align-items:center;gap:12px}
+#tokenBanner button{background:var(--orange);border:none;color:#000;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:700}
 
 .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
 .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
-.metric-title{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);margin-bottom:8px; text-transform:uppercase; font-weight:600;}
+.metric-title{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;font-weight:600}
 .metric-val{font-size:24px;font-weight:500;color:var(--white)}
 
 .table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;text-align:left}
-th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;user-select:none;}
+th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;user-select:none}
 th:hover{color:var(--white)}
 td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
 .positive{color:var(--green);font-weight:500}
 .negative{color:var(--red);font-weight:500}
 
-.tab-container{display:flex;gap:10px;margin-bottom:16px}
-#filterBar{background:var(--bg2); padding:12px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px;}
+.tab-container{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+#filterBar{background:var(--bg2);padding:12px 16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 #settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 
-.terminal-wrapper{background:#000;border:1px solid #333;border-radius:8px;margin-top:24px;overflow:hidden;}
-.terminal-header{background:#111;padding:8px 16px;font-family:'Outfit';font-size:12px;color:#888;display:flex;justify-content:space-between;cursor:pointer;}
-.terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
-.log-line{margin-bottom:4px;}
+.terminal-wrapper{background:#000;border:1px solid #333;border-radius:8px;margin-top:24px;overflow:hidden}
+.terminal-header{background:#111;padding:8px 16px;font-family:'Outfit';font-size:12px;color:#888;display:flex;justify-content:space-between;cursor:pointer}
+.terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6}
+.log-line{margin-bottom:4px}
 
-#driveBtnHeader{background:var(--green);border:none;color:white;display:flex;align-items:center;gap:6px;pointer-events:none;}
+#driveBtnHeader{background:var(--green);border:none;color:white;display:flex;align-items:center;gap:6px;pointer-events:none}
 
-.login-gate { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; }
-.login-btn:hover { background: #1557b0; }
+.login-gate{position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;max-width:400px;width:90%;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.login-btn{width:100%;padding:12px;background:#1a73e8;color:white;border:none;border-radius:6px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:24px}
+.login-btn:hover{background:#1557b0}
 
-#corpInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
-#chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
-.strategy-select{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-family:'Outfit'; font-size:11px;}
+#corpInsertBar{display:none;gap:10px;margin-bottom:16px;background:var(--bg2);padding:16px;border:1px solid var(--border);border-radius:8px}
+#chartContainer{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:24px}
+.strategy-select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-family:'Outfit';font-size:11px}
+
+/* Trade insight badges */
+.insight-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.insight-chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:'Outfit';font-size:11px;font-weight:600;color:var(--text3)}
+.insight-chip.win{border-color:rgba(72,187,120,.4);color:var(--green)}
+.insight-chip.loss{border-color:rgba(252,129,129,.4);color:var(--red)}
+.insight-chip.info{border-color:rgba(99,179,237,.4);color:var(--blue)}
+.insight-chip.warn{border-color:rgba(237,137,54,.4);color:var(--orange)}
 </style>
 </head>
 <body>
 
 <div id="loginGate" class="login-gate">
     <div class="login-card">
-        <div class="logo" style="margin: 0 auto 20px; width: 50px; height: 50px; font-size: 24px;">⚡</div>
-        <h1 class="title" style="margin-bottom: 12px;">TRADE CONSOLE</h1>
-        <p style="color: var(--text3); font-size: 14px; line-height: 1.5;">Your trading data is securely stored and synced via your personal Google Drive account.</p>
+        <div class="logo" style="margin:0 auto 20px;width:50px;height:50px;font-size:24px">⚡</div>
+        <h1 class="title" style="margin-bottom:12px">TRADE CONSOLE</h1>
+        <p style="color:var(--text3);font-size:14px;line-height:1.5">Your trading data is securely stored and synced via your personal Google Drive account.</p>
         <button class="login-btn" onclick="authGoogleDrive()">
             <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
             Connect Google Drive
@@ -76,15 +90,25 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     </div>
 </div>
 
-<div id="appContainer" class="container" style="display: none;">
+<div id="appContainer" class="container" style="display:none">
+
+    <!-- Drive token expiry banner -->
+    <div id="tokenBanner" style="display:none;background:rgba(237,137,54,0.15);border:1px solid rgba(237,137,54,0.4);border-radius:6px;padding:10px 16px;margin-bottom:16px;color:var(--orange);font-family:'Outfit';font-size:13px;align-items:center;gap:12px">
+        ⚠️ Google Drive session expired. Drive sync paused.
+        <button onclick="reAuthDrive()" style="background:var(--orange);border:none;color:#000;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:700">Reconnect</button>
+    </div>
+
     <div class="header">
         <div class="logo-area">
             <div class="logo">⚡</div>
             <div class="title">TRADE CONSOLE</div>
         </div>
         <div class="controls">
-            <button class="btn-sec" onclick="toggleTheme()" id="themeBtn">🌓 Theme</button>
-            <button id="driveBtnHeader" class="btn-sec"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg> Drive Synced</button>
+            <button class="btn-sec" onclick="toggleTheme()">🌓 Theme</button>
+            <button id="driveBtnHeader" class="btn-sec">
+                <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
+                Drive Synced
+            </button>
             <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
@@ -96,7 +120,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         </div>
     </div>
 
-    <div id="settingsPanel">
+    <div id="settingsPanel" style="display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end">
         <div style="flex:1">
             <label style="font-size:11px;color:var(--text3)">Backend URL</label>
             <input type="text" id="backendUrl" placeholder="https://..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
@@ -110,13 +134,20 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
     </div>
 
-    <div class="metrics-grid" id="eliteMetricsGrid" style="display:none; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px dashed var(--border); padding-top:24px;">
-        <div class="metric-card" style="background:rgba(72,187,120,0.05); border-color:rgba(72,187,120,0.2)"><div class="metric-title">AVERAGE WIN</div><div class="metric-val positive" id="valAvgWin">₹0</div></div>
-        <div class="metric-card" style="background:rgba(252,129,129,0.05); border-color:rgba(252,129,129,0.2)"><div class="metric-title">AVERAGE LOSS</div><div class="metric-val negative" id="valAvgLoss">₹0</div></div>
+    <div class="metrics-grid" id="eliteMetricsGrid" style="display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px dashed var(--border);padding-top:24px">
+        <div class="metric-card" style="background:rgba(72,187,120,.05);border-color:rgba(72,187,120,.2)"><div class="metric-title">AVERAGE WIN</div><div class="metric-val positive" id="valAvgWin">₹0</div></div>
+        <div class="metric-card" style="background:rgba(252,129,129,.05);border-color:rgba(252,129,129,.2)"><div class="metric-title">AVERAGE LOSS</div><div class="metric-val negative" id="valAvgLoss">₹0</div></div>
         <div class="metric-card"><div class="metric-title">REWARD / RISK</div><div class="metric-val" id="valRR" style="color:var(--blue)">0.00</div></div>
-        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (WINS)</div><div class="metric-val" id="valDaysWin">0.0</div></div>
-        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (LOSS)</div><div class="metric-val" id="valDaysLoss">0.0</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS (WINS)</div><div class="metric-val" id="valDaysWin">0.0</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS (LOSS)</div><div class="metric-val" id="valDaysLoss">0.0</div></div>
+        <div class="metric-card"><div class="metric-title">PROFIT FACTOR</div><div class="metric-val" id="valPF" style="color:var(--purple)">0.00</div></div>
+        <div class="metric-card"><div class="metric-title">EXPECTANCY / TRADE</div><div class="metric-val" id="valExp">₹0</div></div>
+        <div class="metric-card"><div class="metric-title">LARGEST WIN</div><div class="metric-val positive" id="valBestTrade">₹0</div></div>
+        <div class="metric-card"><div class="metric-title">LARGEST LOSS</div><div class="metric-val negative" id="valWorstTrade">₹0</div></div>
     </div>
+
+    <!-- Trade insights chips — shown in closed tab -->
+    <div class="insight-bar" id="insightBar" style="display:none"></div>
 
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
@@ -127,28 +158,28 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
     </div>
 
-    <div class="controls" id="filterBar">
-        <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="renderUI()" style="width:160px; text-transform:uppercase;">
-        <select id="brokerFilter" class="btn-sec" onchange="renderUI()"><option value="ALL">All Brokers</option></select>
-        <select id="segFilter" class="btn-sec" onchange="renderUI()">
+    <div id="filterBar">
+        <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." style="width:160px;text-transform:uppercase" oninput="onSearchInput()">
+        <select id="brokerFilter" class="btn-sec" onchange="onFilterChange()"><option value="ALL">All Brokers</option></select>
+        <select id="segFilter" class="btn-sec" onchange="onFilterChange()">
             <option value="ALL">All Segments</option>
             <option value="EQ">Equity</option>
             <option value="F&O">F&O</option>
             <option value="MCX">Commodity</option>
         </select>
-        <select id="fyFilter" class="btn-sec" onchange="renderUI()" style="display: none;">
+        <select id="fyFilter" class="btn-sec" onchange="onFilterChange()" style="display:none">
             <option value="ALL">All FYs</option>
         </select>
     </div>
 
-    <div id="chartContainer">
-        <div style="height: 400px; width: 100%; position: relative;">
+    <div id="chartContainer" style="display:none">
+        <div style="height:400px;width:100%;position:relative">
             <canvas id="pnlChart"></canvas>
         </div>
     </div>
 
-    <div id="corpInsertBar">
-        <input type="text" id="newCorpSym" placeholder="SYMBOL (e.g. NPST)" class="btn-sec" style="flex:1; text-transform: uppercase;">
+    <div id="corpInsertBar" style="display:none">
+        <input type="text" id="newCorpSym" placeholder="SYMBOL (e.g. NPST)" class="btn-sec" style="flex:1;text-transform:uppercase">
         <input type="date" id="newCorpDate" class="btn-sec" style="flex:1" title="Ex-Date">
         <input type="number" id="newCorpRatio" placeholder="Ratio Multiplier (e.g. 3.0)" class="btn-sec" step="0.1" style="flex:1">
         <button class="btn-pri" onclick="insertCorpAction()">+ Add Split</button>
@@ -165,17 +196,20 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 </div>
 
 <script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
 let state = {
     open: [], closed: [], corp: [], trade_log: [], currentTab: 'active',
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null,
-    pnlChartInstance: null 
+    pnlChartInstance: null,
+    tokenExpiresAt: null,   // tracks OAuth token expiry
+    _searchDebounce: null   // debounce timer
 };
 
-// Apply Theme on Load
-if(localStorage.getItem('tc_theme') === 'light') { document.body.classList.add('light-mode'); }
-
+if (localStorage.getItem('tc_theme') === 'light') document.body.classList.add('light-mode');
 function toggleTheme() {
     document.body.classList.toggle('light-mode');
     localStorage.setItem('tc_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
@@ -183,6 +217,9 @@ function toggleTheme() {
 
 document.getElementById('backendUrl').value = state.backendUrl;
 const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
+// Google tokens expire in 3600s; we refresh 5 min early
+const TOKEN_LIFETIME_MS = 3600 * 1000;
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 let tokenClient;
 window.onload = function() {
@@ -192,9 +229,12 @@ window.onload = function() {
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 state.driveToken = tokenResponse.access_token;
+                state.tokenExpiresAt = Date.now() + TOKEN_LIFETIME_MS;
+                hideBanner();
                 document.getElementById('loginGate').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
                 appendLog("✅ Connected to Google Drive.");
+                scheduleTokenRefresh();
                 getOrCreateFolder().then(() => fetchPortfolio());
             }
         },
@@ -203,76 +243,159 @@ window.onload = function() {
 
 function authGoogleDrive() { tokenClient.requestAccessToken(); }
 
-// --- ENHANCED DRIVE SYNC LOGIC ---
+// ─────────────────────────────────────────────
+// DRIVE TOKEN EXPIRY MANAGEMENT
+// ─────────────────────────────────────────────
+function scheduleTokenRefresh() {
+    if (!state.tokenExpiresAt) return;
+    const msUntilRefresh = state.tokenExpiresAt - Date.now() - TOKEN_REFRESH_BUFFER_MS;
+    if (msUntilRefresh <= 0) {
+        showExpiredBanner();
+        return;
+    }
+    setTimeout(() => {
+        // Silent re-auth: requestAccessToken with prompt:'' to avoid popup if still valid
+        appendLog("🔄 Refreshing Drive session silently...");
+        try {
+            tokenClient.requestAccessToken({ prompt: '' });
+        } catch(e) {
+            showExpiredBanner();
+        }
+    }, msUntilRefresh);
+}
+
+function showExpiredBanner() {
+    state.driveToken = null;
+    document.getElementById('tokenBanner').style.display = 'flex';
+    appendLog("⚠️ Drive session expired. Sync paused.");
+}
+
+function hideBanner() {
+    document.getElementById('tokenBanner').style.display = 'none';
+}
+
+function reAuthDrive() {
+    tokenClient.requestAccessToken();
+}
+
+// Wrapper: any Drive operation checks token validity first
+async function driveOp(fn) {
+    if (!state.driveToken) { showExpiredBanner(); return null; }
+    if (state.tokenExpiresAt && Date.now() > state.tokenExpiresAt) { showExpiredBanner(); return null; }
+    return await fn();
+}
+
+// ─────────────────────────────────────────────
+// FILTER CHANGE HANDLERS (with debounce on search)
+// ─────────────────────────────────────────────
+function onSearchInput() {
+    clearTimeout(state._searchDebounce);
+    state._searchDebounce = setTimeout(() => {
+        if (state.currentTab === 'chart') renderChart();
+        else renderUI();
+    }, 200);
+}
+
+function onFilterChange() {
+    // FIX: Chart filters now trigger chart re-render immediately
+    if (state.currentTab === 'chart') renderChart();
+    else renderUI();
+}
+
+// ─────────────────────────────────────────────
+// DRIVE SYNC
+// ─────────────────────────────────────────────
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
-    if (!state.driveToken) return null;
-    try {
-        const query = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-        const data = await res.json();
-        if (data.files && data.files.length > 0) state.driveFolderId = data.files[0].id;
-        else {
-            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })});
-            const createData = await createRes.json();
-            state.driveFolderId = createData.id;
-        }
-        return state.driveFolderId;
-    } catch(e) { return null; }
+    return driveOp(async () => {
+        try {
+            const query = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+            const data = await res.json();
+            if (data.files && data.files.length > 0) {
+                state.driveFolderId = data.files[0].id;
+            } else {
+                const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })
+                });
+                const createData = await createRes.json();
+                state.driveFolderId = createData.id;
+            }
+            return state.driveFolderId;
+        } catch(e) { appendLog(`❌ Drive folder error: ${e.message}`); return null; }
+    });
 }
 
 async function uploadFileToDrive(filename, content) {
-    const folderId = await getOrCreateFolder();
-    if (!folderId) return;
-    const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-    const searchData = await searchRes.json();
-    let fileId;
-    if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
-    else {
-        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: filename, parents: [folderId] })});
-        const metaData = await metaRes.json();
-        fileId = metaData.id;
-    }
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
+    return driveOp(async () => {
+        try {
+            const folderId = await getOrCreateFolder();
+            if (!folderId) return;
+            // Escape filename for URL query — prevents + parse bugs
+            const safeFilename = encodeURIComponent(filename);
+            const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
+            const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+            const searchData = await searchRes.json();
+            let fileId;
+            if (searchData.files && searchData.files.length > 0) {
+                fileId = searchData.files[0].id;
+            } else {
+                const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: filename, parents: [folderId] })
+                });
+                const metaData = await metaRes.json();
+                fileId = metaData.id;
+            }
+            await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' },
+                body: content
+            });
+        } catch(e) { appendLog(`❌ Drive upload failed for ${filename}: ${e.message}`); }
+    });
 }
 
 async function downloadAllFromDrive() {
-    const folderId = await getOrCreateFolder();
-    if (!folderId) return [];
-    appendLog("Scanning Google Drive for backup files...");
-    
-    const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-    
-    if (!listRes.ok) {
-        appendLog(`❌ Drive API Error: ${listRes.status}`);
-        return [];
-    }
-
-    const listData = await listRes.json();
-    const files = [];
-    if (listData.files && listData.files.length > 0) {
-        appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
-        for (let file of listData.files) {
-            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-            const content = await fileRes.text();
-            files.push({ filename: file.name, content: content });
+    return driveOp(async () => {
+        const folderId = await getOrCreateFolder();
+        if (!folderId) return [];
+        appendLog("Scanning Google Drive for backup files...");
+        const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+        const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+        if (!listRes.ok) { appendLog(`❌ Drive API Error: ${listRes.status}`); return []; }
+        const listData = await listRes.json();
+        const files = [];
+        if (listData.files && listData.files.length > 0) {
+            appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
+            for (let file of listData.files) {
+                const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                const content = await fileRes.text();
+                files.push({ filename: file.name, content: content });
+            }
+            appendLog("✅ All files downloaded from Drive.");
+        } else {
+            appendLog("⚠️ Drive folder is empty.");
         }
-        appendLog("✅ All files securely downloaded from Drive.");
-    } else {
-        appendLog("⚠️ Drive folder is empty.");
-    }
-    return files;
+        return files;
+    }) || [];
 }
 
 async function clearDriveFiles() {
-    const folderId = await getOrCreateFolder();
-    if (!folderId) return;
-    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
-    state.driveFolderId = null; 
+    return driveOp(async () => {
+        const folderId = await getOrCreateFolder();
+        if (!folderId) return;
+        await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
+        state.driveFolderId = null;
+    });
 }
 
+// ─────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────
 function toggleSettings() {
     const p = document.getElementById('settingsPanel');
     p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
@@ -283,44 +406,44 @@ function saveSettings() {
     toggleSettings();
 }
 
-// --- STRATEGY TAGGING LOGIC ---
+// ─────────────────────────────────────────────
+// STRATEGY TAGS
+// ─────────────────────────────────────────────
 async function saveStrategyTag(compositeKey, strategyValue) {
     let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
-    if(strategyValue) tags[compositeKey] = strategyValue;
+    if (strategyValue) tags[compositeKey] = strategyValue;
     else delete tags[compositeKey];
     localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
-    
-    if(state.driveToken) {
-        appendLog(`Syncing strategy tag to Drive...`);
+    if (state.driveToken) {
+        appendLog("Syncing strategy tag to Drive...");
         await uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
-        appendLog(`✅ Strategy saved.`);
+        appendLog("✅ Strategy saved.");
     }
 }
 
-// --- TAB CONTROLLER ---
+// ─────────────────────────────────────────────
+// TAB CONTROLLER
+// ─────────────────────────────────────────────
 function setTab(tab) {
     state.currentTab = tab;
     if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
     else if (tab === 'log') { state.sortCol = 'Date'; state.sortAsc = false; }
     else if (tab !== 'chart') { state.sortCol = 'Symbol'; state.sortAsc = true; }
-    
-    document.getElementById('tab-active').classList.toggle('active', tab === 'active');
-    document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
-    document.getElementById('tab-log').classList.toggle('active', tab === 'log');
-    document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
-    document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
-    document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
-    
+
+    ['active','closed','log','chart','fy','corp'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    });
+
     document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'fy') ? 'none' : 'flex';
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
     document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
     document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
-
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
-    document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
+    document.getElementById('eliteMetricsGrid').style.display = tab === 'closed' ? 'grid' : 'none';
+    document.getElementById('insightBar').style.display = tab === 'closed' ? 'flex' : 'none';
 
-    if (tab === 'chart') { renderChart(); } 
-    else { renderUI(); }
+    if (tab === 'chart') renderChart();
+    else renderUI();
 }
 
 function handleSort(col) {
@@ -329,38 +452,48 @@ function handleSort(col) {
     renderUI();
 }
 
+// ─────────────────────────────────────────────
+// TERMINAL
+// ─────────────────────────────────────────────
 function toggleTerminal() {
     const body = document.getElementById('terminalBody');
     const btn = document.getElementById('termToggleBtn');
-    if(body.style.display === 'none') { body.style.display = 'block'; btn.innerText = '▼'; } 
+    if (body.style.display === 'none') { body.style.display = 'block'; btn.innerText = '▼'; }
     else { body.style.display = 'none'; btn.innerText = '▲'; }
 }
 function appendLog(text) {
     const tb = document.getElementById('terminalBody');
-    tb.innerHTML += `<div class="log-line">${text}</div>`;
+    const ts = new Date().toLocaleTimeString('en-IN', { hour12: false });
+    tb.innerHTML += `<div class="log-line"><span style="color:#4a5568">[${ts}]</span> ${text}</div>`;
     tb.scrollTop = tb.scrollHeight;
 }
 async function pollLogs() {
-    if(!state.isPollingLogs) return;
+    if (!state.isPollingLogs) return;
     try {
         const res = await fetch(`${state.backendUrl}/api/logs`);
-        if(res.ok) { const data = await res.json(); data.logs.forEach(log => appendLog(log)); }
-    } catch(e){}
+        if (res.ok) { const data = await res.json(); data.logs.forEach(log => appendLog(log)); }
+    } catch(e) {}
     setTimeout(pollLogs, 500);
 }
-function startLogPolling() { if(!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); } }
+function startLogPolling() { if (!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); } }
 function stopLogPolling() { setTimeout(() => { state.isPollingLogs = false; }, 2000); }
 
-const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
-const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+// ─────────────────────────────────────────────
+// FORMATTERS
+// ─────────────────────────────────────────────
+const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtDec = (num) => Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// ─────────────────────────────────────────────
+// CLEAR
+// ─────────────────────────────────────────────
 async function clearLedger() {
-    if(!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
+    if (!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     startLogPolling();
     try {
-        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
-        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
+        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e => console.warn(e));
+        const p2 = state.driveToken ? clearDriveFiles().catch(e => console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
         state.open = []; state.closed = []; state.corp = []; state.trade_log = [];
         localStorage.removeItem('tc_corp_cache');
@@ -371,93 +504,99 @@ async function clearLedger() {
     stopLogPolling();
 }
 
+// ─────────────────────────────────────────────
+// UPLOAD
+// ─────────────────────────────────────────────
 async function handleFileUpload(event) {
     const files = event.target.files;
-    if(!files.length) return;
+    if (!files.length) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
     startLogPolling();
     try {
         const formData = new FormData();
-        for(let f of files) formData.append("files", f);
+        for (let f of files) formData.append("files", f);
         await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
-        if(state.driveToken) {
+        if (state.driveToken) {
             appendLog("Backing up CSVs to Google Drive...");
-            for(let f of files) { const text = await f.text(); await uploadFileToDrive(f.name, text); }
+            for (let f of files) { const text = await f.text(); await uploadFileToDrive(f.name, text); }
         }
         fetchPortfolio();
     } catch(e) { alert("Upload failed."); stopLogPolling(); }
 }
 
+// ─────────────────────────────────────────────
+// FILTER POPULATE
+// ─────────────────────────────────────────────
 function populateFilters() {
-    const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker), ...state.trade_log.map(p=>p.Broker)]);
+    const allBrokers = new Set([...state.open.map(p => p.Broker), ...state.closed.map(p => p.Broker), ...state.trade_log.map(p => p.Broker)]);
     const selectB = document.getElementById('brokerFilter');
     const currentValB = selectB.value;
     selectB.innerHTML = '<option value="ALL">All Brokers</option>';
-    allBrokers.forEach(b => { if(b) selectB.innerHTML += `<option value="${b}">${b}</option>`; });
-    selectB.value = currentValB;
+    allBrokers.forEach(b => { if (b) selectB.innerHTML += `<option value="${b}">${b}</option>`; });
+    if ([...allBrokers].includes(currentValB)) selectB.value = currentValB;
 
-    const allFYs = new Set([...state.closed.map(p=>p.FY), ...state.trade_log.map(p=>p.FY)]);
+    const allFYs = new Set([...state.closed.map(p => p.FY), ...state.trade_log.map(p => p.FY)]);
     const selectF = document.getElementById('fyFilter');
     const currentValF = selectF ? selectF.value : 'ALL';
-    if(selectF) {
+    if (selectF) {
         selectF.innerHTML = '<option value="ALL">All FYs</option>';
         Array.from(allFYs).filter(Boolean).sort().reverse().forEach(fy => {
             selectF.innerHTML += `<option value="${fy}">${fy}</option>`;
         });
-        selectF.value = currentValF;
+        if (currentValF) selectF.value = currentValF;
     }
 }
 
+// ─────────────────────────────────────────────
+// FETCH PORTFOLIO
+// ─────────────────────────────────────────────
 async function fetchPortfolio() {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Calculating Positions...</td></tr>`;
     startLogPolling();
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
-        if(!res.ok) throw new Error();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        
-        if ((!data.positions.open || data.positions.open.length === 0) && 
-            (!data.positions.closed || data.positions.closed.length === 0) && 
-            (!data.positions.trade_log || data.positions.trade_log.length === 0)) {
-            
-            if (state.driveToken) {
-                appendLog("Cloud reset detected. Initiating automated rescue sequence...");
-                try {
-                    const driveFiles = await downloadAllFromDrive();
-                    if (driveFiles.length > 0) {
-                        const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
-                        const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
-                        const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
-                        
-                        if (cacheFile) {
-                            await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
-                            localStorage.setItem('tc_corp_cache', cacheFile.content);
-                        }
-                        if (stratFile) {
-                            localStorage.setItem('tc_strategy_tags', stratFile.content);
-                        }
-                        if (csvFiles.length > 0) {
-                            appendLog("Pushing files to Render server memory...");
-                            await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
-                        }
-                        appendLog("✅ Render server jumpstarted! Recalculating...");
-                        return fetchPortfolio(); 
-                    } else {
-                        appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
+
+        const isEmpty = (!data.positions.open || data.positions.open.length === 0) &&
+                        (!data.positions.closed || data.positions.closed.length === 0) &&
+                        (!data.positions.trade_log || data.positions.trade_log.length === 0);
+
+        if (isEmpty && state.driveToken) {
+            appendLog("Cloud reset detected. Initiating automated rescue sequence...");
+            try {
+                const driveFiles = await downloadAllFromDrive();
+                if (driveFiles && driveFiles.length > 0) {
+                    const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
+                    const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
+                    const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
+
+                    if (cacheFile) {
+                        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
+                        localStorage.setItem('tc_corp_cache', cacheFile.content);
                     }
-                } catch(restoreErr) {
-                    appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
+                    if (stratFile) localStorage.setItem('tc_strategy_tags', stratFile.content);
+                    if (csvFiles.length > 0) {
+                        appendLog("Pushing files to Render server memory...");
+                        await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
+                    }
+                    appendLog("✅ Render server jumpstarted! Recalculating...");
+                    return fetchPortfolio();
+                } else {
+                    appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
                 }
+            } catch(restoreErr) {
+                appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
             }
         }
-        
+
         state.open = data.positions.open || [];
         state.closed = data.positions.closed || [];
-        state.corp = data.positions.corp_actions || []; 
+        state.corp = data.positions.corp_actions || [];
         state.trade_log = data.positions.trade_log || [];
-        
+
         populateFilters();
-        
+
         if (state.driveToken) {
             const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
             if (cacheRes.ok) {
@@ -468,18 +607,24 @@ async function fetchPortfolio() {
                 }
             }
         }
-        
-        if (state.currentTab === 'chart') { renderChart(); } 
-        else { renderUI(); }
-        
+
+        if (state.currentTab === 'chart') renderChart();
+        else renderUI();
+
         if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
             fetchLivePrices(data.positions.token_map);
-        } else { stopLogPolling(); }
+        } else {
+            stopLogPolling();
+        }
     } catch(e) { stopLogPolling(); appendLog(`❌ Fetch Error: ${e.message}`); }
 }
 
+// ─────────────────────────────────────────────
+// LIVE PRICES
+// ─────────────────────────────────────────────
 async function fetchLivePrices(token_map) {
-    state.fetchingPrices = true; if(state.currentTab !== 'chart') renderUI(); 
+    state.fetchingPrices = true;
+    if (state.currentTab !== 'chart') renderUI();
     try {
         const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: token_map }) });
         if (res.ok) {
@@ -493,50 +638,56 @@ async function fetchLivePrices(token_map) {
                 }
             });
         }
-    } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); }
+    } catch(e) {}
+    finally { state.fetchingPrices = false; if (state.currentTab !== 'chart') renderUI(); stopLogPolling(); }
 }
 
+// ─────────────────────────────────────────────
+// CHART
+// ─────────────────────────────────────────────
 function renderChart() {
     const fyFilter = document.getElementById('fyFilter').value;
     const brkFilter = document.getElementById('brokerFilter').value;
     const segFilter = document.getElementById('segFilter').value;
-    
+
     let filteredTrades = [...state.closed];
     if (fyFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.FY === fyFilter);
     if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
-    if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
+    if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter === 'F&O' && p.Segment.includes('FO')));
 
     filteredTrades.sort((a, b) => new Date(a["Exit Date"]) - new Date(b["Exit Date"]));
 
     let dailyAgg = {};
     filteredTrades.forEach(p => {
         const d = p["Exit Date"];
-        if(!dailyAgg[d]) dailyAgg[d] = 0;
+        if (!dailyAgg[d]) dailyAgg[d] = 0;
         dailyAgg[d] += p["P&L"];
     });
 
     const dates = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
     let cumulativeData = [];
     let runningTotal = 0;
-    
     dates.forEach(d => {
         runningTotal += dailyAgg[d];
         cumulativeData.push({ x: d, y: runningTotal });
     });
 
-    document.getElementById('lblPnl').innerText = `REALIZED P&L`;
+    document.getElementById('lblPnl').innerText = 'REALIZED P&L';
     const pnlEl = document.getElementById('valPnl');
-    pnlEl.innerText = (runningTotal>0?'+':'') + fmtMoney(runningTotal);
+    pnlEl.innerText = (runningTotal > 0 ? '+' : '') + fmtMoney(runningTotal);
     pnlEl.className = 'metric-val ' + (runningTotal > 0 ? 'positive' : runningTotal < 0 ? 'negative' : '');
-    
     document.getElementById('lblInv').innerText = 'CLOSED TRADES';
     document.getElementById('valInv').innerText = filteredTrades.length;
     document.getElementById('lblPos').innerText = 'PEAK P&L';
-    const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
+    const peak = Math.max(0, ...cumulativeData.map(d => d.y));
     document.getElementById('valPos').innerText = fmtMoney(peak);
 
     const ctx = document.getElementById('pnlChart').getContext('2d');
-    if (state.pnlChartInstance) { state.pnlChartInstance.destroy(); }
+    if (state.pnlChartInstance) state.pnlChartInstance.destroy();
+
+    // Color line green/red based on final value
+    const lineColor = runningTotal >= 0 ? '#48bb78' : '#fc8181';
+    const fillColor = runningTotal >= 0 ? 'rgba(72,187,120,0.1)' : 'rgba(252,129,129,0.1)';
 
     state.pnlChartInstance = new Chart(ctx, {
         type: 'line',
@@ -545,8 +696,8 @@ function renderChart() {
             datasets: [{
                 label: 'Cumulative Realized P&L',
                 data: cumulativeData.map(d => d.y),
-                borderColor: '#48bb78',
-                backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                borderColor: lineColor,
+                backgroundColor: fillColor,
                 borderWidth: 2,
                 pointRadius: 2,
                 pointHoverRadius: 5,
@@ -556,29 +707,42 @@ function renderChart() {
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '₹ ' + c.parsed.y.toLocaleString('en-IN'); } } } },
-            scales: { x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } }, y: { ticks: { color: '#cbd5e0', callback: function(v) { return '₹ ' + v.toLocaleString('en-IN'); } }, grid: { color: '#1e2533' } } },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(c) { return (c.parsed.y >= 0 ? '+' : '') + '₹ ' + c.parsed.y.toLocaleString('en-IN'); } } }
+            },
+            scales: {
+                x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } },
+                y: {
+                    ticks: { color: '#cbd5e0', callback: function(v) { return '₹ ' + v.toLocaleString('en-IN'); } },
+                    grid: { color: '#1e2533' }
+                }
+            },
             interaction: { intersect: false, mode: 'index' }
         }
     });
 }
 
+// ─────────────────────────────────────────────
+// CORP ACTIONS
+// ─────────────────────────────────────────────
 function insertCorpAction() {
     const sym = document.getElementById('newCorpSym').value.toUpperCase().trim();
-    const date = document.getElementById('newCorpDate').value; 
+    const date = document.getElementById('newCorpDate').value;
     const ratio = parseFloat(document.getElementById('newCorpRatio').value);
-    if(!sym || !date || !ratio) return alert("Please fill all fields.");
-
+    if (!sym || !date || !ratio) return alert("Please fill all fields.");
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-    if(!cache[sym]) cache[sym] = [];
-    cache[sym].push({date: date, ratio: ratio});
-    document.getElementById('newCorpSym').value = ''; document.getElementById('newCorpDate').value = ''; document.getElementById('newCorpRatio').value = '';
+    if (!cache[sym]) cache[sym] = [];
+    cache[sym].push({ date: date, ratio: ratio });
+    document.getElementById('newCorpSym').value = '';
+    document.getElementById('newCorpDate').value = '';
+    document.getElementById('newCorpRatio').value = '';
     syncCacheAndRefresh(cache);
 }
 
 function deleteCorpAction(sym, dateStr) {
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); syncCacheAndRefresh(cache); }
+    if (cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); syncCacheAndRefresh(cache); }
 }
 
 async function syncCacheAndRefresh(cache) {
@@ -586,20 +750,78 @@ async function syncCacheAndRefresh(cache) {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
     startLogPolling();
     try {
-        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
-        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cache) });
+        if (state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
         fetchPortfolio();
     } catch(e) { stopLogPolling(); }
 }
 
+// ─────────────────────────────────────────────
+// TRADE INSIGHTS ENGINE
+// For closed tab: generates contextual chips about trading behaviour
+// ─────────────────────────────────────────────
+function generateInsights(trades) {
+    const chips = [];
+    if (!trades.length) return chips;
+
+    const wins = trades.filter(t => t["P&L"] > 0);
+    const losses = trades.filter(t => t["P&L"] < 0);
+    const winRate = trades.length > 0 ? (wins.length / trades.length * 100) : 0;
+
+    // Best performing segment
+    const segPnl = {};
+    trades.forEach(t => { segPnl[t.Segment] = (segPnl[t.Segment] || 0) + t["P&L"]; });
+    const bestSeg = Object.entries(segPnl).sort((a,b) => b[1]-a[1])[0];
+    if (bestSeg) chips.push({ label: `Best segment: ${bestSeg[0]} (${fmtMoney(bestSeg[1])})`, type: bestSeg[1] > 0 ? 'win' : 'loss' });
+
+    // Hold time analysis
+    const winDays = wins.map(t => Math.max(0, (new Date(t["Exit Date"]) - new Date(t["Entry Date"])) / 86400000));
+    const lossDays = losses.map(t => Math.max(0, (new Date(t["Exit Date"]) - new Date(t["Entry Date"])) / 86400000));
+    const avgWinDays = winDays.length ? (winDays.reduce((a,b)=>a+b,0)/winDays.length).toFixed(1) : 0;
+    const avgLossDays = lossDays.length ? (lossDays.reduce((a,b)=>a+b,0)/lossDays.length).toFixed(1) : 0;
+    if (avgLossDays > avgWinDays && losses.length > 2) {
+        chips.push({ label: `Cutting losses slowly: avg loss held ${avgLossDays}d vs wins ${avgWinDays}d`, type: 'warn' });
+    } else if (avgWinDays > 0) {
+        chips.push({ label: `Avg hold: wins ${avgWinDays}d, losses ${avgLossDays}d`, type: 'info' });
+    }
+
+    // Win rate
+    chips.push({ label: `Win rate: ${winRate.toFixed(1)}% (${wins.length}W / ${losses.length}L)`, type: winRate >= 50 ? 'win' : 'loss' });
+
+    // Gross win vs gross loss
+    const grossWin = wins.reduce((a,t)=>a+t["P&L"],0);
+    const grossLoss = Math.abs(losses.reduce((a,t)=>a+t["P&L"],0));
+    if (grossLoss > 0) {
+        const pf = (grossWin / grossLoss).toFixed(2);
+        chips.push({ label: `Profit factor: ${pf}x`, type: parseFloat(pf) >= 1.5 ? 'win' : parseFloat(pf) >= 1 ? 'info' : 'loss' });
+    }
+
+    // Biggest drag
+    if (losses.length > 0) {
+        const worst = losses.sort((a,b) => a["P&L"]-b["P&L"])[0];
+        chips.push({ label: `Biggest drag: ${worst.Symbol} (${fmtMoney(worst["P&L"])})`, type: 'loss' });
+    }
+
+    // Best trade
+    if (wins.length > 0) {
+        const best = wins.sort((a,b) => b["P&L"]-a["P&L"])[0];
+        chips.push({ label: `Best trade: ${best.Symbol} (+${fmtMoney(best["P&L"])})`, type: 'win' });
+    }
+
+    return chips;
+}
+
+// ─────────────────────────────────────────────
+// RENDER UI
+// ─────────────────────────────────────────────
 function renderUI() {
-    if(state.currentTab === 'chart') return; 
-    
+    if (state.currentTab === 'chart') return;
+
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
     const fyFilter = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
-    const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
-    
+    const searchFilter = document.getElementById('searchFilter').value.toUpperCase().trim();
+
     let dataList = [];
     if (state.currentTab === 'active') dataList = [...state.open];
     else if (state.currentTab === 'closed') dataList = [...state.closed];
@@ -619,151 +841,295 @@ function renderUI() {
             summaryMap[key].Unrealized += (p["P&L"] || 0);
         });
         dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
-    }
-    else {
+    } else {
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-        for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
+        for (let sym of Object.keys(cache)) {
+            cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); });
+        }
     }
-    
-    if (searchFilter && state.currentTab !== 'fy') dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
-    
+
+    // Apply filters
+    if (searchFilter && state.currentTab !== 'fy') {
+        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    }
     if (state.currentTab !== 'corp') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
-        if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+        if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter === 'F&O' && p.Segment && p.Segment.includes('FO')));
     }
-    
     if (fyFilter !== 'ALL' && (state.currentTab === 'closed' || state.currentTab === 'log')) {
         dataList = dataList.filter(p => p.FY === fyFilter);
     }
 
+    // Sort
     dataList.sort((a, b) => {
-        let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : ''; 
+        let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : '';
         let valB = b[state.sortCol] !== undefined ? b[state.sortCol] : '';
-        if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+        if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
         if (valA < valB) return state.sortAsc ? -1 : 1;
         if (valA > valB) return state.sortAsc ? 1 : -1;
         return 0;
     });
 
     const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
-    let totalPnl = 0, totalInv = 0; let html = '';
+    let totalPnl = 0, totalInv = 0;
+    let html = '';
 
+    // ── ACTIVE ──
     if (state.currentTab === 'active') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
-        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' : 'NET UNREALIZED P&L';
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
+            <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
+            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
+            <th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th>
+            <th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th>
+            <th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th>
+            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
+            <th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th>
+        </tr>`;
+        document.getElementById('lblPnl').innerHTML = state.fetchingPrices
+            ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳</span>'
+            : 'NET UNREALIZED P&L';
         document.getElementById('lblInv').innerText = 'MARGIN / INVESTED';
+
         dataList.forEach(p => {
             totalPnl += p["P&L"]; totalInv += p.Invested;
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
             const displayCmp = (state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
-            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+                <td>${p.Qty}</td>
+                <td>${fmtDec(p["Avg Price"])}</td>
+                <td>${fmtMoney(p.Invested)}</td>
+                <td style="color:var(--white)">${displayCmp}</td>
+                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
+                <td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td>
+            </tr>`;
         });
-    } 
+    }
+
+    // ── CLOSED ──
     else if (state.currentTab === 'closed') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
+            <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
+            <th>STRATEGY</th>
+            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
+            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
+            <th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th>
+            <th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th>
+            <th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th>
+            <th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th>
+            <th onclick="handleSort('_holdDays')">DAYS${thIcon('_holdDays')}</th>
+        </tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
-        
-        let wins = 0, losses = 0;
-        let grossWin = 0, grossLoss = 0;
+
+        let wins = 0, losses = 0, grossWin = 0, grossLoss = 0;
         let daysWin = 0, daysLoss = 0;
+        let bestPnl = -Infinity, worstPnl = Infinity;
         let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
 
         dataList.forEach(p => {
-            totalPnl += p["P&L"]; 
-            
-            // Calc Elite Metrics
-            const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
-            const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
-            if(p["P&L"] > 0) { wins++; grossWin += p["P&L"]; daysWin += holdDays; }
-            else if(p["P&L"] < 0) { losses++; grossLoss += Math.abs(p["P&L"]); daysLoss += holdDays; }
+            totalPnl += p["P&L"];
+            const d1 = new Date(p["Entry Date"]);
+            const d2 = new Date(p["Exit Date"]);
+            const holdDays = Math.max(0, Math.round((d2 - d1) / 86400000));
+            p._holdDays = holdDays;
+
+            if (p["P&L"] > 0) { wins++; grossWin += p["P&L"]; daysWin += holdDays; if (p["P&L"] > bestPnl) bestPnl = p["P&L"]; }
+            else if (p["P&L"] < 0) { losses++; grossLoss += Math.abs(p["P&L"]); daysLoss += holdDays; if (p["P&L"] < worstPnl) worstPnl = p["P&L"]; }
 
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
-            
-            // Generate Composite Key for Strategy Mapping
-            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+
+            // Composite key — sanitised to avoid HTML injection in onchange
+            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`.replace(/['"<>]/g,'');
             const currTag = stratTags[compKey] || '';
-            
-            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
-            <td>
-                <select class="strategy-select" onchange="saveStrategyTag('${compKey}', this.value)">
-                    <option value="">- Select Tag -</option>
-                    <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
-                    <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
-                    <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
-                    <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
-                </select>
-            </td>
-            <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
+
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+                <td>
+                    <select class="strategy-select" onchange="saveStrategyTag('${compKey}', this.value)">
+                        <option value="">- Tag -</option>
+                        <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
+                        <option value="Momentum Breakout" ${currTag==='Momentum Breakout'?'selected':''}>Momentum Breakout</option>
+                        <option value="VCP" ${currTag==='VCP'?'selected':''}>VCP</option>
+                        <option value="Stage 2 Breakout" ${currTag==='Stage 2 Breakout'?'selected':''}>Stage 2 Breakout</option>
+                        <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
+                        <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
+                        <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
+                        <option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option>
+                        <option value="Mistake" ${currTag==='Mistake'?'selected':''}>❌ Mistake</option>
+                    </select>
+                </td>
+                <td style="color:var(--orange);font-weight:600">${p.FY}</td>
+                <td>${p.Qty}</td>
+                <td>${fmtDec(p["Entry Price"])}</td>
+                <td>${fmtDec(p["Exit Price"])}</td>
+                <td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td>
+                <td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]}<br>${p["Exit Date"]}</td>
+                <td style="color:var(--text3);font-size:12px">${holdDays}d</td>
+            </tr>`;
         });
-        
+
         totalInv = dataList.length > 0 ? (wins / dataList.length * 100).toFixed(1) + '%' : '0%';
 
-        // Push Elite Metrics to UI
         const avgWin = wins > 0 ? grossWin / wins : 0;
         const avgLoss = losses > 0 ? grossLoss / losses : 0;
         const rr = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
-        
+        const pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : (grossWin > 0 ? '∞' : '0.00');
+        const expectancy = dataList.length > 0 ? totalPnl / dataList.length : 0;
+
         document.getElementById('valAvgWin').innerText = '+' + fmtMoney(avgWin);
         document.getElementById('valAvgLoss').innerText = '-' + fmtMoney(avgLoss);
         document.getElementById('valRR').innerText = rr;
         document.getElementById('valDaysWin').innerText = wins > 0 ? (daysWin / wins).toFixed(1) : '0.0';
         document.getElementById('valDaysLoss').innerText = losses > 0 ? (daysLoss / losses).toFixed(1) : '0.0';
+        document.getElementById('valPF').innerText = pf;
+        const expEl = document.getElementById('valExp');
+        expEl.innerText = (expectancy >= 0 ? '+' : '') + fmtMoney(expectancy);
+        expEl.className = 'metric-val ' + (expectancy > 0 ? 'positive' : expectancy < 0 ? 'negative' : '');
+        document.getElementById('valBestTrade').innerText = bestPnl > -Infinity ? '+' + fmtMoney(bestPnl) : '₹0';
+        document.getElementById('valWorstTrade').innerText = worstPnl < Infinity ? fmtMoney(worstPnl) : '₹0';
 
-    } 
+        // Insights chips
+        const insights = generateInsights(dataList);
+        const insightBar = document.getElementById('insightBar');
+        insightBar.innerHTML = insights.map(i => `<span class="insight-chip ${i.type}">${i.label}</span>`).join('');
+    }
+
+    // ── TRADE LOG ──
     else if (state.currentTab === 'log') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th>
+            <th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th>
+            <th onclick="handleSort('Date')">DATE${thIcon('Date')}</th>
+            <th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th>
+            <th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th>
+            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
+        </tr>`;
         document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE';
         document.getElementById('lblInv').innerText = 'TOTAL SELL VALUE';
         let buyV = 0, sellV = 0;
         dataList.forEach(p => {
-            if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
+            if (p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
             const dirColor = p.Direction === 'Buy' ? 'color:var(--green)' : 'color:var(--red)';
-            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Date}</td><td>${p.Qty}</td><td>${fmtDec(p.Price)}</td><td style="color:var(--orange);font-weight:600">${p.FY}</td></tr>`;
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+                <td>${p.Date}</td><td>${p.Qty}</td><td>${fmtDec(p.Price)}</td>
+                <td style="color:var(--orange);font-weight:600">${p.FY}</td>
+            </tr>`;
         });
         totalPnl = buyV; totalInv = sellV;
     }
+
+    // ── FY SUMMARY ──
     else if (state.currentTab === 'fy') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th><th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
-        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED'; document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('FY')">FY${thIcon('FY')}</th>
+            <th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>
+            <th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>
+            <th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th>
+            <th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th>
+            <th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th>
+        </tr>`;
+        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED';
+        document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
         let totReal = 0, totUnreal = 0;
         dataList.forEach(p => {
             totReal += p.Realized; totUnreal += p.Unrealized;
             const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
             const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
             const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
-            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td><td style="color:var(--white);font-weight:600">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
+            html += `<tr>
+                <td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>
+                <td style="color:var(--white);font-weight:600">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td class="${rCls}">${p.Realized > 0 ? '+' : ''}${fmtMoney(p.Realized)}</td>
+                <td class="${uCls}">${p.Unrealized > 0 ? '+' : ''}${fmtMoney(p.Unrealized)}</td>
+                <td class="${tCls}" style="font-weight:800">${p.Total > 0 ? '+' : ''}${fmtMoney(p.Total)}</td>
+            </tr>`;
         });
         totalPnl = totReal; totalInv = totUnreal;
     }
+
+    // ── CORP ACTIONS ──
     else {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
-        document.getElementById('lblPnl').innerText = 'STORED SPLITS'; document.getElementById('lblInv').innerText = '-';
-        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
+        document.getElementById('tableHead').innerHTML = `<tr>
+            <th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th>
+            <th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th>
+            <th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th>
+            <th>ACTION</th>
+        </tr>`;
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
+        document.getElementById('lblInv').innerText = '-';
+        dataList.forEach(p => {
+            html += `<tr>
+                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
+                <td>${p.Date}</td>
+                <td style="color:var(--blue);font-weight:600">${p.Ratio}x</td>
+                <td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td>
+            </tr>`;
+        });
     }
 
-    if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
+    if (!dataList.length) html = `<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--text3)">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
-    
+
+    // ── METRIC CARDS ──
     if (state.currentTab === 'corp') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = dataList.length; pnlEl.className = 'metric-val';
-        document.getElementById('valInv').innerText = '-'; document.getElementById('valPos').innerText = dataList.length; document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+        document.getElementById('valPnl').innerText = dataList.length;
+        document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('valInv').innerText = '-';
+        document.getElementById('valPos').innerText = dataList.length;
+        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
     } else if (state.currentTab === 'fy') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        const invEl = document.getElementById('valInv'); invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv); invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
-        const combined = totalPnl + totalInv; const posEl = document.getElementById('valPos'); posEl.innerText = (combined>0?'+':'') + fmtMoney(combined); posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : ''); document.getElementById('lblPos').innerText = 'COMBINED P&L';
+        const pnlEl = document.getElementById('valPnl');
+        pnlEl.innerText = (totalPnl > 0 ? '+' : '') + fmtMoney(totalPnl);
+        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        const invEl = document.getElementById('valInv');
+        invEl.innerText = (totalInv > 0 ? '+' : '') + fmtMoney(totalInv);
+        invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
+        const combined = totalPnl + totalInv;
+        const posEl = document.getElementById('valPos');
+        posEl.innerText = (combined > 0 ? '+' : '') + fmtMoney(combined);
+        posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
+        document.getElementById('lblPos').innerText = 'COMBINED P&L';
     } else if (state.currentTab === 'log') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = fmtMoney(totalPnl); pnlEl.className = 'metric-val';
-        document.getElementById('valInv').innerText = fmtMoney(totalInv); document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'NO. OF TRADES';
+        document.getElementById('valPnl').innerText = fmtMoney(totalPnl);
+        document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv);
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('valPos').innerText = dataList.length;
+        document.getElementById('valPos').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'NO. OF TRADES';
     } else {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv; document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
+        const pnlEl = document.getElementById('valPnl');
+        pnlEl.innerText = (totalPnl > 0 ? '+' : '') + fmtMoney(totalPnl);
+        pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv;
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('valPos').innerText = dataList.length;
+        document.getElementById('valPos').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
     }
 }
 </script>
