@@ -41,7 +41,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .positive{color:var(--green);font-weight:500}
 .negative{color:var(--red);font-weight:500}
 
-.tab-container{display:flex;gap:10px;margin-bottom:16px}
+.tab-container{display:flex;gap:10px;margin-bottom:16px; flex-wrap:wrap;}
 #filterBar{background:var(--bg2); padding:12px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px;}
 #settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 
@@ -57,7 +57,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; }
 .login-btn:hover { background: #1557b0; }
 
-#corpInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
+#corpInsertBar, #mapperInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
 #chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
 .strategy-select{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-family:'Outfit'; font-size:11px;}
 </style>
@@ -125,6 +125,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button id="tab-chart" class="btn-sec" onclick="setTab('chart')">P&L TRACKER</button>
         <button id="tab-fy" class="btn-sec" onclick="setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
+        <button id="tab-mapper" class="btn-sec" onclick="setTab('mapper')">SYMBOL MAPPER</button>
     </div>
 
     <div class="controls" id="filterBar">
@@ -154,6 +155,12 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button class="btn-pri" onclick="insertCorpAction()">+ Add Split</button>
     </div>
 
+    <div id="mapperInsertBar">
+        <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2; text-transform: uppercase;">
+        <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1; text-transform: uppercase;">
+        <button class="btn-pri" onclick="insertSymbolMap()">+ Add Mapping</button>
+    </div>
+
     <div class="table-container">
         <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" style="text-align:center">No data loaded.</td></tr></tbody></table>
     </div>
@@ -166,7 +173,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], corp: [], trade_log: [], currentTab: 'active',
+    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: [], currentTab: 'active',
+    symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map') || '{}'),
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null,
@@ -318,9 +326,11 @@ function setTab(tab) {
     document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
     document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
+    document.getElementById('tab-mapper').classList.toggle('active', tab === 'mapper');
     
-    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'fy') ? 'none' : 'flex';
+    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'fy' || tab === 'mapper') ? 'none' : 'flex';
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
+    document.getElementById('mapperInsertBar').style.display = tab === 'mapper' ? 'flex' : 'none';
     document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
     document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
 
@@ -366,18 +376,25 @@ const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDi
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
 async function clearLedger() {
-    if(!confirm("Permanently delete all data from Cloud and Google Drive?")) return;
+    if(!confirm("Permanently delete all data from Cloud and Google Drive? (Symbol Aliases will be kept)")) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     startLogPolling();
     try {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; state.corp = []; state.trade_log = [];
+        state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = [];
         localStorage.removeItem('tc_corp_cache');
         localStorage.removeItem('tc_strategy_tags');
+        // Intentionally preserving tc_symbol_map so user doesn't lose mapped names
+        
+        // Re-upload symbol map to the fresh Drive so it isn't lost
+        if (state.driveToken && Object.keys(state.symbol_map).length > 0) {
+            await uploadFileToDrive('symbol_map.json', JSON.stringify(state.symbol_map));
+        }
+
         renderUI();
-        appendLog("✅ Ledger and Google Drive Cache completely wiped.");
+        appendLog("✅ Ledger and Google Drive Cache wiped (Symbol Maps preserved).");
     } catch(e) { alert("Failed to clear data."); }
     stopLogPolling();
 }
@@ -438,7 +455,8 @@ async function fetchPortfolio() {
                     if (driveFiles.length > 0) {
                         const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
                         const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
-                        const csvFiles = driveFiles.filter(f => f.filename.endsWith('.csv'));
+                        const mapFile = driveFiles.find(f => f.filename === 'symbol_map.json');
+                        const restoreFiles = driveFiles.filter(f => f.filename.endsWith('.csv') || f.filename === 'symbol_map.json');
                         
                         if (cacheFile) {
                             await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
@@ -447,9 +465,13 @@ async function fetchPortfolio() {
                         if (stratFile) {
                             localStorage.setItem('tc_strategy_tags', stratFile.content);
                         }
-                        if (csvFiles.length > 0) {
+                        if (mapFile) {
+                            localStorage.setItem('tc_symbol_map', mapFile.content);
+                            state.symbol_map = JSON.parse(mapFile.content);
+                        }
+                        if (restoreFiles.length > 0) {
                             appendLog("Pushing files to Render server memory...");
-                            await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(csvFiles) });
+                            await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restoreFiles) });
                         }
                         appendLog("✅ Render server jumpstarted! Recalculating...");
                         return fetchPortfolio(); 
@@ -466,6 +488,11 @@ async function fetchPortfolio() {
         state.closed = data.positions.closed || [];
         state.corp = data.positions.corp_actions || []; 
         state.trade_log = data.positions.trade_log || [];
+        state.unknown_symbols = data.positions.unknown_symbols || [];
+        
+        // Update mapper tab notification indicator
+        const pendingCount = state.unknown_symbols.filter(sym => !state.symbol_map[sym]).length;
+        document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
         
         populateFilters();
         
@@ -606,6 +633,41 @@ async function syncCacheAndRefresh(cache) {
     } catch(e) { stopLogPolling(); }
 }
 
+// === SYMBOL MAPPER ENGINE ===
+function insertSymbolMap(messy = null, clean = null) {
+    const m = (messy || document.getElementById('newMessyName').value).toUpperCase().trim();
+    const c = (clean || document.getElementById('newCleanSymbol').value).toUpperCase().trim();
+    if(!m || !c) return alert("Please provide both the messy name and the clean symbol.");
+
+    state.symbol_map[m] = c;
+    if(!messy) { 
+        document.getElementById('newMessyName').value = ''; 
+        document.getElementById('newCleanSymbol').value = '';
+    }
+    syncSymbolMapAndRefresh();
+}
+
+function deleteSymbolMap(messy) {
+    delete state.symbol_map[messy];
+    syncSymbolMapAndRefresh();
+}
+
+async function syncSymbolMapAndRefresh() {
+    localStorage.setItem('tc_symbol_map', JSON.stringify(state.symbol_map));
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Alias Map to Drive & Server...</td></tr>`;
+    startLogPolling();
+    try {
+        const content = JSON.stringify(state.symbol_map);
+        const formData = new FormData();
+        formData.append("files", new Blob([content], { type: 'application/json' }), "symbol_map.json");
+        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        
+        if(state.driveToken) await uploadFileToDrive('symbol_map.json', content);
+        
+        fetchPortfolio(); 
+    } catch(e) { stopLogPolling(); }
+}
+
 document.getElementById('tableBody').addEventListener('change', function(e) {
     if(e.target && e.target.classList.contains('strategy-select')) {
         saveStrategyTag(e.target.dataset.compkey, e.target.value);
@@ -643,14 +705,14 @@ function renderUI() {
         });
         dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
     }
-    else {
+    else if (state.currentTab === 'corp') {
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
         for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
     }
     
-    if (searchFilter && state.currentTab !== 'fy') dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
     
-    if (state.currentTab !== 'corp') {
+    if (state.currentTab !== 'corp' && state.currentTab !== 'mapper') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
@@ -671,7 +733,46 @@ function renderUI() {
     const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0; let html = '';
 
-    if (state.currentTab === 'active') {
+    if (state.currentTab === 'mapper') {
+        document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>CLEAN NSE SYMBOL</th><th>STATUS</th><th>ACTION</th></tr>`;
+        
+        let pendingCount = 0;
+        state.unknown_symbols.forEach(sym => {
+            if(!state.symbol_map[sym]) {
+                pendingCount++;
+                html += `<tr>
+                    <td style="color:var(--red);font-weight:600">${sym}</td>
+                    <td><input type="text" id="map_clean_${sym}" placeholder="Enter Symbol (e.g. BDL)" class="btn-sec" style="padding:4px 8px; text-transform:uppercase;"></td>
+                    <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td>
+                    <td><button class="btn-pri" onclick="insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">Save Map</button></td>
+                </tr>`;
+            }
+        });
+
+        Object.keys(state.symbol_map).forEach(m => {
+            html += `<tr>
+                <td style="color:var(--white);font-weight:600">${m}</td>
+                <td style="color:var(--green);font-weight:600">${state.symbol_map[m]}</td>
+                <td><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span></td>
+                <td><button class="btn-del" onclick="deleteSymbolMap('${m}')">[X] Delete</button></td>
+            </tr>`;
+        });
+
+        if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
+        
+        document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
+        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = pendingCount; pnlEl.className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
+        
+        document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS';
+        document.getElementById('valInv').innerText = Object.keys(state.symbol_map).length; document.getElementById('valInv').className = 'metric-val';
+        
+        document.getElementById('lblPos').innerText = 'TOTAL TRACKED';
+        document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; document.getElementById('valPos').className = 'metric-val';
+        
+        document.getElementById('tableBody').innerHTML = html;
+        return; // Exit early for mapper tab
+    }
+    else if (state.currentTab === 'active') {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
         document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' : 'NET UNREALIZED P&L';
         document.getElementById('lblInv').innerText = 'MARGIN / INVESTED';
