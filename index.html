@@ -54,7 +54,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 .login-gate { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
 .login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; }
+.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: gap: 10px; margin-top: 24px; }
 .login-btn:hover { background: #1557b0; }
 
 #corpInsertBar, #mapperInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
@@ -159,6 +159,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2; text-transform: uppercase;">
         <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1; text-transform: uppercase;">
         <button class="btn-pri" onclick="insertSymbolMap()">+ Add Mapping</button>
+        <button class="btn-pri" style="background:var(--orange); margin-left:20px;" onclick="fetchPortfolio()">⚡ Apply & Recalculate</button>
     </div>
 
     <div class="table-container">
@@ -386,9 +387,7 @@ async function clearLedger() {
         state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = [];
         localStorage.removeItem('tc_corp_cache');
         localStorage.removeItem('tc_strategy_tags');
-        // Intentionally preserving tc_symbol_map so user doesn't lose mapped names
         
-        // Re-upload symbol map to the fresh Drive so it isn't lost
         if (state.driveToken && Object.keys(state.symbol_map).length > 0) {
             await uploadFileToDrive('symbol_map.json', JSON.stringify(state.symbol_map));
         }
@@ -490,7 +489,6 @@ async function fetchPortfolio() {
         state.trade_log = data.positions.trade_log || [];
         state.unknown_symbols = data.positions.unknown_symbols || [];
         
-        // Update mapper tab notification indicator
         const pendingCount = state.unknown_symbols.filter(sym => !state.symbol_map[sym]).length;
         document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
         
@@ -644,28 +642,31 @@ function insertSymbolMap(messy = null, clean = null) {
         document.getElementById('newMessyName').value = ''; 
         document.getElementById('newCleanSymbol').value = '';
     }
-    syncSymbolMapAndRefresh();
+    syncSymbolMapOnly();
 }
 
 function deleteSymbolMap(messy) {
     delete state.symbol_map[messy];
-    syncSymbolMapAndRefresh();
+    syncSymbolMapOnly();
 }
 
-async function syncSymbolMapAndRefresh() {
+// ⚡ THE FIX: Saves to cloud silently WITHOUT triggering the 2-minute math run
+async function syncSymbolMapOnly() {
     localStorage.setItem('tc_symbol_map', JSON.stringify(state.symbol_map));
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Alias Map to Drive & Server...</td></tr>`;
-    startLogPolling();
+    appendLog("Syncing Alias Map to Drive & Server in background...");
     try {
         const content = JSON.stringify(state.symbol_map);
         const formData = new FormData();
         formData.append("files", new Blob([content], { type: 'application/json' }), "symbol_map.json");
-        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         
+        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         if(state.driveToken) await uploadFileToDrive('symbol_map.json', content);
         
-        fetchPortfolio(); 
-    } catch(e) { stopLogPolling(); }
+        appendLog("✅ Map saved! Click 'Apply & Recalculate' when ready.");
+        renderUI(); 
+    } catch(e) { 
+        appendLog("❌ Error saving map.");
+    }
 }
 
 document.getElementById('tableBody').addEventListener('change', function(e) {
@@ -770,7 +771,7 @@ function renderUI() {
         document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; document.getElementById('valPos').className = 'metric-val';
         
         document.getElementById('tableBody').innerHTML = html;
-        return; // Exit early for mapper tab
+        return; 
     }
     else if (state.currentTab === 'active') {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
