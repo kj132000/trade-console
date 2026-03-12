@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
@@ -88,6 +90,12 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
             <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
+            
+            <button class="btn-sec" onclick="exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
+                <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export All Data
+            </button>
+
             <button class="btn-sec" onclick="toggleSettings()">⚙️</button>
             <button class="btn-pri" onclick="fetchPortfolio()">
                 <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -531,6 +539,58 @@ async function fetchLivePrices(token_map) {
             });
         }
     } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); }
+}
+
+// ⚡ NEW: Multi-Sheet Excel Exporter ⚡
+function exportToExcel() {
+    appendLog("Compiling full database into Excel Workbook...");
+    
+    // 1. Create a new empty workbook
+    let wb = XLSX.utils.book_new();
+    
+    // 2. Sheet 1: Active Positions
+    let wsActive = XLSX.utils.json_to_sheet(state.open);
+    XLSX.utils.book_append_sheet(wb, wsActive, "Active Positions");
+    
+    // 3. Sheet 2: Closed History (Injecting your manual Strategy Tags)
+    let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    let closedDataWithTags = state.closed.map(p => {
+        let compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        return {
+            "Symbol": p.Symbol,
+            "Broker": p.Broker,
+            "Segment": p.Segment,
+            "Direction": p.Direction,
+            "Strategy": stratTags[compKey] || '', // Pulls the dropdown value you selected!
+            "FY": p.FY,
+            "Qty": p.Qty,
+            "Entry Price": p["Entry Price"],
+            "Exit Price": p["Exit Price"],
+            "P&L": p["P&L"],
+            "Entry Date": p["Entry Date"],
+            "Exit Date": p["Exit Date"]
+        };
+    });
+    let wsClosed = XLSX.utils.json_to_sheet(closedDataWithTags);
+    XLSX.utils.book_append_sheet(wb, wsClosed, "Closed History");
+    
+    // 4. Sheet 3: Trade Log
+    let wsLog = XLSX.utils.json_to_sheet(state.trade_log);
+    XLSX.utils.book_append_sheet(wb, wsLog, "Raw Trade Log");
+
+    // 5. Sheet 4: Symbol Maps (So you have a backup of your dictionary)
+    let mapData = Object.keys(state.symbol_map).map(messy => ({
+        "Broker Messy Name": messy,
+        "Clean NSE Symbol": state.symbol_map[messy]
+    }));
+    let wsMap = XLSX.utils.json_to_sheet(mapData);
+    XLSX.utils.book_append_sheet(wb, wsMap, "Symbol Mapper");
+
+    // Generate the file and trigger download
+    let filename = `TradeConsole_FullExport_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    
+    appendLog(`✅ Successfully downloaded ${filename} with all tabs.`);
 }
 
 function renderChart() {
