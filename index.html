@@ -174,7 +174,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: [], currentTab: 'active',
+    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: {}, currentTab: 'active',
     symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map') || '{}'),
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
@@ -384,7 +384,7 @@ async function clearLedger() {
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = [];
+        state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = {};
         localStorage.removeItem('tc_corp_cache');
         localStorage.removeItem('tc_strategy_tags');
         
@@ -487,9 +487,11 @@ async function fetchPortfolio() {
         state.closed = data.positions.closed || [];
         state.corp = data.positions.corp_actions || []; 
         state.trade_log = data.positions.trade_log || [];
-        state.unknown_symbols = data.positions.unknown_symbols || [];
         
-        const pendingCount = state.unknown_symbols.filter(sym => !state.symbol_map[sym]).length;
+        // ⚡ THE FIX: Ensures unknown_symbols is always processed as an Object
+        state.unknown_symbols = data.positions.unknown_symbols || {};
+        
+        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
         document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
         
         populateFilters();
@@ -631,7 +633,6 @@ async function syncCacheAndRefresh(cache) {
     } catch(e) { stopLogPolling(); }
 }
 
-// === SYMBOL MAPPER ENGINE ===
 function insertSymbolMap(messy = null, clean = null) {
     const m = (messy || document.getElementById('newMessyName').value).toUpperCase().trim();
     const c = (clean || document.getElementById('newCleanSymbol').value).toUpperCase().trim();
@@ -650,7 +651,6 @@ function deleteSymbolMap(messy) {
     syncSymbolMapOnly();
 }
 
-// ⚡ THE FIX: Saves to cloud silently WITHOUT triggering the 2-minute math run
 async function syncSymbolMapOnly() {
     localStorage.setItem('tc_symbol_map', JSON.stringify(state.symbol_map));
     appendLog("Syncing Alias Map to Drive & Server in background...");
@@ -735,17 +735,23 @@ function renderUI() {
     let totalPnl = 0, totalInv = 0; let html = '';
 
     if (state.currentTab === 'mapper') {
-        document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>CLEAN NSE SYMBOL</th><th>STATUS</th><th>ACTION</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
         
         let pendingCount = 0;
-        state.unknown_symbols.forEach(sym => {
+        Object.keys(state.unknown_symbols).forEach(sym => {
             if(!state.symbol_map[sym]) {
                 pendingCount++;
+                const sugg = state.unknown_symbols[sym] || '';
                 html += `<tr>
                     <td style="color:var(--red);font-weight:600">${sym}</td>
-                    <td><input type="text" id="map_clean_${sym}" placeholder="Enter Symbol (e.g. BDL)" class="btn-sec" style="padding:4px 8px; text-transform:uppercase;"></td>
+                    <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px; text-transform:uppercase; width:120px;">
+                            <button class="btn-pri" onclick="insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">✅ Accept</button>
+                        </div>
+                    </td>
                     <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td>
-                    <td><button class="btn-pri" onclick="insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">Save Map</button></td>
                 </tr>`;
             }
         });
@@ -753,9 +759,14 @@ function renderUI() {
         Object.keys(state.symbol_map).forEach(m => {
             html += `<tr>
                 <td style="color:var(--white);font-weight:600">${m}</td>
+                <td style="color:var(--text3);">-</td>
                 <td style="color:var(--green);font-weight:600">${state.symbol_map[m]}</td>
-                <td><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span></td>
-                <td><button class="btn-del" onclick="deleteSymbolMap('${m}')">[X] Delete</button></td>
+                <td>
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span>
+                        <button class="btn-del" onclick="deleteSymbolMap('${m}')">[X] Delete</button>
+                    </div>
+                </td>
             </tr>`;
         });
 
