@@ -148,6 +148,13 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <select id="fyFilter" class="btn-sec" onchange="renderUI()" style="display: none;">
             <option value="ALL">All FYs</option>
         </select>
+        
+        <select id="fyGroupBy" class="btn-sec" onchange="renderUI()" style="display: none; border-color: var(--orange); color: var(--orange); font-weight: 700;">
+            <option value="FY_Broker_Segment">View: FY ➔ Broker ➔ Segment</option>
+            <option value="FY_Broker">View: FY ➔ Broker</option>
+            <option value="FY_Segment">View: FY ➔ Segment</option>
+            <option value="FY">View: FY Only (Combined)</option>
+        </select>
     </div>
 
     <div id="chartContainer">
@@ -337,13 +344,22 @@ function setTab(tab) {
     document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
     document.getElementById('tab-mapper').classList.toggle('active', tab === 'mapper');
     
-    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'fy' || tab === 'mapper') ? 'none' : 'flex';
+    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'mapper') ? 'none' : 'flex';
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
     document.getElementById('mapperInsertBar').style.display = tab === 'mapper' ? 'flex' : 'none';
     document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
     document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
 
+    const showGeneralFilters = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper');
+    document.getElementById('searchFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
+    document.getElementById('brokerFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
+    document.getElementById('segFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
+    
+    if(document.getElementById('fyGroupBy')) {
+        document.getElementById('fyGroupBy').style.display = (tab === 'fy') ? 'inline-block' : 'none';
+    }
+
     document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
 
     renderUI(); 
@@ -553,7 +569,7 @@ function exportToExcel() {
             "Symbol": p.Symbol,
             "Broker": p.Broker,
             "Segment": p.Segment,
-            "Trade Type": p["Trade Type"] || 'N/A', // ⚡ Added Trade Type (Intraday/Delivery)
+            "Trade Type": p["Trade Type"] || '-', 
             "Direction": p.Direction,
             "Strategy": stratTags[compKey] || '', 
             "FY": p.FY,
@@ -731,19 +747,29 @@ function renderUI() {
     else if (state.currentTab === 'closed') dataList = [...state.closed];
     else if (state.currentTab === 'log') dataList = [...state.trade_log];
     else if (state.currentTab === 'fy') {
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
         const d = new Date(); const y = d.getFullYear();
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
         let summaryMap = {};
+        
         state.closed.forEach(p => {
-            const key = p.FY + "_" + p.Broker + "_" + p.Segment;
-            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
+            let key = p.FY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0 };
             summaryMap[key].Realized += (p["P&L"] || 0);
         });
+        
         state.open.forEach(p => {
-            const key = currentFY + "_" + p.Broker + "_" + p.Segment;
-            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: p.Broker, Segment: p.Segment, Realized: 0, Unrealized: 0 };
+            let key = currentFY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0 };
             summaryMap[key].Unrealized += (p["P&L"] || 0);
         });
+        
         dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
     }
     else if (state.currentTab === 'corp') {
@@ -824,8 +850,7 @@ function renderUI() {
         });
     } 
     else if (state.currentTab === 'closed') {
-        // ⚡ ADDED 'TYPE' HEADER ⚡
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th>TYPE</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('lblInv').innerText = 'WIN RATE';
         
@@ -845,9 +870,8 @@ function renderUI() {
             const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
             const currTag = stratTags[compKey] || '';
             
-            // ⚡ VISUAL BADGES FOR INTRADAY VS DELIVERY ⚡
-            const tradeTypeHTML = p['Trade Type'] === 'Intraday' ? '<span class="btn-sec" style="padding:2px 6px;font-size:10px;color:var(--orange);border-color:var(--orange)">INTRADAY</span>' : 
-                                 (p['Trade Type'] === 'Delivery' ? '<span class="btn-sec" style="padding:2px 6px;font-size:10px;color:var(--blue);border-color:var(--blue)">DELIVERY</span>' : '<span style="color:var(--text3)">-</span>');
+            const tradeTypeHTML = p['Trade Type'] === 'Intraday' ? '<span style="font-size:10px;color:var(--orange);font-weight:700;border:1px solid var(--orange);padding:2px 4px;border-radius:4px">INTRADAY</span>' : 
+                                 (p['Trade Type'] === 'Delivery' ? '<span style="font-size:10px;color:var(--blue);font-weight:700;border:1px solid var(--blue);padding:2px 4px;border-radius:4px">DELIVERY</span>' : '<span style="color:var(--text3)">-</span>');
 
             html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td>${tradeTypeHTML}</td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
             <td><select class="strategy-select" data-compkey="${compKey}"><option value="">- Select Tag -</option><option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option><option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option><option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option><option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option><option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option><option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option></select></td>
@@ -873,7 +897,14 @@ function renderUI() {
         totalPnl = buyV; totalInv = sellV;
     }
     else if (state.currentTab === 'fy') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th><th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
+        // ⚡ DYNAMIC PIVOT HEADERS ⚡
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
+        let thHtml = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th>`;
+        if (groupBy.includes('Broker')) thHtml += `<th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
+        if (groupBy.includes('Segment')) thHtml += `<th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
+        thHtml += `<th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = thHtml;
+
         document.getElementById('lblPnl').innerText = 'TOTAL REALIZED'; document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
         let totReal = 0, totUnreal = 0;
         dataList.forEach(p => {
@@ -881,7 +912,11 @@ function renderUI() {
             const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
             const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
             const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
-            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td><td style="color:var(--white);font-weight:600">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
+            
+            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>`;
+            if (groupBy.includes('Broker')) html += `<td style="color:var(--white);font-weight:600">${p.Broker}</td>`;
+            if (groupBy.includes('Segment')) html += `<td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>`;
+            html += `<td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
         });
         totalPnl = totReal; totalInv = totUnreal;
     }
@@ -912,3 +947,5 @@ function renderUI() {
     }
 }
 </script>
+</body>
+</html>
