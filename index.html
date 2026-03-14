@@ -88,7 +88,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <button class="btn-sec" onclick="toggleTheme()" id="themeBtn">🌓 Theme</button>
             <button id="driveBtnHeader" class="btn-sec"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg> Drive Synced</button>
             <button class="btn-sec" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
-            <input type="file" id="csvUpload" multiple accept=".csv" style="display:none" onchange="handleFileUpload(event)">
+            
+            <input type="file" id="csvUpload" multiple accept=".csv, .xlsx, .xls" style="display:none" onchange="handleFileUpload(event)">
             <button class="btn-sec" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
             
             <button class="btn-sec" onclick="exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
@@ -351,10 +352,7 @@ function setTab(tab) {
     document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
     document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
 
-    // ⚡ NEW SMART VISIBILITY RULES ⚡
-    // Search is hidden for FY, corp, mapper
     document.getElementById('searchFilter').style.display = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
-    // Broker and Segment remain fully visible for FY Summary!
     document.getElementById('brokerFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('segFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
@@ -425,21 +423,51 @@ async function clearLedger() {
     stopLogPolling();
 }
 
+// ⚡ XLSX IN-BROWSER PARSER ⚡
 async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
     startLogPolling();
+    
     try {
         const formData = new FormData();
-        for(let f of files) formData.append("files", f);
+        const processedFiles = [];
+
+        for(let f of files) {
+            if (f.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
+                appendLog(`Converting Excel file ${f.name} to standard CSV format...`);
+                const arrayBuffer = await f.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+                
+                const newFilename = f.name.replace(/\.(xlsx|xls)$/i, '.csv');
+                const newFile = new File([csvContent], newFilename, { type: 'text/csv' });
+                
+                formData.append("files", newFile);
+                processedFiles.push({ name: newFilename, text: csvContent });
+            } else {
+                formData.append("files", f);
+                const text = await f.text();
+                processedFiles.push({ name: f.name, text: text });
+            }
+        }
+
         await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        
         if(state.driveToken) {
-            appendLog("Backing up CSVs to Google Drive...");
-            for(let f of files) { const text = await f.text(); await uploadFileToDrive(f.name, text); }
+            appendLog("Backing up files to Google Drive...");
+            for(let pf of processedFiles) {
+                await uploadFileToDrive(pf.name, pf.text);
+            }
         }
         fetchPortfolio();
-    } catch(e) { alert("Upload failed."); stopLogPolling(); }
+    } catch(e) { 
+        alert("Upload failed."); 
+        stopLogPolling(); 
+    }
 }
 
 function populateFilters() {
@@ -755,7 +783,6 @@ function renderUI() {
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
         let summaryMap = {};
         
-        // ⚡ PRE-FILTER RAW DATA BEFORE PIVOTING ⚡
         let filteredClosed = state.closed;
         let filteredOpen = state.open;
         
@@ -795,12 +822,10 @@ function renderUI() {
         for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
     }
     
-    // TEXT SEARCH POST-FILTER
     if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') {
         dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
     }
     
-    // ⚡ BROKER/SEGMENT POST-FILTER FOR NON-FY TABS ⚡
     if (state.currentTab !== 'corp' && state.currentTab !== 'mapper' && state.currentTab !== 'fy') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
@@ -937,7 +962,6 @@ function renderUI() {
     if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
-    // ⚡ DYNAMIC METRIC CARD ROUTING ⚡
     const c3 = document.getElementById('lblMar').parentElement;
     
     if (state.currentTab === 'mapper') {
