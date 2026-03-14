@@ -112,21 +112,6 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button class="btn-pri" onclick="saveSettings()">Save</button>
     </div>
 
-    <div class="metrics-grid">
-        <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
-        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED</div><div class="metric-val" id="valInv">₹0</div></div>
-        <div class="metric-card"><div class="metric-title" id="lblMar">MARGIN USED</div><div class="metric-val" id="valMar">₹0</div></div>
-        <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
-    </div>
-
-    <div class="metrics-grid" id="eliteMetricsGrid" style="display:none; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px dashed var(--border); padding-top:24px;">
-        <div class="metric-card" style="background:rgba(72,187,120,0.05); border-color:rgba(72,187,120,0.2)"><div class="metric-title">AVERAGE WIN</div><div class="metric-val positive" id="valAvgWin">₹0</div></div>
-        <div class="metric-card" style="background:rgba(252,129,129,0.05); border-color:rgba(252,129,129,0.2)"><div class="metric-title">AVERAGE LOSS</div><div class="metric-val negative" id="valAvgLoss">₹0</div></div>
-        <div class="metric-card"><div class="metric-title">REWARD / RISK</div><div class="metric-val" id="valRR" style="color:var(--blue)">0.00</div></div>
-        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (WINS)</div><div class="metric-val" id="valDaysWin">0.0</div></div>
-        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (LOSS)</div><div class="metric-val" id="valDaysLoss">0.0</div></div>
-    </div>
-
     <div class="tab-container">
         <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
         <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
@@ -156,6 +141,21 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <option value="FY_Segment">View: FY ➔ Segment</option>
             <option value="FY">View: FY Only (Combined)</option>
         </select>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED</div><div class="metric-val" id="valInv">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblMar">MARGIN USED</div><div class="metric-val" id="valMar">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
+    </div>
+
+    <div class="metrics-grid" id="eliteMetricsGrid" style="display:none; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px dashed var(--border); padding-top:24px;">
+        <div class="metric-card" style="background:rgba(72,187,120,0.05); border-color:rgba(72,187,120,0.2)"><div class="metric-title">AVERAGE WIN</div><div class="metric-val positive" id="valAvgWin">₹0</div></div>
+        <div class="metric-card" style="background:rgba(252,129,129,0.05); border-color:rgba(252,129,129,0.2)"><div class="metric-title">AVERAGE LOSS</div><div class="metric-val negative" id="valAvgLoss">₹0</div></div>
+        <div class="metric-card"><div class="metric-title">REWARD / RISK</div><div class="metric-val" id="valRR" style="color:var(--blue)">0.00</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (WINS)</div><div class="metric-val" id="valDaysWin">0.0</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (LOSS)</div><div class="metric-val" id="valDaysLoss">0.0</div></div>
     </div>
 
     <div id="chartContainer">
@@ -351,10 +351,12 @@ function setTab(tab) {
     document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
     document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
 
-    const showGeneralFilters = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper');
-    document.getElementById('searchFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
-    document.getElementById('brokerFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
-    document.getElementById('segFilter').style.display = showGeneralFilters ? 'inline-block' : 'none';
+    // ⚡ NEW SMART VISIBILITY RULES ⚡
+    // Search is hidden for FY, corp, mapper
+    document.getElementById('searchFilter').style.display = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    // Broker and Segment remain fully visible for FY Summary!
+    document.getElementById('brokerFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('segFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
     
     if(document.getElementById('fyGroupBy')) {
@@ -753,7 +755,20 @@ function renderUI() {
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
         let summaryMap = {};
         
-        state.closed.forEach(p => {
+        // ⚡ PRE-FILTER RAW DATA BEFORE PIVOTING ⚡
+        let filteredClosed = state.closed;
+        let filteredOpen = state.open;
+        
+        if (bFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Broker === bFilter);
+            filteredOpen = filteredOpen.filter(p => p.Broker === bFilter);
+        }
+        if (sFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+            filteredOpen = filteredOpen.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+        }
+        
+        filteredClosed.forEach(p => {
             let key = p.FY;
             if (groupBy.includes('Broker')) key += "_" + p.Broker;
             if (groupBy.includes('Segment')) key += "_" + p.Segment;
@@ -762,7 +777,7 @@ function renderUI() {
             summaryMap[key].Realized += (p["P&L"] || 0);
         });
         
-        state.open.forEach(p => {
+        filteredOpen.forEach(p => {
             let key = currentFY;
             if (groupBy.includes('Broker')) key += "_" + p.Broker;
             if (groupBy.includes('Segment')) key += "_" + p.Segment;
@@ -780,9 +795,13 @@ function renderUI() {
         for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
     }
     
-    if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    // TEXT SEARCH POST-FILTER
+    if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') {
+        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    }
     
-    if (state.currentTab !== 'corp' && state.currentTab !== 'mapper') {
+    // ⚡ BROKER/SEGMENT POST-FILTER FOR NON-FY TABS ⚡
+    if (state.currentTab !== 'corp' && state.currentTab !== 'mapper' && state.currentTab !== 'fy') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
@@ -833,7 +852,6 @@ function renderUI() {
         if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
     }
     else if (state.currentTab === 'active') {
-        // ⚡ SPLIT INVESTED AND MARGIN COLUMNS ⚡
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
         
         dataList.forEach(p => {
@@ -890,7 +908,6 @@ function renderUI() {
         totalPnl = buyV; totalInv = sellV;
     }
     else if (state.currentTab === 'fy') {
-        // ⚡ SPLIT INVESTED AND MARGIN COLUMNS IN FY SUMMARY ⚡
         const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
         let thHtml = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th>`;
         if (groupBy.includes('Broker')) thHtml += `<th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
