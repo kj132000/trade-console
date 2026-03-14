@@ -275,7 +275,6 @@ async function uploadFileToDrive(filename, content) {
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
 }
 
-// ⚡ NEW: DRIVE CACHE INVALIDATOR ⚡
 async function deleteSnapshot() {
     if (!state.driveToken) return;
     const folderId = await getOrCreateFolder();
@@ -479,7 +478,6 @@ async function handleFileUpload(event) {
             }
         }
         
-        // ⚡ BUST CACHE AND FORCE RECALCULATE ON NEW UPLOAD
         await deleteSnapshot();
         fetchPortfolio(true);
     } catch(e) { 
@@ -488,7 +486,6 @@ async function handleFileUpload(event) {
     }
 }
 
-// ⚡ SMART REFRESH ROUTER ⚡
 async function handleRefresh(event) {
     if (event.shiftKey) {
         appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
@@ -530,12 +527,10 @@ function populateFilters() {
     }
 }
 
-// ⚡ THE NEW LAZY-LOADING SNAPSHOT ENGINE ⚡
 async function fetchPortfolio(forceRecalc = false) {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Fetching Ledger Data...</td></tr>`;
     startLogPolling();
 
-    // STEP 1: Attempt to bypass Python server and load from Google Drive Cache
     if (!forceRecalc && state.driveToken) {
         try {
             const folderId = await getOrCreateFolder();
@@ -570,7 +565,6 @@ async function fetchPortfolio(forceRecalc = false) {
         } catch(e) { appendLog("Snapshot bypass failed, defaulting to server computation..."); }
     }
 
-    // STEP 2: Fallback to Server Calculation (Only runs if no cache or manually forced)
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
         if(!res.ok) throw new Error();
@@ -623,7 +617,6 @@ async function fetchPortfolio(forceRecalc = false) {
         state.unknown_symbols = data.positions.unknown_symbols || {};
         state.token_map = data.positions.token_map || {};
 
-        // STEP 3: Save newly calculated data to Drive Cache for tomorrow!
         if (state.driveToken && (state.open.length > 0 || state.closed.length > 0)) {
             appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
             await uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
@@ -1046,7 +1039,7 @@ function renderUI() {
         dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
     }
 
-    if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
+    if(!dataList.length && state.currentTab !== 'mapper') html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
     const c3 = document.getElementById('lblMar').parentElement;
