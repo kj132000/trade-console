@@ -114,7 +114,8 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
     <div class="metrics-grid">
         <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
-        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED CAPITAL</div><div class="metric-val" id="valInv">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED</div><div class="metric-val" id="valInv">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblMar">MARGIN USED</div><div class="metric-val" id="valMar">₹0</div></div>
         <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
     </div>
 
@@ -548,7 +549,7 @@ async function fetchLivePrices(token_map) {
                 if (cmp > 0) {
                     p.CMP = cmp;
                     p["P&L"] = (cmp - p["Avg Price"]) * p.Qty * (p.Direction === 'Long' ? 1 : -1);
-                    p["ROI %"] = p.Invested > 0 ? (p["P&L"] / p.Invested) * 100 : 0;
+                    p["ROI %"] = p.Invested > 0 ? (p["P&L"] / p.Invested) * 100 : (p.Margin > 0 ? (p["P&L"] / p.Margin) * 100 : 0);
                 }
             });
         }
@@ -757,7 +758,7 @@ function renderUI() {
             if (groupBy.includes('Broker')) key += "_" + p.Broker;
             if (groupBy.includes('Segment')) key += "_" + p.Segment;
 
-            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0 };
+            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
             summaryMap[key].Realized += (p["P&L"] || 0);
         });
         
@@ -766,8 +767,10 @@ function renderUI() {
             if (groupBy.includes('Broker')) key += "_" + p.Broker;
             if (groupBy.includes('Segment')) key += "_" + p.Segment;
 
-            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0 };
+            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
             summaryMap[key].Unrealized += (p["P&L"] || 0);
+            summaryMap[key].Invested += (p.Invested || 0);
+            summaryMap[key].Margin += (p.Margin || 0);
         });
         
         dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
@@ -798,7 +801,7 @@ function renderUI() {
     });
 
     const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
-    let totalPnl = 0, totalInv = 0; let html = '';
+    let totalPnl = 0, totalInv = 0, totalMar = 0; let totUnreal = 0; let html = '';
 
     if (state.currentTab === 'mapper') {
         document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
@@ -828,31 +831,22 @@ function renderUI() {
             </tr>`;
         });
         if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
-        
-        document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = pendingCount; pnlEl.className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
-        document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS'; document.getElementById('valInv').innerText = Object.keys(state.symbol_map).length; document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('lblPos').innerText = 'TOTAL TRACKED'; document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; document.getElementById('valPos').className = 'metric-val';
-        document.getElementById('tableBody').innerHTML = html;
-        return; 
     }
     else if (state.currentTab === 'active') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">MARGIN / INVESTED${thIcon('Invested')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
-        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED P&L <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching live prices ⏳...</span>' : 'NET UNREALIZED P&L';
-        document.getElementById('lblInv').innerText = 'MARGIN / INVESTED';
+        // ⚡ SPLIT INVESTED AND MARGIN COLUMNS ⚡
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
+        
         dataList.forEach(p => {
-            totalPnl += p["P&L"]; totalInv += p.Invested;
+            totalPnl += p["P&L"]; totalInv += (p.Invested || 0); totalMar += (p.Margin || 0);
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
             const displayCmp = (state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
-            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested || 0)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin || 0)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
         });
     } 
     else if (state.currentTab === 'closed') {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
-        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
-        document.getElementById('lblInv').innerText = 'WIN RATE';
         
         let wins = 0, losses = 0; let grossWin = 0, grossLoss = 0; let daysWin = 0, daysLoss = 0;
         let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
@@ -887,7 +881,6 @@ function renderUI() {
     } 
     else if (state.currentTab === 'log') {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
-        document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE'; document.getElementById('lblInv').innerText = 'TOTAL SELL VALUE';
         let buyV = 0, sellV = 0;
         dataList.forEach(p => {
             if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
@@ -897,18 +890,18 @@ function renderUI() {
         totalPnl = buyV; totalInv = sellV;
     }
     else if (state.currentTab === 'fy') {
-        // ⚡ DYNAMIC PIVOT HEADERS ⚡
+        // ⚡ SPLIT INVESTED AND MARGIN COLUMNS IN FY SUMMARY ⚡
         const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
         let thHtml = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th>`;
         if (groupBy.includes('Broker')) thHtml += `<th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
         if (groupBy.includes('Segment')) thHtml += `<th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
-        thHtml += `<th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th></tr>`;
+        thHtml += `<th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th></tr>`;
         document.getElementById('tableHead').innerHTML = thHtml;
 
-        document.getElementById('lblPnl').innerText = 'TOTAL REALIZED'; document.getElementById('lblInv').innerText = 'TOTAL UNREALIZED';
-        let totReal = 0, totUnreal = 0;
         dataList.forEach(p => {
-            totReal += p.Realized; totUnreal += p.Unrealized;
+            totalPnl += p.Realized; totUnreal += p.Unrealized; 
+            totalInv += p.Invested; totalMar += p.Margin;
+            
             const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
             const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
             const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
@@ -916,34 +909,93 @@ function renderUI() {
             html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>`;
             if (groupBy.includes('Broker')) html += `<td style="color:var(--white);font-weight:600">${p.Broker}</td>`;
             if (groupBy.includes('Segment')) html += `<td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>`;
-            html += `<td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
+            html += `<td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin)}</td></tr>`;
         });
-        totalPnl = totReal; totalInv = totUnreal;
     }
     else {
         document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
-        document.getElementById('lblPnl').innerText = 'STORED SPLITS'; document.getElementById('lblInv').innerText = '-';
         dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
     }
 
     if(!dataList.length) html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
-    if (state.currentTab === 'corp') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = dataList.length; pnlEl.className = 'metric-val';
-        document.getElementById('valInv').innerText = '-'; document.getElementById('valPos').innerText = dataList.length; document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
-    } else if (state.currentTab === 'fy') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        const invEl = document.getElementById('valInv'); invEl.innerText = (totalInv>0?'+':'') + fmtMoney(totalInv); invEl.className = 'metric-val ' + (totalInv > 0 ? 'positive' : totalInv < 0 ? 'negative' : '');
-        const combined = totalPnl + totalInv; const posEl = document.getElementById('valPos'); posEl.innerText = (combined>0?'+':'') + fmtMoney(combined); posEl.className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : ''); document.getElementById('lblPos').innerText = 'COMBINED P&L';
-    } else if (state.currentTab === 'log') {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = fmtMoney(totalPnl); pnlEl.className = 'metric-val';
+    // ⚡ DYNAMIC METRIC CARD ROUTING ⚡
+    const c3 = document.getElementById('lblMar').parentElement;
+    
+    if (state.currentTab === 'mapper') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
+        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+        document.getElementById('valPnl').innerText = pendingCount; 
+        document.getElementById('valPnl').className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
+        document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS'; 
+        document.getElementById('valInv').innerText = Object.keys(state.symbol_map).length; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL TRACKED'; 
+        document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; 
+        document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (state.currentTab === 'corp') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
+        document.getElementById('valPnl').innerText = dataList.length; document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = '-';
+        document.getElementById('valInv').innerText = '-'; document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'log') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE';
+        document.getElementById('valPnl').innerText = fmtMoney(totalPnl); document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = 'TOTAL SELL VALUE';
         document.getElementById('valInv').innerText = fmtMoney(totalInv); document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'NO. OF TRADES';
-    } else {
-        const pnlEl = document.getElementById('valPnl'); pnlEl.innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); pnlEl.className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
-        document.getElementById('valInv').innerText = state.currentTab === 'active' ? fmtMoney(totalInv) : totalInv; document.getElementById('valInv').className = 'metric-val';
-        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val'; document.getElementById('lblPos').innerText = 'TRADES / POSITIONS';
+        document.getElementById('lblPos').innerText = 'NO. OF TRADES';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (state.currentTab === 'closed') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'WIN RATE';
+        document.getElementById('valInv').innerText = totalInv; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'CLOSED TRADES';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'active') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching ⏳...</span>' : 'NET UNREALIZED';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'TOTAL INVESTED';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblMar').innerText = 'TOTAL MARGIN';
+        document.getElementById('valMar').innerText = fmtMoney(totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'ACTIVE POSITIONS';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'fy') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'UNREALIZED P&L';
+        document.getElementById('valInv').innerText = (totUnreal>0?'+':'') + fmtMoney(totUnreal); 
+        document.getElementById('valInv').className = 'metric-val ' + (totUnreal > 0 ? 'positive' : totUnreal < 0 ? 'negative' : '');
+        document.getElementById('lblMar').innerText = 'CAPITAL DEPLOYED';
+        document.getElementById('valMar').innerText = fmtMoney(totalInv + totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'COMBINED P&L';
+        const combined = totalPnl + totUnreal;
+        document.getElementById('valPos').innerText = (combined>0?'+':'') + fmtMoney(combined); 
+        document.getElementById('valPos').className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
     }
 }
 </script>
