@@ -98,7 +98,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             </button>
 
             <button class="btn-sec" onclick="toggleSettings()">⚙️</button>
-            <button class="btn-pri" onclick="fetchPortfolio()">
+            <button class="btn-pri" onclick="handleRefresh(event)" title="Click to refresh Live Prices. Shift+Click to force Deep Recalculation">
                 <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Refresh
             </button>
@@ -176,7 +176,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2; text-transform: uppercase;">
         <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1; text-transform: uppercase;">
         <button class="btn-pri" onclick="insertSymbolMap()">+ Add Mapping</button>
-        <button class="btn-pri" style="background:var(--orange); margin-left:20px;" onclick="fetchPortfolio()">⚡ Apply & Recalculate</button>
+        <button class="btn-pri" style="background:var(--orange); margin-left:20px;" onclick="handleDeepRecalculate()">⚡ Apply & Recalculate</button>
     </div>
 
     <div class="table-container">
@@ -191,7 +191,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 <script>
 let state = {
-    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: {}, currentTab: 'active',
+    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: {}, token_map: {}, currentTab: 'active',
     symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map') || '{}'),
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
@@ -273,6 +273,21 @@ async function uploadFileToDrive(filename, content) {
         fileId = metaData.id;
     }
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
+}
+
+// ⚡ NEW: DRIVE CACHE INVALIDATOR ⚡
+async function deleteSnapshot() {
+    if (!state.driveToken) return;
+    const folderId = await getOrCreateFolder();
+    if (!folderId) return;
+    const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
+    try {
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+        const searchData = await searchRes.json();
+        if (searchData.files && searchData.files.length > 0) {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
+        }
+    } catch(e) {}
 }
 
 async function downloadAllFromDrive() {
@@ -406,6 +421,7 @@ async function clearLedger() {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     startLogPolling();
     try {
+        await deleteSnapshot();
         const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
         const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
@@ -423,7 +439,6 @@ async function clearLedger() {
     stopLogPolling();
 }
 
-// ⚡ XLSX IN-BROWSER PARSER ⚡
 async function handleFileUpload(event) {
     const files = event.target.files;
     if(!files.length) return;
@@ -463,11 +478,36 @@ async function handleFileUpload(event) {
                 await uploadFileToDrive(pf.name, pf.text);
             }
         }
-        fetchPortfolio();
+        
+        // ⚡ BUST CACHE AND FORCE RECALCULATE ON NEW UPLOAD
+        await deleteSnapshot();
+        fetchPortfolio(true);
     } catch(e) { 
         alert("Upload failed."); 
         stopLogPolling(); 
     }
+}
+
+// ⚡ SMART REFRESH ROUTER ⚡
+async function handleRefresh(event) {
+    if (event.shiftKey) {
+        appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
+        await deleteSnapshot();
+        fetchPortfolio(true);
+    } else {
+        appendLog("Refreshing Live Prices...");
+        if (Object.keys(state.token_map).length > 0) {
+            fetchLivePrices();
+        } else {
+            fetchPortfolio(false);
+        }
+    }
+}
+
+async function handleDeepRecalculate() {
+    appendLog("Applying changes and forcing deep recalculation...");
+    await deleteSnapshot();
+    fetchPortfolio(true);
 }
 
 function populateFilters() {
@@ -490,9 +530,47 @@ function populateFilters() {
     }
 }
 
-async function fetchPortfolio() {
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Calculating Positions...</td></tr>`;
+// ⚡ THE NEW LAZY-LOADING SNAPSHOT ENGINE ⚡
+async function fetchPortfolio(forceRecalc = false) {
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Fetching Ledger Data...</td></tr>`;
     startLogPolling();
+
+    // STEP 1: Attempt to bypass Python server and load from Google Drive Cache
+    if (!forceRecalc && state.driveToken) {
+        try {
+            const folderId = await getOrCreateFolder();
+            if (folderId) {
+                const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
+                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                const searchData = await searchRes.json();
+                if (searchData.files && searchData.files.length > 0) {
+                    appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
+                    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                    const snapshotData = await fileRes.json();
+                    
+                    state.open = snapshotData.open || [];
+                    state.closed = snapshotData.closed || [];
+                    state.corp = snapshotData.corp_actions || [];
+                    state.trade_log = snapshotData.trade_log || [];
+                    state.unknown_symbols = snapshotData.unknown_symbols || {};
+                    state.token_map = snapshotData.token_map || {};
+
+                    const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+                    document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
+
+                    populateFilters();
+                    renderUI();
+
+                    if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
+                        fetchLivePrices();
+                    } else { stopLogPolling(); }
+                    return;
+                }
+            }
+        } catch(e) { appendLog("Snapshot bypass failed, defaulting to server computation..."); }
+    }
+
+    // STEP 2: Fallback to Server Calculation (Only runs if no cache or manually forced)
     try {
         const res = await fetch(`${state.backendUrl}/api/portfolio`);
         if(!res.ok) throw new Error();
@@ -528,7 +606,7 @@ async function fetchPortfolio() {
                             await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restoreFiles) });
                         }
                         appendLog("✅ Render server jumpstarted! Recalculating...");
-                        return fetchPortfolio(); 
+                        return fetchPortfolio(true); 
                     } else {
                         appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
                     }
@@ -543,6 +621,13 @@ async function fetchPortfolio() {
         state.corp = data.positions.corp_actions || []; 
         state.trade_log = data.positions.trade_log || [];
         state.unknown_symbols = data.positions.unknown_symbols || {};
+        state.token_map = data.positions.token_map || {};
+
+        // STEP 3: Save newly calculated data to Drive Cache for tomorrow!
+        if (state.driveToken && (state.open.length > 0 || state.closed.length > 0)) {
+            appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
+            await uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+        }
         
         const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
         document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
@@ -562,16 +647,17 @@ async function fetchPortfolio() {
         
         renderUI();
         
-        if (state.open.length > 0 && data.positions.token_map && Object.keys(data.positions.token_map).length > 0) {
-            fetchLivePrices(data.positions.token_map);
+        if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
+            fetchLivePrices();
         } else { stopLogPolling(); }
     } catch(e) { stopLogPolling(); appendLog(`❌ Fetch Error: ${e.message}`); }
 }
 
-async function fetchLivePrices(token_map) {
+async function fetchLivePrices() {
+    if(Object.keys(state.token_map).length === 0) { stopLogPolling(); return; }
     state.fetchingPrices = true; if(state.currentTab !== 'chart') renderUI(); 
     try {
-        const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: token_map }) });
+        const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: state.token_map }) });
         if (res.ok) {
             const prices = await res.json();
             state.open.forEach(p => {
@@ -726,7 +812,8 @@ async function syncCacheAndRefresh(cache) {
     try {
         await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
         if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
-        fetchPortfolio();
+        await deleteSnapshot();
+        fetchPortfolio(true);
     } catch(e) { stopLogPolling(); }
 }
 
