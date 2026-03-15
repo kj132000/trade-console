@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trade Console</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" ></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -57,7 +57,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 .login-gate { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
 .login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: gap: 10px; margin-top: 24px; }
+.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; }
 .login-btn:hover { background: #1557b0; }
 
 #corpInsertBar, #mapperInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
@@ -198,7 +198,7 @@ let state = {
     backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
     driveToken: null, driveFolderId: null,
     pnlChartInstance: null,
-    isProcessing: false // ⚡ NEW: MUTEX LOCK ⚡
+    isProcessing: false
 };
 
 let searchTimeout;
@@ -207,7 +207,6 @@ function debounceSearch() {
     searchTimeout = setTimeout(() => { renderUI(); }, 300);
 }
 
-// ⚡ NEW: UI LOCK MANAGER ⚡
 function lockUI() {
     state.isProcessing = true;
     document.body.style.cursor = 'wait';
@@ -253,7 +252,9 @@ window.onload = function() {
     });
 };
 
-function authGoogleDrive() { tokenClient.requestAccessToken(); }
+function authGoogleDrive() { 
+    tokenClient.requestAccessToken(); 
+}
 
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
@@ -318,4 +319,851 @@ async function downloadAllFromDrive() {
     const listData = await listRes.json();
     const files = [];
     if (listData.files && listData.files.length > 0) {
-        appendLog(`Found
+        appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
+        for (let file of listData.files) {
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+            const content = await fileRes.text();
+            files.push({ filename: file.name, content: content });
+        }
+        appendLog("✅ All files securely downloaded from Drive.");
+    } else {
+        appendLog("⚠️ Drive folder is empty.");
+    }
+    return files;
+}
+
+async function clearDriveFiles() {
+    const folderId = await getOrCreateFolder();
+    if (!folderId) return;
+    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
+    state.driveFolderId = null; 
+}
+
+function toggleSettings() {
+    const p = document.getElementById('settingsPanel');
+    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+function saveSettings() {
+    state.backendUrl = document.getElementById('backendUrl').value;
+    localStorage.setItem('tc_backend_url', state.backendUrl);
+    toggleSettings();
+}
+
+async function saveStrategyTag(compositeKey, strategyValue) {
+    let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    if(strategyValue) tags[compositeKey] = strategyValue;
+    else delete tags[compositeKey];
+    localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
+    
+    if(state.driveToken) {
+        appendLog(`Syncing strategy tag to Drive...`);
+        await uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
+        appendLog(`✅ Strategy saved.`);
+    }
+}
+
+function setTab(tab) {
+    state.currentTab = tab;
+    if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
+    else if (tab === 'log') { state.sortCol = 'Date'; state.sortAsc = false; }
+    else if (tab !== 'chart') { state.sortCol = 'Symbol'; state.sortAsc = true; }
+    
+    document.getElementById('tab-active').classList.toggle('active', tab === 'active');
+    document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    document.getElementById('tab-log').classList.toggle('active', tab === 'log');
+    document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
+    document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
+    document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
+    document.getElementById('tab-mapper').classList.toggle('active', tab === 'mapper');
+    
+    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'mapper') ? 'none' : 'flex';
+    document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
+    document.getElementById('mapperInsertBar').style.display = tab === 'mapper' ? 'flex' : 'none';
+    document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
+    document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
+
+    document.getElementById('searchFilter').style.display = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('brokerFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('segFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
+    
+    if(document.getElementById('fyGroupBy')) {
+        document.getElementById('fyGroupBy').style.display = (tab === 'fy') ? 'inline-block' : 'none';
+    }
+
+    document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
+
+    renderUI(); 
+}
+
+function handleSort(col) {
+    if (state.sortCol === col) state.sortAsc = !state.sortAsc;
+    else { state.sortCol = col; state.sortAsc = true; }
+    renderUI();
+}
+
+function toggleTerminal() {
+    const body = document.getElementById('terminalBody');
+    const btn = document.getElementById('termToggleBtn');
+    if(body.style.display === 'none') { body.style.display = 'block'; btn.innerText = '▼'; } 
+    else { body.style.display = 'none'; btn.innerText = '▲'; }
+}
+
+function appendLog(text) {
+    const tb = document.getElementById('terminalBody');
+    const now = new Date();
+    const ts = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+    tb.innerHTML += `<div class="log-line"><span style="color:#888">${ts}</span> ${text}</div>`;
+    tb.scrollTop = tb.scrollHeight;
+}
+
+async function pollLogs() {
+    if(!state.isPollingLogs) return;
+    try {
+        const res = await fetch(`${state.backendUrl}/api/logs`);
+        if(res.ok) { const data = await res.json(); data.logs.forEach(log => appendLog(log)); }
+    } catch(e){}
+    setTimeout(pollLogs, 500);
+}
+function startLogPolling() { if(!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); } }
+function stopLogPolling() { setTimeout(() => { state.isPollingLogs = false; }, 2000); }
+
+const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+async function clearLedger() {
+    if (state.isProcessing) return;
+    if(!confirm("Permanently delete all data from Cloud and Google Drive? (Symbol Aliases will be kept)")) return;
+    
+    lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
+    startLogPolling();
+    try {
+        await deleteSnapshot();
+        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
+        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
+        await Promise.all([p1, p2]);
+        state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = {};
+        localStorage.removeItem('tc_corp_cache');
+        localStorage.removeItem('tc_strategy_tags');
+        
+        if (state.driveToken && Object.keys(state.symbol_map).length > 0) {
+            await uploadFileToDrive('symbol_map.json', JSON.stringify(state.symbol_map));
+        }
+
+        renderUI();
+        appendLog("✅ Ledger and Google Drive Cache wiped (Symbol Maps preserved).");
+    } catch(e) { alert("Failed to clear data."); }
+    stopLogPolling();
+    unlockUI();
+}
+
+async function handleFileUpload(event) {
+    if (state.isProcessing) return;
+    const files = event.target.files;
+    if(!files.length) return;
+    
+    lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
+    startLogPolling();
+    
+    try {
+        const formData = new FormData();
+        const processedFiles = [];
+
+        for(let f of files) {
+            if (f.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
+                appendLog(`Converting Excel file ${f.name} to standard CSV format...`);
+                const arrayBuffer = await f.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+                
+                const newFilename = f.name.replace(/\.(xlsx|xls)$/i, '.csv');
+                const newFile = new File([csvContent], newFilename, { type: 'text/csv' });
+                
+                formData.append("files", newFile);
+                processedFiles.push({ name: newFilename, text: csvContent });
+            } else {
+                formData.append("files", f);
+                const text = await f.text();
+                processedFiles.push({ name: f.name, text: text });
+            }
+        }
+
+        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        
+        if(state.driveToken) {
+            appendLog("Backing up files to Google Drive...");
+            for(let pf of processedFiles) {
+                await uploadFileToDrive(pf.name, pf.text);
+            }
+        }
+        
+        await deleteSnapshot();
+        await fetchPortfolio(true);
+    } catch(e) { 
+        alert("Upload failed."); 
+        stopLogPolling(); 
+        unlockUI();
+    }
+}
+
+async function handleRefresh(event) {
+    if (state.isProcessing) return;
+    lockUI();
+    if (event.shiftKey) {
+        appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
+        await deleteSnapshot();
+        await fetchPortfolio(true);
+    } else {
+        appendLog("Refreshing Live Prices...");
+        if (Object.keys(state.token_map).length > 0) {
+            await fetchLivePrices();
+        } else {
+            await fetchPortfolio(false);
+        }
+    }
+}
+
+async function handleDeepRecalculate() {
+    if (state.isProcessing) return;
+    lockUI();
+    appendLog("Applying changes and forcing deep recalculation...");
+    await deleteSnapshot();
+    await fetchPortfolio(true);
+}
+
+function populateFilters() {
+    const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker), ...state.trade_log.map(p=>p.Broker)]);
+    const selectB = document.getElementById('brokerFilter');
+    const currentValB = selectB.value;
+    selectB.innerHTML = '<option value="ALL">All Brokers</option>';
+    allBrokers.forEach(b => { if(b) selectB.innerHTML += `<option value="${b}">${b}</option>`; });
+    selectB.value = currentValB;
+
+    const allFYs = new Set([...state.closed.map(p=>p.FY), ...state.trade_log.map(p=>p.FY)]);
+    const selectF = document.getElementById('fyFilter');
+    const currentValF = selectF ? selectF.value : 'ALL';
+    if(selectF) {
+        selectF.innerHTML = '<option value="ALL">All FYs</option>';
+        Array.from(allFYs).filter(Boolean).sort().reverse().forEach(fy => {
+            selectF.innerHTML += `<option value="${fy}">${fy}</option>`;
+        });
+        selectF.value = currentValF;
+    }
+}
+
+async function fetchPortfolio(forceRecalc = false) {
+    lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Fetching Ledger Data...</td></tr>`;
+    startLogPolling();
+
+    if (!forceRecalc && state.driveToken) {
+        try {
+            const folderId = await getOrCreateFolder();
+            if (folderId) {
+                const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
+                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                const searchData = await searchRes.json();
+                if (searchData.files && searchData.files.length > 0) {
+                    appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
+                    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                    const snapshotData = await fileRes.json();
+                    
+                    state.open = snapshotData.open || [];
+                    state.closed = snapshotData.closed || [];
+                    state.corp = snapshotData.corp_actions || [];
+                    state.trade_log = snapshotData.trade_log || [];
+                    state.unknown_symbols = snapshotData.unknown_symbols || {};
+                    state.token_map = snapshotData.token_map || {};
+
+                    const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+                    document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
+
+                    populateFilters();
+                    renderUI();
+
+                    if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
+                        await fetchLivePrices();
+                    } else { stopLogPolling(); unlockUI(); }
+                    return;
+                }
+            }
+        } catch(e) { appendLog("Snapshot bypass failed, defaulting to server computation..."); }
+    }
+
+    try {
+        const res = await fetch(`${state.backendUrl}/api/portfolio`);
+        if(!res.ok) throw new Error();
+        const data = await res.json();
+        
+        if ((!data.positions.open || data.positions.open.length === 0) && 
+            (!data.positions.closed || data.positions.closed.length === 0) && 
+            (!data.positions.trade_log || data.positions.trade_log.length === 0)) {
+            
+            if (state.driveToken) {
+                appendLog("Cloud reset detected. Initiating automated rescue sequence...");
+                try {
+                    const driveFiles = await downloadAllFromDrive();
+                    if (driveFiles.length > 0) {
+                        const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
+                        const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
+                        const mapFile = driveFiles.find(f => f.filename === 'symbol_map.json');
+                        const restoreFiles = driveFiles.filter(f => f.filename.endsWith('.csv') || f.filename === 'symbol_map.json');
+                        
+                        if (cacheFile) {
+                            await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
+                            localStorage.setItem('tc_corp_cache', cacheFile.content);
+                        }
+                        if (stratFile) {
+                            localStorage.setItem('tc_strategy_tags', stratFile.content);
+                        }
+                        if (mapFile) {
+                            localStorage.setItem('tc_symbol_map', mapFile.content);
+                            state.symbol_map = JSON.parse(mapFile.content);
+                        }
+                        if (restoreFiles.length > 0) {
+                            appendLog(`Pushing ${restoreFiles.length} files to Render in batches to prevent memory overload...`);
+                            const chunkSize = 5;
+                            for (let i = 0; i < restoreFiles.length; i += chunkSize) {
+                                const chunk = restoreFiles.slice(i, i + chunkSize);
+                                await fetch(`${state.backendUrl}/api/restore`, { 
+                                    method: 'POST', 
+                                    headers: { 'Content-Type': 'application/json' }, 
+                                    body: JSON.stringify(chunk) 
+                                });
+                            }
+                        }
+                        appendLog("✅ Render server jumpstarted! Recalculating...");
+                        return fetchPortfolio(true); 
+                    } else {
+                        appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
+                    }
+                } catch(restoreErr) {
+                    appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
+                }
+            }
+        }
+        
+        state.open = data.positions.open || [];
+        state.closed = data.positions.closed || [];
+        state.corp = data.positions.corp_actions || []; 
+        state.trade_log = data.positions.trade_log || [];
+        state.unknown_symbols = data.positions.unknown_symbols || {};
+        state.token_map = data.positions.token_map || {};
+
+        if (state.driveToken && (state.open.length > 0 || state.closed.length > 0)) {
+            appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
+            await uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+        }
+        
+        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+        document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
+        
+        populateFilters();
+        
+        if (state.driveToken) {
+            const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
+            if (cacheRes.ok) {
+                const cacheData = await cacheRes.json();
+                if (Object.keys(cacheData).length > 0) {
+                    localStorage.setItem('tc_corp_cache', JSON.stringify(cacheData));
+                    await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
+                }
+            }
+        }
+        
+        renderUI();
+        
+        if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
+            await fetchLivePrices();
+        } else { stopLogPolling(); unlockUI(); }
+    } catch(e) { stopLogPolling(); appendLog(`❌ Fetch Error: ${e.message}`); unlockUI(); }
+}
+
+async function fetchLivePrices() {
+    if(Object.keys(state.token_map).length === 0) { stopLogPolling(); unlockUI(); return; }
+    state.fetchingPrices = true; if(state.currentTab !== 'chart') renderUI(); 
+    try {
+        const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: state.token_map }) });
+        if (res.ok) {
+            const prices = await res.json();
+            state.open.forEach(p => {
+                const cmp = prices[p.Symbol] || 0;
+                if (cmp > 0) {
+                    p.CMP = cmp;
+                    p["P&L"] = (cmp - p["Avg Price"]) * p.Qty * (p.Direction === 'Long' ? 1 : -1);
+                    p["ROI %"] = p.Invested > 0 ? (p["P&L"] / p.Invested) * 100 : (p.Margin > 0 ? (p["P&L"] / p.Margin) * 100 : 0);
+                }
+            });
+        }
+    } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); unlockUI(); }
+}
+
+function exportToExcel() {
+    appendLog("Compiling full database into Excel Workbook...");
+    let wb = XLSX.utils.book_new();
+    
+    let wsActive = XLSX.utils.json_to_sheet(state.open);
+    XLSX.utils.book_append_sheet(wb, wsActive, "Active Positions");
+    
+    let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    let closedDataWithTags = state.closed.map(p => {
+        let compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        return {
+            "Symbol": p.Symbol,
+            "Broker": p.Broker,
+            "Segment": p.Segment,
+            "Trade Type": p["Trade Type"] || '-', 
+            "Direction": p.Direction,
+            "Strategy": stratTags[compKey] || '', 
+            "FY": p.FY,
+            "Qty": p.Qty,
+            "Entry Price": p["Entry Price"],
+            "Exit Price": p["Exit Price"],
+            "P&L": p["P&L"],
+            "Entry Date": p["Entry Date"],
+            "Exit Date": p["Exit Date"]
+        };
+    });
+    let wsClosed = XLSX.utils.json_to_sheet(closedDataWithTags);
+    XLSX.utils.book_append_sheet(wb, wsClosed, "Closed History");
+    
+    let wsLog = XLSX.utils.json_to_sheet(state.trade_log);
+    XLSX.utils.book_append_sheet(wb, wsLog, "Raw Trade Log");
+
+    let mapData = Object.keys(state.symbol_map).map(messy => ({
+        "Broker Messy Name": messy,
+        "Clean NSE Symbol": state.symbol_map[messy]
+    }));
+    let wsMap = XLSX.utils.json_to_sheet(mapData);
+    XLSX.utils.book_append_sheet(wb, wsMap, "Symbol Mapper");
+
+    let filename = `TradeConsole_FullExport_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    appendLog(`✅ Successfully downloaded ${filename} with all tabs.`);
+}
+
+function renderChart() {
+    const fyFilter = document.getElementById('fyFilter').value;
+    const brkFilter = document.getElementById('brokerFilter').value;
+    const segFilter = document.getElementById('segFilter').value;
+    
+    let filteredTrades = [...state.closed];
+    if (fyFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.FY === fyFilter);
+    if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
+    if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
+
+    filteredTrades.sort((a, b) => new Date(a["Exit Date"]) - new Date(b["Exit Date"]));
+
+    let dailyAgg = {};
+    filteredTrades.forEach(p => {
+        const d = p["Exit Date"];
+        if(!dailyAgg[d]) dailyAgg[d] = 0;
+        dailyAgg[d] += p["P&L"];
+    });
+
+    const dates = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
+    let cumulativeData = [];
+    let runningTotal = 0;
+    
+    dates.forEach(d => {
+        runningTotal += dailyAgg[d];
+        cumulativeData.push({ x: d, y: runningTotal });
+    });
+
+    document.getElementById('lblPnl').innerText = `REALIZED P&L`;
+    const pnlEl = document.getElementById('valPnl');
+    pnlEl.innerText = (runningTotal>0?'+':'') + fmtMoney(runningTotal);
+    pnlEl.className = 'metric-val ' + (runningTotal > 0 ? 'positive' : runningTotal < 0 ? 'negative' : '');
+    
+    document.getElementById('lblInv').innerText = 'CLOSED TRADES';
+    document.getElementById('valInv').innerText = filteredTrades.length;
+    document.getElementById('lblPos').innerText = 'PEAK P&L';
+    const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
+    document.getElementById('valPos').innerText = fmtMoney(peak);
+
+    const finalPnl = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1].y : 0;
+    const chartLineColor = finalPnl >= 0 ? '#48bb78' : '#fc8181';
+    const chartBgColor = finalPnl >= 0 ? 'rgba(72, 187, 120, 0.1)' : 'rgba(252, 129, 129, 0.1)';
+
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    if (state.pnlChartInstance) { state.pnlChartInstance.destroy(); }
+
+    state.pnlChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Cumulative Realized P&L',
+                data: cumulativeData.map(d => d.y),
+                borderColor: chartLineColor,
+                backgroundColor: chartBgColor,
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '₹ ' + c.parsed.y.toLocaleString('en-IN'); } } } },
+            scales: { x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } }, y: { ticks: { color: '#cbd5e0', callback: function(v) { return '₹ ' + v.toLocaleString('en-IN'); } }, grid: { color: '#1e2533' } } },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+}
+
+function insertCorpAction() {
+    const sym = document.getElementById('newCorpSym').value.toUpperCase().trim();
+    const date = document.getElementById('newCorpDate').value; 
+    const ratio = parseFloat(document.getElementById('newCorpRatio').value);
+    if(!sym || !date || !ratio) return alert("Please fill all fields.");
+
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(!cache[sym]) cache[sym] = [];
+    cache[sym].push({date: date, ratio: ratio});
+    document.getElementById('newCorpSym').value = ''; document.getElementById('newCorpDate').value = ''; document.getElementById('newCorpRatio').value = '';
+    syncCacheAndRefresh(cache);
+}
+
+function deleteCorpAction(sym, dateStr) {
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); syncCacheAndRefresh(cache); }
+}
+
+async function syncCacheAndRefresh(cache) {
+    localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
+    startLogPolling();
+    try {
+        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
+        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        await deleteSnapshot();
+        await fetchPortfolio(true);
+    } catch(e) { stopLogPolling(); unlockUI(); }
+}
+
+function insertSymbolMap(messy = null, clean = null) {
+    const m = (messy || document.getElementById('newMessyName').value).toUpperCase().trim();
+    const c = (clean || document.getElementById('newCleanSymbol').value).toUpperCase().trim();
+    if(!m || !c) return alert("Please provide both the messy name and the clean symbol.");
+
+    state.symbol_map[m] = c;
+    if(!messy) { document.getElementById('newMessyName').value = ''; document.getElementById('newCleanSymbol').value = ''; }
+    syncSymbolMapOnly();
+}
+
+function deleteSymbolMap(messy) {
+    delete state.symbol_map[messy];
+    syncSymbolMapOnly();
+}
+
+async function syncSymbolMapOnly() {
+    localStorage.setItem('tc_symbol_map', JSON.stringify(state.symbol_map));
+    appendLog("Syncing Alias Map to Drive & Server in background...");
+    try {
+        const content = JSON.stringify(state.symbol_map);
+        const formData = new FormData();
+        formData.append("files", new Blob([content], { type: 'application/json' }), "symbol_map.json");
+        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        if(state.driveToken) await uploadFileToDrive('symbol_map.json', content);
+        appendLog("✅ Map saved! Click 'Apply & Recalculate' when ready.");
+        renderUI(); 
+    } catch(e) { appendLog("❌ Error saving map."); }
+}
+
+document.getElementById('tableBody').addEventListener('change', function(e) {
+    if(e.target && e.target.classList.contains('strategy-select')) {
+        saveStrategyTag(e.target.dataset.compkey, e.target.value);
+    }
+});
+
+function renderUI() {
+    if(state.currentTab === 'chart') { renderChart(); return; }
+    
+    const bFilter = document.getElementById('brokerFilter').value;
+    const sFilter = document.getElementById('segFilter').value;
+    const fyFilter = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
+    const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
+    
+    let dataList = [];
+    if (state.currentTab === 'active') dataList = [...state.open];
+    else if (state.currentTab === 'closed') dataList = [...state.closed];
+    else if (state.currentTab === 'log') dataList = [...state.trade_log];
+    else if (state.currentTab === 'fy') {
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
+        const d = new Date(); const y = d.getFullYear();
+        const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
+        let summaryMap = {};
+        
+        let filteredClosed = state.closed;
+        let filteredOpen = state.open;
+        
+        if (bFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Broker === bFilter);
+            filteredOpen = filteredOpen.filter(p => p.Broker === bFilter);
+        }
+        if (sFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+            filteredOpen = filteredOpen.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+        }
+        
+        filteredClosed.forEach(p => {
+            let key = p.FY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
+            summaryMap[key].Realized += (p["P&L"] || 0);
+        });
+        
+        filteredOpen.forEach(p => {
+            let key = currentFY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
+            summaryMap[key].Unrealized += (p["P&L"] || 0);
+            summaryMap[key].Invested += (p.Invested || 0);
+            summaryMap[key].Margin += (p.Margin || 0);
+        });
+        
+        dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
+    }
+    else if (state.currentTab === 'corp') {
+        let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+        for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
+    }
+    
+    if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') {
+        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    }
+    
+    if (state.currentTab !== 'corp' && state.currentTab !== 'mapper' && state.currentTab !== 'fy') {
+        if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
+        if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+    }
+    
+    if (fyFilter !== 'ALL' && (state.currentTab === 'closed' || state.currentTab === 'log')) {
+        dataList = dataList.filter(p => p.FY === fyFilter);
+    }
+
+    dataList.sort((a, b) => {
+        let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : ''; 
+        let valB = b[state.sortCol] !== undefined ? b[state.sortCol] : '';
+        if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+        if (valA < valB) return state.sortAsc ? -1 : 1;
+        if (valA > valB) return state.sortAsc ? 1 : -1;
+        return 0;
+    });
+
+    const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
+    let totalPnl = 0, totalInv = 0, totalMar = 0; let totUnreal = 0; let html = '';
+
+    if (state.currentTab === 'mapper') {
+        document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
+        let pendingCount = 0;
+        Object.keys(state.unknown_symbols).forEach(sym => {
+            if(!state.symbol_map[sym]) {
+                pendingCount++;
+                const sugg = state.unknown_symbols[sym] || '';
+                html += `<tr>
+                    <td style="color:var(--red);font-weight:600">${sym}</td>
+                    <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px; text-transform:uppercase; width:120px;">
+                            <button class="btn-pri ctrl-btn" onclick="insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">✅ Accept</button>
+                        </div>
+                    </td>
+                    <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td>
+                </tr>`;
+            }
+        });
+        Object.keys(state.symbol_map).forEach(m => {
+            html += `<tr>
+                <td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);">-</td>
+                <td style="color:var(--green);font-weight:600">${state.symbol_map[m]}</td>
+                <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span><button class="btn-del ctrl-btn" onclick="deleteSymbolMap('${m}')">[X] Delete</button></div></td>
+            </tr>`;
+        });
+        if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
+    }
+    else if (state.currentTab === 'active') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
+        
+        dataList.forEach(p => {
+            totalPnl += p["P&L"]; totalInv += (p.Invested || 0); totalMar += (p.Margin || 0);
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            const displayCmp = (state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
+            const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested || 0)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin || 0)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
+        });
+    } 
+    else if (state.currentTab === 'closed') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        
+        let wins = 0, losses = 0; let grossWin = 0, grossLoss = 0; let daysWin = 0, daysLoss = 0;
+        let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+
+        dataList.forEach(p => {
+            totalPnl += p["P&L"]; 
+            const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
+            const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
+            
+            if (p["Entry Price"] > 0) {
+                if(p["P&L"] > 0) { wins++; grossWin += p["P&L"]; daysWin += holdDays; }
+                else if(p["P&L"] < 0) { losses++; grossLoss += Math.abs(p["P&L"]); daysLoss += holdDays; }
+            }
+
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
+            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+            const currTag = stratTags[compKey] || '';
+            
+            const tradeTypeHTML = p['Trade Type'] === 'Intraday' ? '<span style="font-size:10px;color:var(--orange);font-weight:700;border:1px solid var(--orange);padding:2px 4px;border-radius:4px">INTRADAY</span>' : 
+                                 (p['Trade Type'] === 'Delivery' ? '<span style="font-size:10px;color:var(--blue);font-weight:700;border:1px solid var(--blue);padding:2px 4px;border-radius:4px">DELIVERY</span>' : '<span style="color:var(--text3)">-</span>');
+
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td>${tradeTypeHTML}</td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+            <td><select class="strategy-select" data-compkey="${compKey}"><option value="">- Select Tag -</option><option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option><option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option><option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option><option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option><option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option><option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option></select></td>
+            <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td>${holdDays.toFixed(0)}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
+        });
+        
+        const validTrades = wins + losses;
+        totalInv = validTrades > 0 ? (wins / validTrades * 100).toFixed(1) + '%' : '0%';
+        const avgWin = wins > 0 ? grossWin / wins : 0; 
+        const avgLoss = losses > 0 ? grossLoss / losses : 0;
+        const rr = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
+        
+        document.getElementById('valAvgWin').innerText = '+' + fmtMoney(avgWin); 
+        document.getElementById('valAvgLoss').innerText = '-' + fmtMoney(avgLoss);
+        document.getElementById('valRR').innerText = rr; 
+        document.getElementById('valDaysWin').innerText = wins > 0 ? (daysWin / wins).toFixed(1) : '0.0'; 
+        document.getElementById('valDaysLoss').innerText = losses > 0 ? (daysLoss / losses).toFixed(1) : '0.0';
+    } 
+    else if (state.currentTab === 'log') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
+        let buyV = 0, sellV = 0;
+        dataList.forEach(p => {
+            if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
+            const dirColor = p.Direction === 'Buy' ? 'color:var(--green)' : 'color:var(--red)';
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Date}</td><td>${p.Qty}</td><td>${fmtDec(p.Price)}</td><td style="color:var(--orange);font-weight:600">${p.FY}</td></tr>`;
+        });
+        totalPnl = buyV; totalInv = sellV;
+    }
+    else if (state.currentTab === 'fy') {
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
+        let thHtml = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th>`;
+        if (groupBy.includes('Broker')) thHtml += `<th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
+        if (groupBy.includes('Segment')) thHtml += `<th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
+        thHtml += `<th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = thHtml;
+
+        dataList.forEach(p => {
+            totalPnl += p.Realized; totUnreal += p.Unrealized; 
+            totalInv += p.Invested; totalMar += p.Margin;
+            
+            const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
+            const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
+            const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
+            
+            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>`;
+            if (groupBy.includes('Broker')) html += `<td style="color:var(--white);font-weight:600">${p.Broker}</td>`;
+            if (groupBy.includes('Segment')) html += `<td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>`;
+            html += `<td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin)}</td></tr>`;
+        });
+    }
+    else {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
+        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del ctrl-btn" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
+    }
+
+    if(!dataList.length && state.currentTab !== 'mapper') html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
+    document.getElementById('tableBody').innerHTML = html;
+    
+    const c3 = document.getElementById('lblMar').parentElement;
+    
+    if (state.currentTab === 'mapper') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
+        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+        document.getElementById('valPnl').innerText = pendingCount; 
+        document.getElementById('valPnl').className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
+        document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS'; 
+        document.getElementById('valInv').innerText = Object.keys(state.symbol_map).length; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL TRACKED'; 
+        document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; 
+        document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (state.currentTab === 'corp') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
+        document.getElementById('valPnl').innerText = dataList.length; document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = '-';
+        document.getElementById('valInv').innerText = '-'; document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'log') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE';
+        document.getElementById('valPnl').innerText = fmtMoney(totalPnl); document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = 'TOTAL SELL VALUE';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'NO. OF TRADES';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (state.currentTab === 'closed') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'WIN RATE';
+        document.getElementById('valInv').innerText = totalInv; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'CLOSED TRADES';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'active') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching ⏳...</span>' : 'NET UNREALIZED';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'TOTAL INVESTED';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblMar').innerText = 'TOTAL MARGIN';
+        document.getElementById('valMar').innerText = fmtMoney(totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'ACTIVE POSITIONS';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (state.currentTab === 'fy') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'UNREALIZED P&L';
+        document.getElementById('valInv').innerText = (totUnreal>0?'+':'') + fmtMoney(totUnreal); 
+        document.getElementById('valInv').className = 'metric-val ' + (totUnreal > 0 ? 'positive' : totUnreal < 0 ? 'negative' : '');
+        document.getElementById('lblMar').innerText = 'CAPITAL DEPLOYED';
+        document.getElementById('valMar').innerText = fmtMoney(totalInv + totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'COMBINED P&L';
+        const combined = totalPnl + totUnreal;
+        document.getElementById('valPos').innerText = (combined>0?'+':'') + fmtMoney(combined); 
+        document.getElementById('valPos').className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
+    }
+}
+</script>
+</body>
+</html>
