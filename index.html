@@ -46,7 +46,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 .negative{color:var(--red);font-weight:500}
 
 .tab-container{display:flex;gap:10px;margin-bottom:16px; flex-wrap:wrap;}
-#filterBar{background:var(--bg2); padding:12px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px;}
+#filterBar{background:var(--bg2); padding:12px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px; align-items:center;}
 #settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 
 .terminal-wrapper{background:#000;border:1px solid #333;border-radius:8px;margin-top:24px;overflow:hidden;}
@@ -63,7 +63,16 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
 
 #corpInsertBar, #mapperInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
 #chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
-.strategy-select{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-family:'Outfit'; font-size:11px;}
+.strategy-select{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-family:'Outfit'; font-size:11px; width:140px;}
+
+.help-container { display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:30px; margin-bottom:24px; font-family:'Outfit',sans-serif; color:var(--text); line-height:1.6; }
+.help-container h2 { color:var(--white); margin-bottom:16px; font-size:22px; }
+.help-container h3 { color:var(--blue); margin-top:24px; margin-bottom:8px; font-size:16px; }
+.help-container p { margin-bottom:12px; font-size:14px; }
+.help-container ul { margin-left:20px; margin-bottom:16px; font-size:14px; }
+.help-container li { margin-bottom:6px; }
+.rec-badge { font-size:10px; background:var(--blue2); color:white; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:700; transition:0.2s;}
+.rec-badge:hover { filter:brightness(1.2); }
 </style>
 </head>
 <body>
@@ -96,7 +105,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             
             <button class="btn-sec ctrl-btn" onclick="window.exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
                 <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Export All Data
+                Export
             </button>
 
             <button class="btn-sec ctrl-btn" onclick="window.toggleSettings()">⚙️</button>
@@ -123,6 +132,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button id="tab-fy" class="btn-sec" onclick="window.setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="window.setTab('corp')">CORPORATE ACTIONS</button>
         <button id="tab-mapper" class="btn-sec" onclick="window.setTab('mapper')">SYMBOL MAPPER</button>
+        <button id="tab-help" class="btn-sec" onclick="window.setTab('help')" style="border-color:var(--blue); color:var(--blue);">HELP & LOGIC</button>
     </div>
 
     <div class="controls" id="filterBar">
@@ -144,9 +154,58 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <option value="FY_Segment">View: FY ➔ Segment</option>
             <option value="FY">View: FY Only (Combined)</option>
         </select>
+
+        <select id="strategyFilter" class="btn-sec" onchange="window.renderUI()" style="display: none;">
+            <option value="ALL">All Strategies</option>
+            <option value="UNASSIGNED">-- Unassigned Trades --</option>
+            <option value="0DTE">0DTE</option>
+            <option value="Overnight pre-expiry">Overnight pre-expiry</option>
+            <option value="Short-term Swing">Short-term Swing</option>
+            <option value="Long-term Holding">Long-term Holding</option>
+            <option value="Cash Secured Put">Cash Secured Put</option>
+            <option value="Short Vega">Short Vega</option>
+            <option value="Hedge">Hedge</option>
+            <option value="❌ Mistake">❌ Mistake</option>
+        </select>
+
+        <button id="massAcceptBtn" class="btn-pri" onclick="window.massAcceptRecommendations()" style="display: none; background: linear-gradient(135deg, #ed8936, #dd6b20);">
+            ✨ Mass Accept Recommendations
+        </button>
     </div>
 
-    <div class="metrics-grid">
+    <div id="helpContainer" class="help-container">
+        <h2>How the Math Engine Works</h2>
+        <p>Trade Console uses an advanced mathematical engine to convert thousands of raw broker trades into a perfect accounting ledger. Here is exactly how the data is processed:</p>
+        
+        <h3>1. The FIFO Ledger (First-In, First-Out)</h3>
+        <p>The engine sorts every trade you've ever made chronologically. When you sell 100 shares of a stock, the engine "looks back" in time and mathematically consumes the oldest 100 shares you bought. This is the industry-standard accounting method for calculating true realized P&L.</p>
+        
+        <h3>2. Intraday vs. Delivery Prioritization</h3>
+        <p>Before the FIFO engine looks back into history, it specifically scans the exact day of the trade. If it finds a Buy and a Sell for the same asset on the exact same date, it matches them together instantly as an <b>Intraday Trade</b>. Only the "leftover" shares spill over into the Delivery queue.</p>
+
+        <h3>3. Active Positions & Live Margins</h3>
+        <ul>
+            <li><b>Invested:</b> For Equity, this is simply your Qty * Average Buy Price.</li>
+            <li><b>Margin Used:</b> For F&O Shorts, the engine pings Angel One's live Margin API to get the exact overnight span + exposure margin required for your specific strike price.</li>
+            <li><b>Live CMP:</b> When you click Refresh, the system securely connects to the live market to pull the Current Market Price for all open assets and calculates live Unrealized P&L.</li>
+        </ul>
+
+        <h3>4. Corporate Actions & Stock Splits</h3>
+        <p>If you bought 100 shares of a stock at ₹1,000, and it later underwent a 1:5 split, the engine mathematically rewrites history. It transforms your old record into 500 shares at ₹200. This ensures your P&L is perfectly accurate when you eventually sell them.</p>
+
+        <h3>5. The Options Settlement Engine</h3>
+        <p>If you short an option and let it expire, brokers often don't provide an "Exit" record in your CSV. Trade Console detects expired options, fetches the 10-year historical closing price of the underlying index (e.g., NIFTY) from Yahoo Finance for that exact expiration date, calculates whether the option expired In-The-Money or Out-of-The-Money, and automatically generates a phantom "Exit Trade" with the correct settlement price to balance your P&L.</p>
+
+        <h3>6. The Strategy Recommendation Engine</h3>
+        <p>In the Closed History tab, the engine calculates the exact number of days you held an asset and automatically suggests strategies to save you time tagging data:</p>
+        <ul>
+            <li><b>0DTE:</b> Automatically triggered if you Buy and Sell an Option on the exact same day (Hold Days = 0).</li>
+            <li><b>Overnight pre-expiry:</b> Triggered if you Short an Option exactly 1 day before closing it (Hold Days = 1).</li>
+            <li><b>Long-term Holding:</b> Triggered if you hold any asset for more than 180 days.</li>
+        </ul>
+    </div>
+
+    <div class="metrics-grid" id="mainMetricsGrid">
         <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
         <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED</div><div class="metric-val" id="valInv">₹0</div></div>
         <div class="metric-card"><div class="metric-title" id="lblMar">MARGIN USED</div><div class="metric-val" id="valMar">₹0</div></div>
@@ -181,7 +240,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <button class="btn-pri ctrl-btn" style="background:var(--orange); margin-left:20px;" onclick="window.handleDeepRecalculate()">⚡ Apply & Recalculate</button>
     </div>
 
-    <div class="table-container">
+    <div class="table-container" id="mainTableContainer">
         <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" style="text-align:center">No data loaded.</td></tr></tbody></table>
     </div>
 
@@ -201,6 +260,8 @@ window.state = {
     pnlChartInstance: null,
     isProcessing: false
 };
+
+window.currentFilteredData = []; // Stores currently visible rows for mass actions
 
 let searchTimeout;
 window.debounceSearch = function() {
@@ -296,7 +357,6 @@ window.uploadFileToDrive = async function(filename, content) {
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
 };
 
-// ⚡ NEW: General Drive File Deleter ⚡
 window.deleteFileFromDrive = async function(filename) {
     if (!window.state.driveToken) return;
     const folderId = await window.getOrCreateFolder();
@@ -315,13 +375,11 @@ window.deleteSnapshot = async function() {
     await window.deleteFileFromDrive('portfolio_snapshot.json');
 };
 
-// ⚡ NEW: MASTER FILE DOWNLOAD BYPASS LOGIC ⚡
 window.downloadAllFromDrive = async function() {
     const folderId = await window.getOrCreateFolder();
     if (!folderId) return [];
     window.appendLog("Scanning Google Drive for backup files...");
     
-    // 1. Check for Master CSV first to bypass heavy loads
     const mQuery = encodeURIComponent(`name='TradeConsole_Master.csv' and '${folderId}' in parents and trashed=false`);
     const mRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${mQuery}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
     let hasMaster = false;
@@ -334,7 +392,6 @@ window.downloadAllFromDrive = async function() {
         }
     }
 
-    // 2. Fetch file list and apply bypass filter
     const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
     
@@ -346,10 +403,7 @@ window.downloadAllFromDrive = async function() {
     
     if (listData.files && listData.files.length > 0) {
         for (let file of listData.files) {
-            // Ignore 45 raw files if Master exists
-            if (hasMaster && file.name.endsWith('.csv') && file.name !== 'TradeConsole_Master.csv') {
-                continue; 
-            }
+            if (hasMaster && file.name.endsWith('.csv') && file.name !== 'TradeConsole_Master.csv') continue; 
             const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
             const content = await fileRes.text();
             files.push({ filename: file.name, content: content });
@@ -379,16 +433,54 @@ window.saveSettings = function() {
     window.toggleSettings();
 };
 
-window.saveStrategyTag = async function(compositeKey, strategyValue) {
+window.saveStrategyTag = async function(compositeKey, strategyValue, skipRender = false) {
     let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
     if(strategyValue) tags[compositeKey] = strategyValue;
     else delete tags[compositeKey];
     localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
     
-    if(window.state.driveToken) {
+    if(window.state.driveToken && !skipRender) {
         window.appendLog(`Syncing strategy tag to Drive...`);
         await window.uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
         window.appendLog(`✅ Strategy saved.`);
+        window.renderUI();
+    }
+};
+
+window.applySingleRecommendation = async function(compKey, recValue) {
+    await window.saveStrategyTag(compKey, recValue, false);
+};
+
+// ⚡ NEW: MASS ACCEPT ALGORITHM ⚡
+window.massAcceptRecommendations = async function() {
+    let updated = false;
+    let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+
+    window.currentFilteredData.forEach(p => {
+        const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        const currTag = tags[compKey] || '';
+        
+        if (!currTag) {
+            const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
+            const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
+            const rec = window.getStrategyRecommendation(p, holdDays);
+            
+            if (rec) {
+                tags[compKey] = rec;
+                updated = true;
+            }
+        }
+    });
+
+    if (updated) {
+        localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
+        if (window.state.driveToken) {
+            window.appendLog(`Batch syncing mass strategies to Drive...`);
+            await window.uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
+        }
+        window.renderUI();
+    } else {
+        alert("No visible unassigned recommendations to apply.");
     }
 };
 
@@ -396,7 +488,7 @@ window.setTab = function(tab) {
     window.state.currentTab = tab;
     if (tab === 'fy') { window.state.sortCol = 'FY'; window.state.sortAsc = false; }
     else if (tab === 'log') { window.state.sortCol = 'Date'; window.state.sortAsc = false; }
-    else if (tab !== 'chart') { window.state.sortCol = 'Symbol'; window.state.sortAsc = true; }
+    else if (tab !== 'chart' && tab !== 'help') { window.state.sortCol = 'Symbol'; window.state.sortAsc = true; }
     
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
@@ -405,25 +497,32 @@ window.setTab = function(tab) {
     document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
     document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
     document.getElementById('tab-mapper').classList.toggle('active', tab === 'mapper');
+    document.getElementById('tab-help').classList.toggle('active', tab === 'help');
     
-    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'mapper') ? 'none' : 'flex';
+    // Manage UI blocks
+    const isHelp = tab === 'help';
+    document.getElementById('helpContainer').style.display = isHelp ? 'block' : 'none';
+    document.getElementById('mainTableContainer').style.display = (tab === 'chart' || isHelp) ? 'none' : 'block';
+    document.getElementById('mainMetricsGrid').style.display = isHelp ? 'none' : 'grid';
+    document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
+    
+    // Filter Bar Visibilities
+    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'mapper' || isHelp) ? 'none' : 'flex';
     document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
     document.getElementById('mapperInsertBar').style.display = tab === 'mapper' ? 'flex' : 'none';
-    document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
-    document.querySelector('.table-container').style.display = tab === 'chart' ? 'none' : 'block';
-
+    
     document.getElementById('searchFilter').style.display = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('brokerFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('segFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
     document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
     
-    if(document.getElementById('fyGroupBy')) {
-        document.getElementById('fyGroupBy').style.display = (tab === 'fy') ? 'inline-block' : 'none';
-    }
-
+    // Specific elements for tabs
+    document.getElementById('fyGroupBy').style.display = (tab === 'fy') ? 'inline-block' : 'none';
     document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
+    document.getElementById('strategyFilter').style.display = (tab === 'closed') ? 'inline-block' : 'none';
+    document.getElementById('massAcceptBtn').style.display = (tab === 'closed') ? 'inline-block' : 'none';
 
-    window.renderUI(); 
+    if (!isHelp) window.renderUI(); 
 };
 
 window.handleSort = function(col) {
@@ -536,7 +635,6 @@ window.handleFileUpload = async function(event) {
             for(let pf of processedFiles) {
                 await window.uploadFileToDrive(pf.name, pf.text);
             }
-            // ⚡ MASTER FILE TRIGGER: Delete old master so engine rebuilds a fresh one
             window.appendLog("Invalidating old Master CSV & Snapshot...");
             await window.deleteFileFromDrive('TradeConsole_Master.csv');
             await window.deleteSnapshot();
@@ -699,8 +797,6 @@ window.fetchPortfolio = async function(forceRecalc = false) {
                 window.appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
                 await window.uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
             }
-            
-            // ⚡ MASTER FILE TRIGGER: Save compiled master file returned by backend
             if (data.positions.master_csv_data) {
                 window.appendLog("💾 Generating and saving pristine Master CSV to Drive...");
                 await window.uploadFileToDrive('TradeConsole_Master.csv', data.positions.master_csv_data);
@@ -924,6 +1020,19 @@ window.syncSymbolMapOnly = async function() {
     } catch(e) { window.appendLog("❌ Error saving map."); }
 };
 
+// Strategy Recommendation Engine Helper
+window.getStrategyRecommendation = function(p, holdDays) {
+    if (holdDays > 180) return "Long-term Holding";
+    if (p.Segment === 'F&O' || p.Segment === 'MCX') {
+        const isOption = p.Symbol.endsWith('CE') || p.Symbol.endsWith('PE');
+        if (isOption) {
+            if (holdDays === 0) return "0DTE";
+            if (holdDays === 1 && p.Direction === 'Short') return "Overnight pre-expiry";
+        }
+    }
+    return "";
+};
+
 document.getElementById('tableBody').addEventListener('change', function(e) {
     if(e.target && e.target.classList.contains('strategy-select')) {
         window.saveStrategyTag(e.target.dataset.compkey, e.target.value);
@@ -931,12 +1040,17 @@ document.getElementById('tableBody').addEventListener('change', function(e) {
 });
 
 window.renderUI = function() {
-    if(window.state.currentTab === 'chart') { window.renderChart(); return; }
+    if(window.state.currentTab === 'chart' || window.state.currentTab === 'help') { 
+        if (window.state.currentTab === 'chart') window.renderChart(); 
+        return; 
+    }
     
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
     const fyFilter = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
+    const stratFilter = document.getElementById('strategyFilter') ? document.getElementById('strategyFilter').value : 'ALL';
     const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
+    let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
     
     let dataList = [];
     if (window.state.currentTab === 'active') dataList = [...window.state.open];
@@ -996,8 +1110,17 @@ window.renderUI = function() {
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
     
-    if (fyFilter !== 'ALL' && (window.state.currentTab === 'closed' || window.state.currentTab === 'log')) {
-        dataList = dataList.filter(p => p.FY === fyFilter);
+    if (window.state.currentTab === 'closed' || window.state.currentTab === 'log') {
+        if (fyFilter !== 'ALL') dataList = dataList.filter(p => p.FY === fyFilter);
+    }
+
+    if (window.state.currentTab === 'closed' && stratFilter !== 'ALL') {
+        dataList = dataList.filter(p => {
+            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+            const currTag = stratTags[compKey] || '';
+            if (stratFilter === 'UNASSIGNED') return currTag === '';
+            return currTag === stratFilter;
+        });
     }
 
     dataList.sort((a, b) => {
@@ -1008,6 +1131,9 @@ window.renderUI = function() {
         if (valA > valB) return window.state.sortAsc ? 1 : -1;
         return 0;
     });
+
+    // Store globally for Mass Accept
+    window.currentFilteredData = dataList;
 
     const thIcon = (col) => window.state.sortCol === col ? (window.state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0, totalMar = 0; let totUnreal = 0; let html = '';
@@ -1054,10 +1180,9 @@ window.renderUI = function() {
         });
     } 
     else if (window.state.currentTab === 'closed') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="window.handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th>RECOMMENDATION</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="window.handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         
         let wins = 0, losses = 0; let grossWin = 0, grossLoss = 0; let daysWin = 0, daysLoss = 0;
-        let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
 
         dataList.forEach(p => {
             totalPnl += p["P&L"]; 
@@ -1075,11 +1200,31 @@ window.renderUI = function() {
             const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
             const currTag = stratTags[compKey] || '';
             
+            // Generate Recommendation
+            let recHTML = '<span style="color:var(--text3)">-</span>';
+            if (!currTag) {
+                const rec = window.getStrategyRecommendation(p, holdDays);
+                if (rec) {
+                    recHTML = `<span class="rec-badge" onclick="window.applySingleRecommendation('${compKey}', '${rec}')">✨ ${rec}</span>`;
+                }
+            }
+            
             const tradeTypeHTML = p['Trade Type'] === 'Intraday' ? '<span style="font-size:10px;color:var(--orange);font-weight:700;border:1px solid var(--orange);padding:2px 4px;border-radius:4px">INTRADAY</span>' : 
                                  (p['Trade Type'] === 'Delivery' ? '<span style="font-size:10px;color:var(--blue);font-weight:700;border:1px solid var(--blue);padding:2px 4px;border-radius:4px">DELIVERY</span>' : '<span style="color:var(--text3)">-</span>');
 
-            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td>${tradeTypeHTML}</td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
-            <td><select class="strategy-select" data-compkey="${compKey}"><option value="">- Select Tag -</option><option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option><option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option><option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option><option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option><option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option><option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option></select></td>
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td>${tradeTypeHTML}</td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+            <td><select class="strategy-select" data-compkey="${compKey}">
+                <option value="">- Select Tag -</option>
+                <option value="0DTE" ${currTag==='0DTE'?'selected':''}>0DTE</option>
+                <option value="Overnight pre-expiry" ${currTag==='Overnight pre-expiry'?'selected':''}>Overnight pre-expiry</option>
+                <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
+                <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
+                <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
+                <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
+                <option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option>
+                <option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option>
+            </select></td>
+            <td>${recHTML}</td>
             <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td>${holdDays.toFixed(0)}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
         });
         
