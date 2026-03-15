@@ -652,8 +652,9 @@ window.handleRefresh = async function(event) {
     if (window.state.isProcessing) return;
     window.lockUI();
     if (event && event.shiftKey) {
-        window.appendLog("Deep Refresh detected. Wiping snapshot and recalculating...");
+        window.appendLog("Deep Refresh detected. Wiping snapshot AND Master File to force raw rebuild...");
         await window.deleteSnapshot();
+        await window.deleteFileFromDrive('TradeConsole_Master.csv'); // ⚡ THIS IS THE FIX ⚡
         await window.fetchPortfolio(true);
     } else {
         window.appendLog("Refreshing Live Prices...");
@@ -664,7 +665,6 @@ window.handleRefresh = async function(event) {
         }
     }
 };
-
 window.handleDeepRecalculate = async function() {
     if (window.state.isProcessing) return;
     window.lockUI();
