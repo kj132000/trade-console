@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trade Console</title>
+<link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -252,10 +253,13 @@ window.onload = function() {
     });
 };
 
-function authGoogleDrive() { 
-    tokenClient.requestAccessToken(); 
-}
-
+window.authGoogleDrive = function() { 
+    if (tokenClient) {
+        tokenClient.requestAccessToken(); 
+    } else {
+        alert("Google Security is still loading. Please wait a second and try again.");
+    }
+};
 async function getOrCreateFolder() {
     if (state.driveFolderId) return state.driveFolderId;
     if (!state.driveToken) return null;
