@@ -73,7 +73,7 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <div class="logo" style="margin: 0 auto 20px; width: 50px; height: 50px; font-size: 24px;">⚡</div>
         <h1 class="title" style="margin-bottom: 12px;">TRADE CONSOLE</h1>
         <p style="color: var(--text3); font-size: 14px; line-height: 1.5;">Your trading data is securely stored and synced via your personal Google Drive account.</p>
-        <button class="login-btn" onclick="authGoogleDrive()">
+        <button class="login-btn" onclick="window.authGoogleDrive()">
             <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
             Connect Google Drive
         </button>
@@ -87,20 +87,20 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <div class="title">TRADE CONSOLE</div>
         </div>
         <div class="controls">
-            <button class="btn-sec ctrl-btn" onclick="toggleTheme()" id="themeBtn">🌓 Theme</button>
+            <button class="btn-sec ctrl-btn" onclick="window.toggleTheme()" id="themeBtn">🌓 Theme</button>
             <button id="driveBtnHeader" class="btn-sec ctrl-btn"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg> Drive Synced</button>
-            <button class="btn-sec ctrl-btn" style="color:var(--red);border-color:var(--red)" onclick="clearLedger()">🗑️ Clear</button>
+            <button class="btn-sec ctrl-btn" style="color:var(--red);border-color:var(--red)" onclick="window.clearLedger()">🗑️ Clear</button>
             
-            <input type="file" id="csvUpload" multiple accept=".csv, .xlsx, .xls" style="display:none" onchange="handleFileUpload(event)">
+            <input type="file" id="csvUpload" multiple accept=".csv, .xlsx, .xls" style="display:none" onchange="window.handleFileUpload(event)">
             <button class="btn-sec ctrl-btn" id="uploadBtn" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
             
-            <button class="btn-sec ctrl-btn" onclick="exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
+            <button class="btn-sec ctrl-btn" onclick="window.exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
                 <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                 Export All Data
             </button>
 
-            <button class="btn-sec ctrl-btn" onclick="toggleSettings()">⚙️</button>
-            <button class="btn-pri ctrl-btn" id="refreshBtn" onclick="handleRefresh(event)" title="Click to refresh Live Prices. Shift+Click to force Deep Recalculation">
+            <button class="btn-sec ctrl-btn" onclick="window.toggleSettings()">⚙️</button>
+            <button class="btn-pri ctrl-btn" id="refreshBtn" onclick="window.handleRefresh(event)" title="Click to refresh Live Prices. Shift+Click to force Deep Recalculation">
                 <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Refresh
             </button>
@@ -112,33 +112,33 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
             <label style="font-size:11px;color:var(--text3)">Backend URL</label>
             <input type="text" id="backendUrl" placeholder="https://..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
         </div>
-        <button class="btn-pri ctrl-btn" onclick="saveSettings()">Save</button>
+        <button class="btn-pri ctrl-btn" onclick="window.saveSettings()">Save</button>
     </div>
 
     <div class="tab-container">
-        <button id="tab-active" class="btn-sec active" onclick="setTab('active')">ACTIVE POSITIONS</button>
-        <button id="tab-closed" class="btn-sec" onclick="setTab('closed')">CLOSED HISTORY</button>
-        <button id="tab-log" class="btn-sec" onclick="setTab('log')">TRADE LOG</button>
-        <button id="tab-chart" class="btn-sec" onclick="setTab('chart')">P&L TRACKER</button>
-        <button id="tab-fy" class="btn-sec" onclick="setTab('fy')">FY SUMMARY</button>
-        <button id="tab-corp" class="btn-sec" onclick="setTab('corp')">CORPORATE ACTIONS</button>
-        <button id="tab-mapper" class="btn-sec" onclick="setTab('mapper')">SYMBOL MAPPER</button>
+        <button id="tab-active" class="btn-sec active" onclick="window.setTab('active')">ACTIVE POSITIONS</button>
+        <button id="tab-closed" class="btn-sec" onclick="window.setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-log" class="btn-sec" onclick="window.setTab('log')">TRADE LOG</button>
+        <button id="tab-chart" class="btn-sec" onclick="window.setTab('chart')">P&L TRACKER</button>
+        <button id="tab-fy" class="btn-sec" onclick="window.setTab('fy')">FY SUMMARY</button>
+        <button id="tab-corp" class="btn-sec" onclick="window.setTab('corp')">CORPORATE ACTIONS</button>
+        <button id="tab-mapper" class="btn-sec" onclick="window.setTab('mapper')">SYMBOL MAPPER</button>
     </div>
 
     <div class="controls" id="filterBar">
-        <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="debounceSearch()" style="width:160px; text-transform:uppercase;">
-        <select id="brokerFilter" class="btn-sec" onchange="renderUI()"><option value="ALL">All Brokers</option></select>
-        <select id="segFilter" class="btn-sec" onchange="renderUI()">
+        <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="window.debounceSearch()" style="width:160px; text-transform:uppercase;">
+        <select id="brokerFilter" class="btn-sec" onchange="window.renderUI()"><option value="ALL">All Brokers</option></select>
+        <select id="segFilter" class="btn-sec" onchange="window.renderUI()">
             <option value="ALL">All Segments</option>
             <option value="EQ">Equity</option>
             <option value="F&O">F&O</option>
             <option value="MCX">Commodity</option>
         </select>
-        <select id="fyFilter" class="btn-sec" onchange="renderUI()" style="display: none;">
+        <select id="fyFilter" class="btn-sec" onchange="window.renderUI()" style="display: none;">
             <option value="ALL">All FYs</option>
         </select>
         
-        <select id="fyGroupBy" class="btn-sec" onchange="renderUI()" style="display: none; border-color: var(--orange); color: var(--orange); font-weight: 700;">
+        <select id="fyGroupBy" class="btn-sec" onchange="window.renderUI()" style="display: none; border-color: var(--orange); color: var(--orange); font-weight: 700;">
             <option value="FY_Broker_Segment">View: FY ➔ Broker ➔ Segment</option>
             <option value="FY_Broker">View: FY ➔ Broker</option>
             <option value="FY_Segment">View: FY ➔ Segment</option>
@@ -171,14 +171,14 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
         <input type="text" id="newCorpSym" placeholder="SYMBOL (e.g. NPST)" class="btn-sec" style="flex:1; text-transform: uppercase;">
         <input type="date" id="newCorpDate" class="btn-sec" style="flex:1" title="Ex-Date">
         <input type="number" id="newCorpRatio" placeholder="Ratio Multiplier (e.g. 3.0)" class="btn-sec" step="0.1" style="flex:1">
-        <button class="btn-pri ctrl-btn" onclick="insertCorpAction()">+ Add Split</button>
+        <button class="btn-pri ctrl-btn" onclick="window.insertCorpAction()">+ Add Split</button>
     </div>
 
     <div id="mapperInsertBar">
         <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2; text-transform: uppercase;">
         <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1; text-transform: uppercase;">
-        <button class="btn-pri ctrl-btn" onclick="insertSymbolMap()">+ Add Mapping</button>
-        <button class="btn-pri ctrl-btn" style="background:var(--orange); margin-left:20px;" onclick="handleDeepRecalculate()">⚡ Apply & Recalculate</button>
+        <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap()">+ Add Mapping</button>
+        <button class="btn-pri ctrl-btn" style="background:var(--orange); margin-left:20px;" onclick="window.handleDeepRecalculate()">⚡ Apply & Recalculate</button>
     </div>
 
     <div class="table-container">
@@ -186,13 +186,13 @@ td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(-
     </div>
 
     <div class="terminal-wrapper">
-        <div class="terminal-header" onclick="toggleTerminal()"><span>>_ SYSTEM LOGS</span><span id="termToggleBtn">▼</span></div>
+        <div class="terminal-header" onclick="window.toggleTerminal()"><span>>_ SYSTEM LOGS</span><span id="termToggleBtn">▼</span></div>
         <div class="terminal-body" id="terminalBody"><div class="log-line">System initialized. Awaiting secure Google Drive connection...</div></div>
     </div>
 </div>
 
 <script>
-let state = {
+window.state = {
     open: [], closed: [], corp: [], trade_log: [], unknown_symbols: {}, token_map: {}, currentTab: 'active',
     symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map') || '{}'),
     sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
@@ -203,37 +203,37 @@ let state = {
 };
 
 let searchTimeout;
-function debounceSearch() {
+window.debounceSearch = function() {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { renderUI(); }, 300);
-}
+    searchTimeout = setTimeout(() => { window.renderUI(); }, 300);
+};
 
-function lockUI() {
-    state.isProcessing = true;
+window.lockUI = function() {
+    window.state.isProcessing = true;
     document.body.style.cursor = 'wait';
     document.querySelectorAll('.ctrl-btn').forEach(btn => btn.disabled = true);
-}
+};
 
-function unlockUI() {
-    state.isProcessing = false;
+window.unlockUI = function() {
+    window.state.isProcessing = false;
     document.body.style.cursor = 'default';
     document.querySelectorAll('.ctrl-btn').forEach(btn => btn.disabled = false);
-}
+};
 
-function handleAuthExpiry() {
-    appendLog("❌ Google Drive Token expired. Please reconnect.");
-    state.driveToken = null;
+window.handleAuthExpiry = function() {
+    window.appendLog("❌ Google Drive Token expired. Please reconnect.");
+    window.state.driveToken = null;
     document.getElementById('loginGate').style.display = 'flex';
-}
+};
 
 if(localStorage.getItem('tc_theme') === 'light') { document.body.classList.add('light-mode'); }
 
-function toggleTheme() {
+window.toggleTheme = function() {
     document.body.classList.toggle('light-mode');
     localStorage.setItem('tc_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
-}
+};
 
-document.getElementById('backendUrl').value = state.backendUrl;
+document.getElementById('backendUrl').value = window.state.backendUrl;
 const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
 
 let tokenClient;
@@ -243,11 +243,11 @@ window.onload = function() {
         scope: 'https://www.googleapis.com/auth/drive.file',
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
-                state.driveToken = tokenResponse.access_token;
+                window.state.driveToken = tokenResponse.access_token;
                 document.getElementById('loginGate').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
-                appendLog("✅ Connected to Google Drive.");
-                getOrCreateFolder().then(() => fetchPortfolio());
+                window.appendLog("✅ Connected to Google Drive.");
+                window.getOrCreateFolder().then(() => window.fetchPortfolio());
             }
         },
     });
@@ -260,117 +260,119 @@ window.authGoogleDrive = function() {
         alert("Google Security is still loading. Please wait a second and try again.");
     }
 };
-async function getOrCreateFolder() {
-    if (state.driveFolderId) return state.driveFolderId;
-    if (!state.driveToken) return null;
+
+window.getOrCreateFolder = async function() {
+    if (window.state.driveFolderId) return window.state.driveFolderId;
+    if (!window.state.driveToken) return null;
     try {
         const query = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-        if (res.status === 401) { handleAuthExpiry(); return null; }
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+        if (res.status === 401) { window.handleAuthExpiry(); return null; }
         const data = await res.json();
-        if (data.files && data.files.length > 0) state.driveFolderId = data.files[0].id;
+        if (data.files && data.files.length > 0) window.state.driveFolderId = data.files[0].id;
         else {
-            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })});
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })});
             const createData = await createRes.json();
-            state.driveFolderId = createData.id;
+            window.state.driveFolderId = createData.id;
         }
-        return state.driveFolderId;
+        return window.state.driveFolderId;
     } catch(e) { return null; }
-}
+};
 
-async function uploadFileToDrive(filename, content) {
-    const folderId = await getOrCreateFolder();
+window.uploadFileToDrive = async function(filename, content) {
+    const folderId = await window.getOrCreateFolder();
     if (!folderId) return;
     const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
-    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
-    if (searchRes.status === 401) { handleAuthExpiry(); return; }
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    if (searchRes.status === 401) { window.handleAuthExpiry(); return; }
     const searchData = await searchRes.json();
     let fileId;
     if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
     else {
-        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: filename, parents: [folderId] })});
+        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: filename, parents: [folderId] })});
         const metaData = await metaRes.json();
         fileId = metaData.id;
     }
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
-}
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
+};
 
-async function deleteSnapshot() {
-    if (!state.driveToken) return;
-    const folderId = await getOrCreateFolder();
+window.deleteSnapshot = async function() {
+    if (!window.state.driveToken) return;
+    const folderId = await window.getOrCreateFolder();
     if (!folderId) return;
     const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
     try {
-        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
         const searchData = await searchRes.json();
         if (searchData.files && searchData.files.length > 0) {
-            await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
+            await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${window.state.driveToken}` }});
         }
     } catch(e) {}
-}
+};
 
-async function downloadAllFromDrive() {
-    const folderId = await getOrCreateFolder();
+window.downloadAllFromDrive = async function() {
+    const folderId = await window.getOrCreateFolder();
     if (!folderId) return [];
-    appendLog("Scanning Google Drive for backup files...");
+    window.appendLog("Scanning Google Drive for backup files...");
     
     const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
     
-    if (listRes.status === 401) { handleAuthExpiry(); return []; }
-    if (!listRes.ok) { appendLog(`❌ Drive API Error: ${listRes.status}`); return []; }
+    if (listRes.status === 401) { window.handleAuthExpiry(); return []; }
+    if (!listRes.ok) { window.appendLog(`❌ Drive API Error: ${listRes.status}`); return []; }
 
     const listData = await listRes.json();
     const files = [];
     if (listData.files && listData.files.length > 0) {
-        appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
+        window.appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
         for (let file of listData.files) {
-            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
             const content = await fileRes.text();
             files.push({ filename: file.name, content: content });
         }
-        appendLog("✅ All files securely downloaded from Drive.");
+        window.appendLog("✅ All files securely downloaded from Drive.");
     } else {
-        appendLog("⚠️ Drive folder is empty.");
+        window.appendLog("⚠️ Drive folder is empty.");
     }
     return files;
-}
+};
 
-async function clearDriveFiles() {
-    const folderId = await getOrCreateFolder();
+window.clearDriveFiles = async function() {
+    const folderId = await window.getOrCreateFolder();
     if (!folderId) return;
-    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${state.driveToken}` }});
-    state.driveFolderId = null; 
-}
+    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    window.state.driveFolderId = null; 
+};
 
-function toggleSettings() {
+window.toggleSettings = function() {
     const p = document.getElementById('settingsPanel');
     p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
-}
-function saveSettings() {
-    state.backendUrl = document.getElementById('backendUrl').value;
-    localStorage.setItem('tc_backend_url', state.backendUrl);
-    toggleSettings();
-}
+};
 
-async function saveStrategyTag(compositeKey, strategyValue) {
+window.saveSettings = function() {
+    window.state.backendUrl = document.getElementById('backendUrl').value;
+    localStorage.setItem('tc_backend_url', window.state.backendUrl);
+    window.toggleSettings();
+};
+
+window.saveStrategyTag = async function(compositeKey, strategyValue) {
     let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
     if(strategyValue) tags[compositeKey] = strategyValue;
     else delete tags[compositeKey];
     localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
     
-    if(state.driveToken) {
-        appendLog(`Syncing strategy tag to Drive...`);
-        await uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
-        appendLog(`✅ Strategy saved.`);
+    if(window.state.driveToken) {
+        window.appendLog(`Syncing strategy tag to Drive...`);
+        await window.uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
+        window.appendLog(`✅ Strategy saved.`);
     }
-}
+};
 
-function setTab(tab) {
-    state.currentTab = tab;
-    if (tab === 'fy') { state.sortCol = 'FY'; state.sortAsc = false; }
-    else if (tab === 'log') { state.sortCol = 'Date'; state.sortAsc = false; }
-    else if (tab !== 'chart') { state.sortCol = 'Symbol'; state.sortAsc = true; }
+window.setTab = function(tab) {
+    window.state.currentTab = tab;
+    if (tab === 'fy') { window.state.sortCol = 'FY'; window.state.sortAsc = false; }
+    else if (tab === 'log') { window.state.sortCol = 'Date'; window.state.sortAsc = false; }
+    else if (tab !== 'chart') { window.state.sortCol = 'Symbol'; window.state.sortAsc = true; }
     
     document.getElementById('tab-active').classList.toggle('active', tab === 'active');
     document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
@@ -397,79 +399,85 @@ function setTab(tab) {
 
     document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
 
-    renderUI(); 
-}
+    window.renderUI(); 
+};
 
-function handleSort(col) {
-    if (state.sortCol === col) state.sortAsc = !state.sortAsc;
-    else { state.sortCol = col; state.sortAsc = true; }
-    renderUI();
-}
+window.handleSort = function(col) {
+    if (window.state.sortCol === col) window.state.sortAsc = !window.state.sortAsc;
+    else { window.state.sortCol = col; window.state.sortAsc = true; }
+    window.renderUI();
+};
 
-function toggleTerminal() {
+window.toggleTerminal = function() {
     const body = document.getElementById('terminalBody');
     const btn = document.getElementById('termToggleBtn');
     if(body.style.display === 'none') { body.style.display = 'block'; btn.innerText = '▼'; } 
     else { body.style.display = 'none'; btn.innerText = '▲'; }
-}
+};
 
-function appendLog(text) {
+window.appendLog = function(text) {
     const tb = document.getElementById('terminalBody');
     const now = new Date();
     const ts = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
     tb.innerHTML += `<div class="log-line"><span style="color:#888">${ts}</span> ${text}</div>`;
     tb.scrollTop = tb.scrollHeight;
-}
+};
 
-async function pollLogs() {
-    if(!state.isPollingLogs) return;
+window.pollLogs = async function() {
+    if(!window.state.isPollingLogs) return;
     try {
-        const res = await fetch(`${state.backendUrl}/api/logs`);
-        if(res.ok) { const data = await res.json(); data.logs.forEach(log => appendLog(log)); }
+        const res = await fetch(`${window.state.backendUrl}/api/logs`);
+        if(res.ok) { const data = await res.json(); data.logs.forEach(log => window.appendLog(log)); }
     } catch(e){}
-    setTimeout(pollLogs, 500);
-}
-function startLogPolling() { if(!state.isPollingLogs) { state.isPollingLogs = true; pollLogs(); } }
-function stopLogPolling() { setTimeout(() => { state.isPollingLogs = false; }, 2000); }
+    setTimeout(window.pollLogs, 500);
+};
+
+window.startLogPolling = function() { 
+    if(!window.state.isPollingLogs) { window.state.isPollingLogs = true; window.pollLogs(); } 
+};
+
+window.stopLogPolling = function() { 
+    setTimeout(() => { window.state.isPollingLogs = false; }, 2000); 
+};
 
 const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 
-async function clearLedger() {
-    if (state.isProcessing) return;
+window.clearLedger = async function() {
+    if (window.state.isProcessing) return;
     if(!confirm("Permanently delete all data from Cloud and Google Drive? (Symbol Aliases will be kept)")) return;
     
-    lockUI();
+    window.lockUI();
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
-    startLogPolling();
+    window.startLogPolling();
     try {
-        await deleteSnapshot();
-        const p1 = fetch(`${state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
-        const p2 = state.driveToken ? clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
+        await window.deleteSnapshot();
+        const p1 = fetch(`${window.state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
+        const p2 = window.state.driveToken ? window.clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
         await Promise.all([p1, p2]);
-        state.open = []; state.closed = []; state.corp = []; state.trade_log = []; state.unknown_symbols = {};
+        window.state.open = []; window.state.closed = []; window.state.corp = []; window.state.trade_log = []; window.state.unknown_symbols = {};
         localStorage.removeItem('tc_corp_cache');
         localStorage.removeItem('tc_strategy_tags');
         
-        if (state.driveToken && Object.keys(state.symbol_map).length > 0) {
-            await uploadFileToDrive('symbol_map.json', JSON.stringify(state.symbol_map));
+        if (window.state.driveToken && Object.keys(window.state.symbol_map).length > 0) {
+            await window.uploadFileToDrive('symbol_map.json', JSON.stringify(window.state.symbol_map));
         }
 
-        renderUI();
-        appendLog("✅ Ledger and Google Drive Cache wiped (Symbol Maps preserved).");
+        window.renderUI();
+        window.appendLog("✅ Ledger and Google Drive Cache wiped (Symbol Maps preserved).");
     } catch(e) { alert("Failed to clear data."); }
-    stopLogPolling();
-    unlockUI();
-}
+    window.stopLogPolling();
+    window.unlockUI();
+};
 
-async function handleFileUpload(event) {
-    if (state.isProcessing) return;
+window.handleFileUpload = async function(event) {
+    if (window.state.isProcessing) return;
     const files = event.target.files;
     if(!files.length) return;
     
-    lockUI();
+    window.lockUI();
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
-    startLogPolling();
+    window.startLogPolling();
     
     try {
         const formData = new FormData();
@@ -477,7 +485,7 @@ async function handleFileUpload(event) {
 
         for(let f of files) {
             if (f.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
-                appendLog(`Converting Excel file ${f.name} to standard CSV format...`);
+                window.appendLog(`Converting Excel file ${f.name} to standard CSV format...`);
                 const arrayBuffer = await f.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
@@ -496,58 +504,58 @@ async function handleFileUpload(event) {
             }
         }
 
-        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        await fetch(`${window.state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         
-        if(state.driveToken) {
-            appendLog("Backing up files to Google Drive...");
+        if(window.state.driveToken) {
+            window.appendLog("Backing up files to Google Drive...");
             for(let pf of processedFiles) {
-                await uploadFileToDrive(pf.name, pf.text);
+                await window.uploadFileToDrive(pf.name, pf.text);
             }
         }
         
-        await deleteSnapshot();
-        await fetchPortfolio(true);
+        await window.deleteSnapshot();
+        await window.fetchPortfolio(true);
     } catch(e) { 
         alert("Upload failed."); 
-        stopLogPolling(); 
-        unlockUI();
+        window.stopLogPolling(); 
+        window.unlockUI();
     }
-}
+};
 
-async function handleRefresh(event) {
-    if (state.isProcessing) return;
-    lockUI();
-    if (event.shiftKey) {
-        appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
-        await deleteSnapshot();
-        await fetchPortfolio(true);
+window.handleRefresh = async function(event) {
+    if (window.state.isProcessing) return;
+    window.lockUI();
+    if (event && event.shiftKey) {
+        window.appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
+        await window.deleteSnapshot();
+        await window.fetchPortfolio(true);
     } else {
-        appendLog("Refreshing Live Prices...");
-        if (Object.keys(state.token_map).length > 0) {
-            await fetchLivePrices();
+        window.appendLog("Refreshing Live Prices...");
+        if (Object.keys(window.state.token_map).length > 0) {
+            await window.fetchLivePrices();
         } else {
-            await fetchPortfolio(false);
+            await window.fetchPortfolio(false);
         }
     }
-}
+};
 
-async function handleDeepRecalculate() {
-    if (state.isProcessing) return;
-    lockUI();
-    appendLog("Applying changes and forcing deep recalculation...");
-    await deleteSnapshot();
-    await fetchPortfolio(true);
-}
+window.handleDeepRecalculate = async function() {
+    if (window.state.isProcessing) return;
+    window.lockUI();
+    window.appendLog("Applying changes and forcing deep recalculation...");
+    await window.deleteSnapshot();
+    await window.fetchPortfolio(true);
+};
 
-function populateFilters() {
-    const allBrokers = new Set([...state.open.map(p=>p.Broker), ...state.closed.map(p=>p.Broker), ...state.trade_log.map(p=>p.Broker)]);
+window.populateFilters = function() {
+    const allBrokers = new Set([...window.state.open.map(p=>p.Broker), ...window.state.closed.map(p=>p.Broker), ...window.state.trade_log.map(p=>p.Broker)]);
     const selectB = document.getElementById('brokerFilter');
     const currentValB = selectB.value;
     selectB.innerHTML = '<option value="ALL">All Brokers</option>';
     allBrokers.forEach(b => { if(b) selectB.innerHTML += `<option value="${b}">${b}</option>`; });
     selectB.value = currentValB;
 
-    const allFYs = new Set([...state.closed.map(p=>p.FY), ...state.trade_log.map(p=>p.FY)]);
+    const allFYs = new Set([...window.state.closed.map(p=>p.FY), ...window.state.trade_log.map(p=>p.FY)]);
     const selectF = document.getElementById('fyFilter');
     const currentValF = selectF ? selectF.value : 'ALL';
     if(selectF) {
@@ -557,60 +565,60 @@ function populateFilters() {
         });
         selectF.value = currentValF;
     }
-}
+};
 
-async function fetchPortfolio(forceRecalc = false) {
-    lockUI();
+window.fetchPortfolio = async function(forceRecalc = false) {
+    window.lockUI();
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Fetching Ledger Data...</td></tr>`;
-    startLogPolling();
+    window.startLogPolling();
 
-    if (!forceRecalc && state.driveToken) {
+    if (!forceRecalc && window.state.driveToken) {
         try {
-            const folderId = await getOrCreateFolder();
+            const folderId = await window.getOrCreateFolder();
             if (folderId) {
                 const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
-                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
                 const searchData = await searchRes.json();
                 if (searchData.files && searchData.files.length > 0) {
-                    appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
-                    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}?alt=media`, { headers: { Authorization: `Bearer ${state.driveToken}` }});
+                    window.appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
+                    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
                     const snapshotData = await fileRes.json();
                     
-                    state.open = snapshotData.open || [];
-                    state.closed = snapshotData.closed || [];
-                    state.corp = snapshotData.corp_actions || [];
-                    state.trade_log = snapshotData.trade_log || [];
-                    state.unknown_symbols = snapshotData.unknown_symbols || {};
-                    state.token_map = snapshotData.token_map || {};
+                    window.state.open = snapshotData.open || [];
+                    window.state.closed = snapshotData.closed || [];
+                    window.state.corp = snapshotData.corp_actions || [];
+                    window.state.trade_log = snapshotData.trade_log || [];
+                    window.state.unknown_symbols = snapshotData.unknown_symbols || {};
+                    window.state.token_map = snapshotData.token_map || {};
 
-                    const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+                    const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
                     document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
 
-                    populateFilters();
-                    renderUI();
+                    window.populateFilters();
+                    window.renderUI();
 
-                    if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
-                        await fetchLivePrices();
-                    } else { stopLogPolling(); unlockUI(); }
+                    if (window.state.open.length > 0 && Object.keys(window.state.token_map).length > 0) {
+                        await window.fetchLivePrices();
+                    } else { window.stopLogPolling(); window.unlockUI(); }
                     return;
                 }
             }
-        } catch(e) { appendLog("Snapshot bypass failed, defaulting to server computation..."); }
+        } catch(e) { window.appendLog("Snapshot bypass failed, defaulting to server computation..."); }
     }
 
     try {
-        const res = await fetch(`${state.backendUrl}/api/portfolio`);
-        if(!res.ok) throw new Error();
+        const res = await fetch(`${window.state.backendUrl}/api/portfolio`);
+        if(!res.ok) throw new Error("Failed to fetch from backend");
         const data = await res.json();
         
         if ((!data.positions.open || data.positions.open.length === 0) && 
             (!data.positions.closed || data.positions.closed.length === 0) && 
             (!data.positions.trade_log || data.positions.trade_log.length === 0)) {
             
-            if (state.driveToken) {
-                appendLog("Cloud reset detected. Initiating automated rescue sequence...");
+            if (window.state.driveToken) {
+                window.appendLog("Cloud reset detected. Initiating automated rescue sequence...");
                 try {
-                    const driveFiles = await downloadAllFromDrive();
+                    const driveFiles = await window.downloadAllFromDrive();
                     if (driveFiles.length > 0) {
                         const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
                         const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
@@ -618,7 +626,7 @@ async function fetchPortfolio(forceRecalc = false) {
                         const restoreFiles = driveFiles.filter(f => f.filename.endsWith('.csv') || f.filename === 'symbol_map.json');
                         
                         if (cacheFile) {
-                            await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
+                            await fetch(`${window.state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
                             localStorage.setItem('tc_corp_cache', cacheFile.content);
                         }
                         if (stratFile) {
@@ -626,75 +634,75 @@ async function fetchPortfolio(forceRecalc = false) {
                         }
                         if (mapFile) {
                             localStorage.setItem('tc_symbol_map', mapFile.content);
-                            state.symbol_map = JSON.parse(mapFile.content);
+                            window.state.symbol_map = JSON.parse(mapFile.content);
                         }
                         if (restoreFiles.length > 0) {
-                            appendLog(`Pushing ${restoreFiles.length} files to Render in batches to prevent memory overload...`);
+                            window.appendLog(`Pushing ${restoreFiles.length} files to Render in batches to prevent memory overload...`);
                             const chunkSize = 5;
                             for (let i = 0; i < restoreFiles.length; i += chunkSize) {
                                 const chunk = restoreFiles.slice(i, i + chunkSize);
-                                await fetch(`${state.backendUrl}/api/restore`, { 
+                                await fetch(`${window.state.backendUrl}/api/restore`, { 
                                     method: 'POST', 
                                     headers: { 'Content-Type': 'application/json' }, 
                                     body: JSON.stringify(chunk) 
                                 });
                             }
                         }
-                        appendLog("✅ Render server jumpstarted! Recalculating...");
-                        return fetchPortfolio(true); 
+                        window.appendLog("✅ Render server jumpstarted! Recalculating...");
+                        return window.fetchPortfolio(true); 
                     } else {
-                        appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
+                        window.appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
                     }
                 } catch(restoreErr) {
-                    appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
+                    window.appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
                 }
             }
         }
         
-        state.open = data.positions.open || [];
-        state.closed = data.positions.closed || [];
-        state.corp = data.positions.corp_actions || []; 
-        state.trade_log = data.positions.trade_log || [];
-        state.unknown_symbols = data.positions.unknown_symbols || {};
-        state.token_map = data.positions.token_map || {};
+        window.state.open = data.positions.open || [];
+        window.state.closed = data.positions.closed || [];
+        window.state.corp = data.positions.corp_actions || []; 
+        window.state.trade_log = data.positions.trade_log || [];
+        window.state.unknown_symbols = data.positions.unknown_symbols || {};
+        window.state.token_map = data.positions.token_map || {};
 
-        if (state.driveToken && (state.open.length > 0 || state.closed.length > 0)) {
-            appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
-            await uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+        if (window.state.driveToken && (window.state.open.length > 0 || window.state.closed.length > 0)) {
+            window.appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
+            await window.uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
         }
         
-        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+        const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
         document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
         
-        populateFilters();
+        window.populateFilters();
         
-        if (state.driveToken) {
-            const cacheRes = await fetch(`${state.backendUrl}/api/backup_cache`);
+        if (window.state.driveToken) {
+            const cacheRes = await fetch(`${window.state.backendUrl}/api/backup_cache`);
             if (cacheRes.ok) {
                 const cacheData = await cacheRes.json();
                 if (Object.keys(cacheData).length > 0) {
                     localStorage.setItem('tc_corp_cache', JSON.stringify(cacheData));
-                    await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
+                    await window.uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
                 }
             }
         }
         
-        renderUI();
+        window.renderUI();
         
-        if (state.open.length > 0 && Object.keys(state.token_map).length > 0) {
-            await fetchLivePrices();
-        } else { stopLogPolling(); unlockUI(); }
-    } catch(e) { stopLogPolling(); appendLog(`❌ Fetch Error: ${e.message}`); unlockUI(); }
-}
+        if (window.state.open.length > 0 && Object.keys(window.state.token_map).length > 0) {
+            await window.fetchLivePrices();
+        } else { window.stopLogPolling(); window.unlockUI(); }
+    } catch(e) { window.stopLogPolling(); window.appendLog(`❌ Fetch Error: ${e.message}`); window.unlockUI(); }
+};
 
-async function fetchLivePrices() {
-    if(Object.keys(state.token_map).length === 0) { stopLogPolling(); unlockUI(); return; }
-    state.fetchingPrices = true; if(state.currentTab !== 'chart') renderUI(); 
+window.fetchLivePrices = async function() {
+    if(Object.keys(window.state.token_map).length === 0) { window.stopLogPolling(); window.unlockUI(); return; }
+    window.state.fetchingPrices = true; if(window.state.currentTab !== 'chart') window.renderUI(); 
     try {
-        const res = await fetch(`${state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: state.token_map }) });
+        const res = await fetch(`${window.state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: window.state.token_map }) });
         if (res.ok) {
             const prices = await res.json();
-            state.open.forEach(p => {
+            window.state.open.forEach(p => {
                 const cmp = prices[p.Symbol] || 0;
                 if (cmp > 0) {
                     p.CMP = cmp;
@@ -703,18 +711,18 @@ async function fetchLivePrices() {
                 }
             });
         }
-    } catch (e) {} finally { state.fetchingPrices = false; if(state.currentTab !== 'chart') renderUI(); stopLogPolling(); unlockUI(); }
-}
+    } catch (e) {} finally { window.state.fetchingPrices = false; if(window.state.currentTab !== 'chart') window.renderUI(); window.stopLogPolling(); window.unlockUI(); }
+};
 
-function exportToExcel() {
-    appendLog("Compiling full database into Excel Workbook...");
+window.exportToExcel = function() {
+    window.appendLog("Compiling full database into Excel Workbook...");
     let wb = XLSX.utils.book_new();
     
-    let wsActive = XLSX.utils.json_to_sheet(state.open);
+    let wsActive = XLSX.utils.json_to_sheet(window.state.open);
     XLSX.utils.book_append_sheet(wb, wsActive, "Active Positions");
     
     let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
-    let closedDataWithTags = state.closed.map(p => {
+    let closedDataWithTags = window.state.closed.map(p => {
         let compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
         return {
             "Symbol": p.Symbol,
@@ -735,27 +743,27 @@ function exportToExcel() {
     let wsClosed = XLSX.utils.json_to_sheet(closedDataWithTags);
     XLSX.utils.book_append_sheet(wb, wsClosed, "Closed History");
     
-    let wsLog = XLSX.utils.json_to_sheet(state.trade_log);
+    let wsLog = XLSX.utils.json_to_sheet(window.state.trade_log);
     XLSX.utils.book_append_sheet(wb, wsLog, "Raw Trade Log");
 
-    let mapData = Object.keys(state.symbol_map).map(messy => ({
+    let mapData = Object.keys(window.state.symbol_map).map(messy => ({
         "Broker Messy Name": messy,
-        "Clean NSE Symbol": state.symbol_map[messy]
+        "Clean NSE Symbol": window.state.symbol_map[messy]
     }));
     let wsMap = XLSX.utils.json_to_sheet(mapData);
     XLSX.utils.book_append_sheet(wb, wsMap, "Symbol Mapper");
 
     let filename = `TradeConsole_FullExport_${new Date().toISOString().slice(0,10)}.xlsx`;
     XLSX.writeFile(wb, filename);
-    appendLog(`✅ Successfully downloaded ${filename} with all tabs.`);
-}
+    window.appendLog(`✅ Successfully downloaded ${filename} with all tabs.`);
+};
 
-function renderChart() {
+window.renderChart = function() {
     const fyFilter = document.getElementById('fyFilter').value;
     const brkFilter = document.getElementById('brokerFilter').value;
     const segFilter = document.getElementById('segFilter').value;
     
-    let filteredTrades = [...state.closed];
+    let filteredTrades = [...window.state.closed];
     if (fyFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.FY === fyFilter);
     if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
     if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
@@ -794,9 +802,9 @@ function renderChart() {
     const chartBgColor = finalPnl >= 0 ? 'rgba(72, 187, 120, 0.1)' : 'rgba(252, 129, 129, 0.1)';
 
     const ctx = document.getElementById('pnlChart').getContext('2d');
-    if (state.pnlChartInstance) { state.pnlChartInstance.destroy(); }
+    if (window.state.pnlChartInstance) { window.state.pnlChartInstance.destroy(); }
 
-    state.pnlChartInstance = new Chart(ctx, {
+    window.state.pnlChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: dates,
@@ -819,9 +827,9 @@ function renderChart() {
             interaction: { intersect: false, mode: 'index' }
         }
     });
-}
+};
 
-function insertCorpAction() {
+window.insertCorpAction = function() {
     const sym = document.getElementById('newCorpSym').value.toUpperCase().trim();
     const date = document.getElementById('newCorpDate').value; 
     const ratio = parseFloat(document.getElementById('newCorpRatio').value);
@@ -831,63 +839,63 @@ function insertCorpAction() {
     if(!cache[sym]) cache[sym] = [];
     cache[sym].push({date: date, ratio: ratio});
     document.getElementById('newCorpSym').value = ''; document.getElementById('newCorpDate').value = ''; document.getElementById('newCorpRatio').value = '';
-    syncCacheAndRefresh(cache);
-}
+    window.syncCacheAndRefresh(cache);
+};
 
-function deleteCorpAction(sym, dateStr) {
+window.deleteCorpAction = function(sym, dateStr) {
     let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
-    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); syncCacheAndRefresh(cache); }
-}
+    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); window.syncCacheAndRefresh(cache); }
+};
 
-async function syncCacheAndRefresh(cache) {
+window.syncCacheAndRefresh = async function(cache) {
     localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
-    startLogPolling();
+    window.startLogPolling();
     try {
-        await fetch(`${state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
-        if(state.driveToken) await uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
-        await deleteSnapshot();
-        await fetchPortfolio(true);
-    } catch(e) { stopLogPolling(); unlockUI(); }
-}
+        await fetch(`${window.state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
+        if(window.state.driveToken) await window.uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        await window.deleteSnapshot();
+        await window.fetchPortfolio(true);
+    } catch(e) { window.stopLogPolling(); window.unlockUI(); }
+};
 
-function insertSymbolMap(messy = null, clean = null) {
+window.insertSymbolMap = function(messy = null, clean = null) {
     const m = (messy || document.getElementById('newMessyName').value).toUpperCase().trim();
     const c = (clean || document.getElementById('newCleanSymbol').value).toUpperCase().trim();
     if(!m || !c) return alert("Please provide both the messy name and the clean symbol.");
 
-    state.symbol_map[m] = c;
+    window.state.symbol_map[m] = c;
     if(!messy) { document.getElementById('newMessyName').value = ''; document.getElementById('newCleanSymbol').value = ''; }
-    syncSymbolMapOnly();
-}
+    window.syncSymbolMapOnly();
+};
 
-function deleteSymbolMap(messy) {
-    delete state.symbol_map[messy];
-    syncSymbolMapOnly();
-}
+window.deleteSymbolMap = function(messy) {
+    delete window.state.symbol_map[messy];
+    window.syncSymbolMapOnly();
+};
 
-async function syncSymbolMapOnly() {
-    localStorage.setItem('tc_symbol_map', JSON.stringify(state.symbol_map));
-    appendLog("Syncing Alias Map to Drive & Server in background...");
+window.syncSymbolMapOnly = async function() {
+    localStorage.setItem('tc_symbol_map', JSON.stringify(window.state.symbol_map));
+    window.appendLog("Syncing Alias Map to Drive & Server in background...");
     try {
-        const content = JSON.stringify(state.symbol_map);
+        const content = JSON.stringify(window.state.symbol_map);
         const formData = new FormData();
         formData.append("files", new Blob([content], { type: 'application/json' }), "symbol_map.json");
-        await fetch(`${state.backendUrl}/api/upload`, { method: 'POST', body: formData });
-        if(state.driveToken) await uploadFileToDrive('symbol_map.json', content);
-        appendLog("✅ Map saved! Click 'Apply & Recalculate' when ready.");
-        renderUI(); 
-    } catch(e) { appendLog("❌ Error saving map."); }
-}
+        await fetch(`${window.state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        if(window.state.driveToken) await window.uploadFileToDrive('symbol_map.json', content);
+        window.appendLog("✅ Map saved! Click 'Apply & Recalculate' when ready.");
+        window.renderUI(); 
+    } catch(e) { window.appendLog("❌ Error saving map."); }
+};
 
 document.getElementById('tableBody').addEventListener('change', function(e) {
     if(e.target && e.target.classList.contains('strategy-select')) {
-        saveStrategyTag(e.target.dataset.compkey, e.target.value);
+        window.saveStrategyTag(e.target.dataset.compkey, e.target.value);
     }
 });
 
-function renderUI() {
-    if(state.currentTab === 'chart') { renderChart(); return; }
+window.renderUI = function() {
+    if(window.state.currentTab === 'chart') { window.renderChart(); return; }
     
     const bFilter = document.getElementById('brokerFilter').value;
     const sFilter = document.getElementById('segFilter').value;
@@ -895,17 +903,17 @@ function renderUI() {
     const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
     
     let dataList = [];
-    if (state.currentTab === 'active') dataList = [...state.open];
-    else if (state.currentTab === 'closed') dataList = [...state.closed];
-    else if (state.currentTab === 'log') dataList = [...state.trade_log];
-    else if (state.currentTab === 'fy') {
+    if (window.state.currentTab === 'active') dataList = [...window.state.open];
+    else if (window.state.currentTab === 'closed') dataList = [...window.state.closed];
+    else if (window.state.currentTab === 'log') dataList = [...window.state.trade_log];
+    else if (window.state.currentTab === 'fy') {
         const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
         const d = new Date(); const y = d.getFullYear();
         const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
         let summaryMap = {};
         
-        let filteredClosed = state.closed;
-        let filteredOpen = state.open;
+        let filteredClosed = window.state.closed;
+        let filteredOpen = window.state.open;
         
         if (bFilter !== 'ALL') {
             filteredClosed = filteredClosed.filter(p => p.Broker === bFilter);
@@ -938,79 +946,79 @@ function renderUI() {
         
         dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
     }
-    else if (state.currentTab === 'corp') {
+    else if (window.state.currentTab === 'corp') {
         let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
         for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
     }
     
-    if (searchFilter && state.currentTab !== 'fy' && state.currentTab !== 'mapper') {
+    if (searchFilter && window.state.currentTab !== 'fy' && window.state.currentTab !== 'mapper') {
         dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
     }
     
-    if (state.currentTab !== 'corp' && state.currentTab !== 'mapper' && state.currentTab !== 'fy') {
+    if (window.state.currentTab !== 'corp' && window.state.currentTab !== 'mapper' && window.state.currentTab !== 'fy') {
         if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
         if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
     }
     
-    if (fyFilter !== 'ALL' && (state.currentTab === 'closed' || state.currentTab === 'log')) {
+    if (fyFilter !== 'ALL' && (window.state.currentTab === 'closed' || window.state.currentTab === 'log')) {
         dataList = dataList.filter(p => p.FY === fyFilter);
     }
 
     dataList.sort((a, b) => {
-        let valA = a[state.sortCol] !== undefined ? a[state.sortCol] : ''; 
-        let valB = b[state.sortCol] !== undefined ? b[state.sortCol] : '';
+        let valA = a[window.state.sortCol] !== undefined ? a[window.state.sortCol] : ''; 
+        let valB = b[window.state.sortCol] !== undefined ? b[window.state.sortCol] : '';
         if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
-        if (valA < valB) return state.sortAsc ? -1 : 1;
-        if (valA > valB) return state.sortAsc ? 1 : -1;
+        if (valA < valB) return window.state.sortAsc ? -1 : 1;
+        if (valA > valB) return window.state.sortAsc ? 1 : -1;
         return 0;
     });
 
-    const thIcon = (col) => state.sortCol === col ? (state.sortAsc ? ' ↑' : ' ↓') : '';
+    const thIcon = (col) => window.state.sortCol === col ? (window.state.sortAsc ? ' ↑' : ' ↓') : '';
     let totalPnl = 0, totalInv = 0, totalMar = 0; let totUnreal = 0; let html = '';
 
-    if (state.currentTab === 'mapper') {
+    if (window.state.currentTab === 'mapper') {
         document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
         let pendingCount = 0;
-        Object.keys(state.unknown_symbols).forEach(sym => {
-            if(!state.symbol_map[sym]) {
+        Object.keys(window.state.unknown_symbols).forEach(sym => {
+            if(!window.state.symbol_map[sym]) {
                 pendingCount++;
-                const sugg = state.unknown_symbols[sym] || '';
+                const sugg = window.state.unknown_symbols[sym] || '';
                 html += `<tr>
                     <td style="color:var(--red);font-weight:600">${sym}</td>
                     <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
                     <td>
                         <div style="display:flex;gap:6px;">
                             <input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px; text-transform:uppercase; width:120px;">
-                            <button class="btn-pri ctrl-btn" onclick="insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">✅ Accept</button>
+                            <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">✅ Accept</button>
                         </div>
                     </td>
                     <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td>
                 </tr>`;
             }
         });
-        Object.keys(state.symbol_map).forEach(m => {
+        Object.keys(window.state.symbol_map).forEach(m => {
             html += `<tr>
                 <td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);">-</td>
-                <td style="color:var(--green);font-weight:600">${state.symbol_map[m]}</td>
-                <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span><button class="btn-del ctrl-btn" onclick="deleteSymbolMap('${m}')">[X] Delete</button></div></td>
+                <td style="color:var(--green);font-weight:600">${window.state.symbol_map[m]}</td>
+                <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span><button class="btn-del ctrl-btn" onclick="window.deleteSymbolMap('${m}')">[X] Delete</button></div></td>
             </tr>`;
         });
         if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
     }
-    else if (state.currentTab === 'active') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
+    else if (window.state.currentTab === 'active') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="window.handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="window.handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="window.handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
         
         dataList.forEach(p => {
             totalPnl += p["P&L"]; totalInv += (p.Invested || 0); totalMar += (p.Margin || 0);
             const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
             const sgn = p["P&L"] > 0 ? '+' : '';
-            const displayCmp = (state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
+            const displayCmp = (window.state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
             const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
             html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested || 0)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin || 0)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
         });
     } 
-    else if (state.currentTab === 'closed') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+    else if (window.state.currentTab === 'closed') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="window.handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
         
         let wins = 0, losses = 0; let grossWin = 0, grossLoss = 0; let daysWin = 0, daysLoss = 0;
         let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
@@ -1051,8 +1059,8 @@ function renderUI() {
         document.getElementById('valDaysWin').innerText = wins > 0 ? (daysWin / wins).toFixed(1) : '0.0'; 
         document.getElementById('valDaysLoss').innerText = losses > 0 ? (daysLoss / losses).toFixed(1) : '0.0';
     } 
-    else if (state.currentTab === 'log') {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
+    else if (window.state.currentTab === 'log') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="window.handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
         let buyV = 0, sellV = 0;
         dataList.forEach(p => {
             if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
@@ -1061,12 +1069,12 @@ function renderUI() {
         });
         totalPnl = buyV; totalInv = sellV;
     }
-    else if (state.currentTab === 'fy') {
+    else if (window.state.currentTab === 'fy') {
         const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
-        let thHtml = `<tr><th onclick="handleSort('FY')">FY${thIcon('FY')}</th>`;
-        if (groupBy.includes('Broker')) thHtml += `<th onclick="handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
-        if (groupBy.includes('Segment')) thHtml += `<th onclick="handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
-        thHtml += `<th onclick="handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="handleSort('Total')">TOTAL P&L${thIcon('Total')}</th><th onclick="handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="handleSort('Margin')">MARGIN${thIcon('Margin')}</th></tr>`;
+        let thHtml = `<tr><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th>`;
+        if (groupBy.includes('Broker')) thHtml += `<th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
+        if (groupBy.includes('Segment')) thHtml += `<th onclick="window.handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
+        thHtml += `<th onclick="window.handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="window.handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="window.handleSort('Total')">TOTAL P&L${thIcon('Total')}</th><th onclick="window.handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="window.handleSort('Margin')">MARGIN${thIcon('Margin')}</th></tr>`;
         document.getElementById('tableHead').innerHTML = thHtml;
 
         dataList.forEach(p => {
@@ -1084,29 +1092,29 @@ function renderUI() {
         });
     }
     else {
-        document.getElementById('tableHead').innerHTML = `<tr><th onclick="handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
-        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del ctrl-btn" onclick="deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="window.handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
+        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del ctrl-btn" onclick="window.deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
     }
 
-    if(!dataList.length && state.currentTab !== 'mapper') html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
+    if(!dataList.length && window.state.currentTab !== 'mapper') html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
     document.getElementById('tableBody').innerHTML = html;
     
     const c3 = document.getElementById('lblMar').parentElement;
     
-    if (state.currentTab === 'mapper') {
+    if (window.state.currentTab === 'mapper') {
         c3.style.display = 'none';
         document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
-        const pendingCount = Object.keys(state.unknown_symbols).filter(sym => !state.symbol_map[sym]).length;
+        const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
         document.getElementById('valPnl').innerText = pendingCount; 
         document.getElementById('valPnl').className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
         document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS'; 
-        document.getElementById('valInv').innerText = Object.keys(state.symbol_map).length; 
+        document.getElementById('valInv').innerText = Object.keys(window.state.symbol_map).length; 
         document.getElementById('valInv').className = 'metric-val';
         document.getElementById('lblPos').innerText = 'TOTAL TRACKED'; 
-        document.getElementById('valPos').innerText = pendingCount + Object.keys(state.symbol_map).length; 
+        document.getElementById('valPos').innerText = pendingCount + Object.keys(window.state.symbol_map).length; 
         document.getElementById('valPos').className = 'metric-val';
     } 
-    else if (state.currentTab === 'corp') {
+    else if (window.state.currentTab === 'corp') {
         c3.style.display = 'none';
         document.getElementById('lblPnl').innerText = 'STORED SPLITS';
         document.getElementById('valPnl').innerText = dataList.length; document.getElementById('valPnl').className = 'metric-val';
@@ -1115,7 +1123,7 @@ function renderUI() {
         document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
         document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
     }
-    else if (state.currentTab === 'log') {
+    else if (window.state.currentTab === 'log') {
         c3.style.display = 'none';
         document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE';
         document.getElementById('valPnl').innerText = fmtMoney(totalPnl); document.getElementById('valPnl').className = 'metric-val';
@@ -1124,7 +1132,7 @@ function renderUI() {
         document.getElementById('lblPos').innerText = 'NO. OF TRADES';
         document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
     } 
-    else if (state.currentTab === 'closed') {
+    else if (window.state.currentTab === 'closed') {
         c3.style.display = 'none';
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
@@ -1136,9 +1144,9 @@ function renderUI() {
         document.getElementById('valPos').innerText = dataList.length; 
         document.getElementById('valPos').className = 'metric-val';
     }
-    else if (state.currentTab === 'active') {
+    else if (window.state.currentTab === 'active') {
         c3.style.display = 'block';
-        document.getElementById('lblPnl').innerHTML = state.fetchingPrices ? 'NET UNREALIZED <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching ⏳...</span>' : 'NET UNREALIZED';
+        document.getElementById('lblPnl').innerHTML = window.state.fetchingPrices ? 'NET UNREALIZED <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching ⏳...</span>' : 'NET UNREALIZED';
         document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
         document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
         document.getElementById('lblInv').innerText = 'TOTAL INVESTED';
@@ -1151,7 +1159,7 @@ function renderUI() {
         document.getElementById('valPos').innerText = dataList.length; 
         document.getElementById('valPos').className = 'metric-val';
     }
-    else if (state.currentTab === 'fy') {
+    else if (window.state.currentTab === 'fy') {
         c3.style.display = 'block';
         document.getElementById('lblPnl').innerText = 'REALIZED P&L';
         document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
@@ -1167,7 +1175,7 @@ function renderUI() {
         document.getElementById('valPos').innerText = (combined>0?'+':'') + fmtMoney(combined); 
         document.getElementById('valPos').className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
     }
-}
+};
 </script>
 </body>
 </html>
