@@ -596,8 +596,17 @@ async function fetchPortfolio(forceRecalc = false) {
                             state.symbol_map = JSON.parse(mapFile.content);
                         }
                         if (restoreFiles.length > 0) {
-                            appendLog("Pushing files to Render server memory...");
-                            await fetch(`${state.backendUrl}/api/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(restoreFiles) });
+                            // ⚡ FIX: CHUNK UPLOADS TO PREVENT RENDER OUT-OF-MEMORY CRASHES ⚡
+                            appendLog(`Pushing ${restoreFiles.length} files to Render in batches to prevent memory overload...`);
+                            const chunkSize = 5;
+                            for (let i = 0; i < restoreFiles.length; i += chunkSize) {
+                                const chunk = restoreFiles.slice(i, i + chunkSize);
+                                await fetch(`${state.backendUrl}/api/restore`, { 
+                                    method: 'POST', 
+                                    headers: { 'Content-Type': 'application/json' }, 
+                                    body: JSON.stringify(chunk) 
+                                });
+                            }
                         }
                         appendLog("✅ Render server jumpstarted! Recalculating...");
                         return fetchPortfolio(true); 
@@ -979,7 +988,6 @@ function renderUI() {
             const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
             const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
             
-            // ⚡ FIX: Filter out Orphaned/Bonus shares (Entry Price = 0) from trading metrics
             if (p["Entry Price"] > 0) {
                 if(p["P&L"] > 0) { wins++; grossWin += p["P&L"]; daysWin += holdDays; }
                 else if(p["P&L"] < 0) { losses++; grossLoss += Math.abs(p["P&L"]); daysLoss += holdDays; }
@@ -999,7 +1007,6 @@ function renderUI() {
             <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td>${holdDays.toFixed(0)}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
         });
         
-        // ⚡ FIX: Calculate Win Rate purely on valid trading setups
         const validTrades = wins + losses;
         totalInv = validTrades > 0 ? (wins / validTrades * 100).toFixed(1) + '%' : '0%';
         const avgWin = wins > 0 ? grossWin / wins : 0; 
