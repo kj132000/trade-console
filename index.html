@@ -296,11 +296,12 @@ window.uploadFileToDrive = async function(filename, content) {
     await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
 };
 
-window.deleteSnapshot = async function() {
+// ⚡ NEW: General Drive File Deleter ⚡
+window.deleteFileFromDrive = async function(filename) {
     if (!window.state.driveToken) return;
     const folderId = await window.getOrCreateFolder();
     if (!folderId) return;
-    const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
+    const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
     try {
         const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
         const searchData = await searchRes.json();
@@ -310,11 +311,30 @@ window.deleteSnapshot = async function() {
     } catch(e) {}
 };
 
+window.deleteSnapshot = async function() {
+    await window.deleteFileFromDrive('portfolio_snapshot.json');
+};
+
+// ⚡ NEW: MASTER FILE DOWNLOAD BYPASS LOGIC ⚡
 window.downloadAllFromDrive = async function() {
     const folderId = await window.getOrCreateFolder();
     if (!folderId) return [];
     window.appendLog("Scanning Google Drive for backup files...");
     
+    // 1. Check for Master CSV first to bypass heavy loads
+    const mQuery = encodeURIComponent(`name='TradeConsole_Master.csv' and '${folderId}' in parents and trashed=false`);
+    const mRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${mQuery}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    let hasMaster = false;
+    
+    if (mRes.ok) {
+        const mData = await mRes.json();
+        if (mData.files && mData.files.length > 0) {
+            hasMaster = true;
+            window.appendLog("⚡ Optimized Master File found! Bypassing massive raw CSV downloads...");
+        }
+    }
+
+    // 2. Fetch file list and apply bypass filter
     const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
     
@@ -323,14 +343,18 @@ window.downloadAllFromDrive = async function() {
 
     const listData = await listRes.json();
     const files = [];
+    
     if (listData.files && listData.files.length > 0) {
-        window.appendLog(`Found ${listData.files.length} files in Drive. Downloading...`);
         for (let file of listData.files) {
+            // Ignore 45 raw files if Master exists
+            if (hasMaster && file.name.endsWith('.csv') && file.name !== 'TradeConsole_Master.csv') {
+                continue; 
+            }
             const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
             const content = await fileRes.text();
             files.push({ filename: file.name, content: content });
         }
-        window.appendLog("✅ All files securely downloaded from Drive.");
+        window.appendLog(`✅ Securely downloaded ${files.length} core files from Drive.`);
     } else {
         window.appendLog("⚠️ Drive folder is empty.");
     }
@@ -451,6 +475,7 @@ window.clearLedger = async function() {
     document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
     window.startLogPolling();
     try {
+        await window.deleteFileFromDrive('TradeConsole_Master.csv');
         await window.deleteSnapshot();
         const p1 = fetch(`${window.state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
         const p2 = window.state.driveToken ? window.clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
@@ -476,7 +501,7 @@ window.handleFileUpload = async function(event) {
     if(!files.length) return;
     
     window.lockUI();
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Saving to Drive & Server...</td></tr>`;
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Processing New Files...</td></tr>`;
     window.startLogPolling();
     
     try {
@@ -507,13 +532,16 @@ window.handleFileUpload = async function(event) {
         await fetch(`${window.state.backendUrl}/api/upload`, { method: 'POST', body: formData });
         
         if(window.state.driveToken) {
-            window.appendLog("Backing up files to Google Drive...");
+            window.appendLog("Backing up new raw files to Drive...");
             for(let pf of processedFiles) {
                 await window.uploadFileToDrive(pf.name, pf.text);
             }
+            // ⚡ MASTER FILE TRIGGER: Delete old master so engine rebuilds a fresh one
+            window.appendLog("Invalidating old Master CSV & Snapshot...");
+            await window.deleteFileFromDrive('TradeConsole_Master.csv');
+            await window.deleteSnapshot();
         }
         
-        await window.deleteSnapshot();
         await window.fetchPortfolio(true);
     } catch(e) { 
         alert("Upload failed."); 
@@ -526,7 +554,7 @@ window.handleRefresh = async function(event) {
     if (window.state.isProcessing) return;
     window.lockUI();
     if (event && event.shiftKey) {
-        window.appendLog("Deep Refresh detected. Wiping cache and recalculating from raw files...");
+        window.appendLog("Deep Refresh detected. Wiping snapshot and recalculating...");
         await window.deleteSnapshot();
         await window.fetchPortfolio(true);
     } else {
@@ -666,9 +694,17 @@ window.fetchPortfolio = async function(forceRecalc = false) {
         window.state.unknown_symbols = data.positions.unknown_symbols || {};
         window.state.token_map = data.positions.token_map || {};
 
-        if (window.state.driveToken && (window.state.open.length > 0 || window.state.closed.length > 0)) {
-            window.appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
-            await window.uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+        if (window.state.driveToken) {
+            if (window.state.open.length > 0 || window.state.closed.length > 0) {
+                window.appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
+                await window.uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+            }
+            
+            // ⚡ MASTER FILE TRIGGER: Save compiled master file returned by backend
+            if (data.positions.master_csv_data) {
+                window.appendLog("💾 Generating and saving pristine Master CSV to Drive...");
+                await window.uploadFileToDrive('TradeConsole_Master.csv', data.positions.master_csv_data);
+            }
         }
         
         const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
