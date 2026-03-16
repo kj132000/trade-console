@@ -1,636 +1,1362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Console</title>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
-            --text-main: #ffffff;
-            --text-muted: #a0a0a0;
-            --accent-blue: #2979ff;
-            --profit-green: #00e676;
-            --loss-red: #ff5252;
-            --border-color: #333333;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Console</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-        }
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e14;--bg2:#111621;--bg3:#1a202c;--border:#1e2533;--text:#cbd5e0;--text2:#4a5568;--text3:#718096;--white:#e2e8f0;--blue:#63b3ed;--green:#48bb78;--red:#fc8181;--orange:#ed8936;--blue2:#2b6cb0}
+body.light-mode {--bg:#f7fafc;--bg2:#ffffff;--bg3:#edf2f7;--border:#e2e8f0;--text:#2d3748;--text2:#4a5568;--text3:#718096;--white:#1a202c;}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom: 80px; transition: background 0.3s, color 0.3s;}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
+button, select, input{cursor:pointer;font-family:'Outfit',sans-serif;transition:filter .15s}button:hover{filter:brightness(1.15)}
+button:disabled {opacity: 0.5; cursor: not-allowed;}
+input, select{font-family:inherit;outline:none}
 
-        /* Header & Controls */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,#2b6cb0,#63b3ed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff}
+.title{font-size:20px;font-weight:800;color:var(--white);letter-spacing:2px;font-family:'Outfit',sans-serif}
+.controls{display:flex;gap:10px;align-items:center; flex-wrap: wrap;}
 
-        .title {
-            font-size: 24px;
-            font-weight: bold;
-        }
+.btn-pri{padding:8px 16px;background:linear-gradient(135deg,#2b6cb0,#3182ce);border:none;color:#fff;border-radius:6px;font-size:13px;font-weight:600; display:flex; align-items:center; gap:6px;}
+.btn-sec{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;font-weight:600}
+.btn-sec.active{background:var(--blue2);color:white;border-color:var(--blue2)}
+.btn-del{background:transparent;border:none;color:var(--red);font-weight:800;font-size:14px;cursor:pointer;}
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
+.metric-title{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);margin-bottom:8px; text-transform:uppercase; font-weight:600;}
+.metric-val{font-size:24px;font-weight:500;color:var(--white)}
 
-        .btn {
-            background-color: var(--panel-bg);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
+.table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;text-align:left}
+th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;user-select:none;}
+th:hover{color:var(--white)}
+td{padding:16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.positive{color:var(--green);font-weight:500}
+.negative{color:var(--red);font-weight:500}
 
-        .btn:hover {
-            background-color: #2a2a2a;
-            border-color: var(--text-muted);
-        }
+.tab-container{display:flex;gap:10px;margin-bottom:16px; flex-wrap:wrap;}
+#filterBar{background:var(--bg2); padding:12px 16px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px; align-items:center;}
+#settingsPanel{display:none;background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);margin-bottom:24px;gap:12px;align-items:flex-end}
 
-        .btn-primary {
-            background-color: var(--accent-blue);
-            border-color: var(--accent-blue);
-            font-weight: bold;
-        }
+.terminal-wrapper{background:#000;border:1px solid #333;border-radius:8px;margin-top:24px;overflow:hidden;}
+.terminal-header{background:#111;padding:8px 16px;font-family:'Outfit';font-size:12px;color:#888;display:flex;justify-content:space-between;cursor:pointer;}
+.terminal-body{padding:16px;height:200px;overflow-y:auto;font-family:'DM Mono';font-size:12px;color:#4af626;line-height:1.6;}
+.log-line{margin-bottom:4px;}
 
-        .btn-primary:hover {
-            background-color: #1565c0;
-        }
+#driveBtnHeader{background:var(--green);border:none;color:white;display:flex;align-items:center;gap:6px;pointer-events:none;}
 
-        .btn-danger {
-            background-color: #331111;
-            border-color: var(--loss-red);
-            color: var(--loss-red);
-        }
+.login-gate { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.login-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.login-btn { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; }
+.login-btn:hover { background: #1557b0; }
 
-        .btn-danger:hover {
-            background-color: var(--loss-red);
-            color: #fff;
-        }
+#corpInsertBar, #mapperInsertBar{display:none; gap:10px; margin-bottom:16px; background:var(--bg2); padding:16px; border:1px solid var(--border); border-radius:8px;}
+#chartContainer{display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:24px;}
+.strategy-select{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-family:'Outfit'; font-size:11px; width:140px;}
 
-        /* Summary Cards */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .metric-card {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .metric-title {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-
-        .metric-value {
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .profit { color: var(--profit-green); }
-        .loss { color: var(--loss-red); }
-
-        /* Tabs */
-        .tabs {
-            display: flex;
-            gap: 5px;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 15px;
-        }
-
-        .tab-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .tab-btn:hover {
-            color: var(--text-main);
-        }
-
-        .tab-btn.active {
-            color: var(--accent-blue);
-            border-bottom: 2px solid var(--accent-blue);
-        }
-
-        .tab-content {
-            display: none;
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            overflow-x: auto;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* Tables */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        th, td {
-            padding: 12px 10px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            color: var(--text-muted);
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            background-color: var(--panel-bg);
-            z-index: 10;
-        }
-
-        tr:hover td {
-            background-color: #252525;
-        }
-
-        .text-right { text-align: right; }
-        
-        .badge {
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            background-color: #333;
-        }
-
-        /* Terminal Logger */
-        .terminal-container {
-            margin-top: 25px;
-            background-color: #000000;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            height: 200px;
-            overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 13px;
-            color: #00ff00;
-        }
-        
-        .terminal-line { margin-bottom: 4px; }
-        .terminal-time { color: #888; margin-right: 8px; }
-        .terminal-error { color: var(--loss-red); }
-        .terminal-warning { color: #ffeb3b; }
-
-        /* Loader Overlay */
-        #loader {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            font-size: 20px;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.1);
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            border-left-color: var(--accent-blue);
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+.help-container { display:none; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:30px; margin-bottom:24px; font-family:'Outfit',sans-serif; color:var(--text); line-height:1.6; }
+.help-container h2 { color:var(--white); margin-bottom:16px; font-size:22px; }
+.help-container h3 { color:var(--blue); margin-top:24px; margin-bottom:8px; font-size:16px; }
+.help-container p { margin-bottom:12px; font-size:14px; }
+.help-container ul { margin-left:20px; margin-bottom:16px; font-size:14px; }
+.help-container li { margin-bottom:6px; }
+.rec-badge { font-size:10px; background:var(--blue2); color:white; padding:3px 6px; border-radius:4px; cursor:pointer; font-weight:700; transition:0.2s;}
+.rec-badge:hover { filter:brightness(1.2); }
+</style>
 </head>
 <body>
 
-    <div id="loader">
-        <div class="spinner"></div>
-        <div id="loader-text">Processing...</div>
+<div id="loginGate" class="login-gate">
+    <div class="login-card">
+        <div class="logo" style="margin: 0 auto 20px; width: 50px; height: 50px; font-size: 24px;">⚡</div>
+        <h1 class="title" style="margin-bottom: 12px;">TRADE CONSOLE</h1>
+        <p style="color: var(--text3); font-size: 14px; line-height: 1.5;">Your trading data is securely stored and synced via your personal Google Drive account.</p>
+        <button class="login-btn" onclick="window.authGoogleDrive()">
+            <svg style="width:20px;height:20px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg>
+            Connect Google Drive
+        </button>
     </div>
+</div>
 
-    <div class="header-container">
-        <div class="title">Trade Console V2</div>
+<div id="appContainer" class="container" style="display: none;">
+    <div class="header">
+        <div class="logo-area">
+            <div class="logo">⚡</div>
+            <div class="title">TRADE CONSOLE</div>
+        </div>
         <div class="controls">
-            <button class="btn btn-danger" onclick="clearServerCache()">🗑️ Clear Cache</button>
-            <button class="btn" onclick="document.getElementById('fileUpload').click()">📁 Upload Raw CSVs</button>
-            <input type="file" id="fileUpload" multiple accept=".csv,.xlsx" style="display: none;" onchange="handleFileUpload(event)">
-            <button class="btn btn-primary" onclick="handleRefresh(event)" title="Hold Shift + Click for Deep Refresh">🔄 Refresh (Shift for Deep)</button>
+            <button class="btn-sec ctrl-btn" onclick="window.toggleTheme()" id="themeBtn">🌓 Theme</button>
+            <button id="driveBtnHeader" class="btn-sec ctrl-btn"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="currentColor"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L16.29 3.5h-6.86L2.87 15M17.14 15L10.58 26.5h6.86L24 15"/></svg> Drive Synced</button>
+            <button class="btn-sec ctrl-btn" style="color:var(--red);border-color:var(--red)" onclick="window.clearLedger()">🗑️ Clear</button>
+            
+            <input type="file" id="csvUpload" multiple accept=".csv, .xlsx, .xls" style="display:none" onchange="window.handleFileUpload(event)">
+            <button class="btn-sec ctrl-btn" id="uploadBtn" onclick="document.getElementById('csvUpload').click()">📁 Upload</button>
+            
+            <button class="btn-sec ctrl-btn" onclick="window.exportToExcel()" style="color:var(--green); border-color:var(--green); display:flex; align-items:center; gap:4px;">
+                <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export
+            </button>
+
+            <button class="btn-sec ctrl-btn" onclick="window.toggleSettings()">⚙️</button>
+            <button class="btn-pri ctrl-btn" id="refreshBtn" onclick="window.handleRefresh(event)" title="Click to refresh Live Prices. Shift+Click to force Deep Recalculation">
+                <svg style="width:14px;height:14px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Refresh
+            </button>
         </div>
     </div>
 
-    <div class="metrics-grid">
-        <div class="metric-card">
-            <div class="metric-title">Total Invested</div>
-            <div class="metric-value" id="val-invested">₹0</div>
+    <div id="settingsPanel">
+        <div style="flex:1">
+            <label style="font-size:11px;color:var(--text3)">Backend URL</label>
+            <input type="text" id="backendUrl" placeholder="https://..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:white;border-radius:6px;margin-top:4px">
         </div>
-        <div class="metric-card">
-            <div class="metric-title">Current Value</div>
-            <div class="metric-value" id="val-current">₹0</div>
+        <button class="btn-pri ctrl-btn" onclick="window.saveSettings()">Save</button>
+    </div>
+
+    <div class="tab-container">
+        <button id="tab-active" class="btn-sec active" onclick="window.setTab('active')">ACTIVE POSITIONS</button>
+        <button id="tab-closed" class="btn-sec" onclick="window.setTab('closed')">CLOSED HISTORY</button>
+        <button id="tab-log" class="btn-sec" onclick="window.setTab('log')">TRADE LOG</button>
+        <button id="tab-chart" class="btn-sec" onclick="window.setTab('chart')">P&L TRACKER</button>
+        <button id="tab-fy" class="btn-sec" onclick="window.setTab('fy')">FY SUMMARY</button>
+        <button id="tab-corp" class="btn-sec" onclick="window.setTab('corp')">CORPORATE ACTIONS</button>
+        <button id="tab-mapper" class="btn-sec" onclick="window.setTab('mapper')">SYMBOL MAPPER</button>
+        <button id="tab-help" class="btn-sec" onclick="window.setTab('help')" style="border-color:var(--blue); color:var(--blue);">HELP & LOGIC</button>
+    </div>
+
+    <div class="controls" id="filterBar">
+        <input type="text" id="searchFilter" class="btn-sec" placeholder="Search Symbol..." onkeyup="window.debounceSearch()" style="width:160px; text-transform:uppercase;">
+        <select id="brokerFilter" class="btn-sec" onchange="window.renderUI()"><option value="ALL">All Brokers</option></select>
+        <select id="segFilter" class="btn-sec" onchange="window.renderUI()">
+            <option value="ALL">All Segments</option>
+            <option value="EQ">Equity</option>
+            <option value="F&O">F&O</option>
+            <option value="MCX">Commodity</option>
+        </select>
+        <select id="fyFilter" class="btn-sec" onchange="window.renderUI()" style="display: none;">
+            <option value="ALL">All FYs</option>
+        </select>
+        
+        <select id="fyGroupBy" class="btn-sec" onchange="window.renderUI()" style="display: none; border-color: var(--orange); color: var(--orange); font-weight: 700;">
+            <option value="FY_Broker_Segment">View: FY ➔ Broker ➔ Segment</option>
+            <option value="FY_Broker">View: FY ➔ Broker</option>
+            <option value="FY_Segment">View: FY ➔ Segment</option>
+            <option value="FY">View: FY Only (Combined)</option>
+        </select>
+
+        <select id="strategyFilter" class="btn-sec" onchange="window.renderUI()" style="display: none;">
+            <option value="ALL">All Strategies</option>
+            <option value="UNASSIGNED">-- Unassigned Trades --</option>
+            <option value="0DTE">0DTE</option>
+            <option value="Overnight pre-expiry">Overnight pre-expiry</option>
+            <option value="Short-term Swing">Short-term Swing</option>
+            <option value="Long-term Holding">Long-term Holding</option>
+            <option value="Cash Secured Put">Cash Secured Put</option>
+            <option value="Short Vega">Short Vega</option>
+            <option value="Hedge">Hedge</option>
+            <option value="❌ Mistake">❌ Mistake</option>
+        </select>
+
+        <button id="massAcceptBtn" class="btn-pri" onclick="window.massAcceptRecommendations()" style="display: none; background: linear-gradient(135deg, #ed8936, #dd6b20);">
+            ✨ Mass Accept Recommendations
+        </button>
+    </div>
+
+    <div id="helpContainer" class="help-container">
+        <h2>How the Math Engine Works</h2>
+        <p>Trade Console uses an advanced mathematical engine to convert thousands of raw broker trades into a perfect accounting ledger. Here is exactly how the data is processed:</p>
+        
+        <h3>1. The FIFO Ledger (First-In, First-Out)</h3>
+        <p>The engine sorts every trade you've ever made chronologically. When you sell 100 shares of a stock, the engine "looks back" in time and mathematically consumes the oldest 100 shares you bought. This is the industry-standard accounting method for calculating true realized P&L.</p>
+        
+        <h3>2. Intraday vs. Delivery Prioritization</h3>
+        <p>Before the FIFO engine looks back into history, it specifically scans the exact day of the trade. If it finds a Buy and a Sell for the same asset on the exact same date, it matches them together instantly as an <b>Intraday Trade</b>. Only the "leftover" shares spill over into the Delivery queue.</p>
+
+        <h3>3. Active Positions & Live Margins</h3>
+        <ul>
+            <li><b>Invested:</b> For Equity, this is simply your Qty * Average Buy Price.</li>
+            <li><b>Margin Used:</b> For F&O Shorts, the engine pings Angel One's live Margin API to get the exact overnight span + exposure margin required for your specific strike price.</li>
+            <li><b>Live CMP:</b> When you click Refresh, the system securely connects to the live market to pull the Current Market Price for all open assets and calculates live Unrealized P&L.</li>
+        </ul>
+
+        <h3>4. Corporate Actions & Stock Splits</h3>
+        <p>If you bought 100 shares of a stock at ₹1,000, and it later underwent a 1:5 split, the engine mathematically rewrites history. It transforms your old record into 500 shares at ₹200. This ensures your P&L is perfectly accurate when you eventually sell them.</p>
+
+        <h3>5. The Options Settlement Engine</h3>
+        <p>If you short an option and let it expire, brokers often don't provide an "Exit" record in your CSV. Trade Console detects expired options, fetches the 10-year historical closing price of the underlying index (e.g., NIFTY) from Yahoo Finance for that exact expiration date, calculates whether the option expired In-The-Money or Out-of-The-Money, and automatically generates a phantom "Exit Trade" with the correct settlement price to balance your P&L.</p>
+
+        <h3>6. The Strategy Recommendation Engine</h3>
+        <p>In the Closed History tab, the engine calculates the exact number of days you held an asset and automatically suggests strategies to save you time tagging data:</p>
+        <ul>
+            <li><b>0DTE:</b> Automatically triggered if you Buy and Sell an Option on the exact same day (Hold Days = 0).</li>
+            <li><b>Overnight pre-expiry:</b> Triggered if you Short an Option exactly 1 day before closing it (Hold Days = 1).</li>
+            <li><b>Long-term Holding:</b> Triggered if you hold any asset for more than 180 days.</li>
+        </ul>
+    </div>
+
+    <div class="metrics-grid" id="mainMetricsGrid">
+        <div class="metric-card"><div class="metric-title" id="lblPnl">NET P&L</div><div class="metric-val" id="valPnl">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblInv">INVESTED</div><div class="metric-val" id="valInv">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblMar">MARGIN USED</div><div class="metric-val" id="valMar">₹0</div></div>
+        <div class="metric-card"><div class="metric-title" id="lblPos">TRADES / POSITIONS</div><div class="metric-val" id="valPos">0</div></div>
+    </div>
+
+    <div class="metrics-grid" id="eliteMetricsGrid" style="display:none; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px dashed var(--border); padding-top:24px;">
+        <div class="metric-card" style="background:rgba(72,187,120,0.05); border-color:rgba(72,187,120,0.2)"><div class="metric-title">AVERAGE WIN</div><div class="metric-val positive" id="valAvgWin">₹0</div></div>
+        <div class="metric-card" style="background:rgba(252,129,129,0.05); border-color:rgba(252,129,129,0.2)"><div class="metric-title">AVERAGE LOSS</div><div class="metric-val negative" id="valAvgLoss">₹0</div></div>
+        <div class="metric-card"><div class="metric-title">REWARD / RISK</div><div class="metric-val" id="valRR" style="color:var(--blue)">0.00</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (WINS)</div><div class="metric-val" id="valDaysWin">0.0</div></div>
+        <div class="metric-card"><div class="metric-title">AVG DAYS HELD (LOSS)</div><div class="metric-val" id="valDaysLoss">0.0</div></div>
+    </div>
+
+    <div id="chartContainer">
+        <div style="height: 400px; width: 100%; position: relative;">
+            <canvas id="pnlChart"></canvas>
         </div>
-        <div class="metric-card">
-            <div class="metric-title">Total P&L (Open)</div>
-            <div class="metric-value" id="val-pnl">₹0</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-title">Realized P&L (Closed)</div>
-            <div class="metric-value" id="val-realized">₹0</div>
-        </div>
     </div>
 
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-open', this)">Active Positions</button>
-        <button class="tab-btn" onclick="switchTab('tab-closed', this)">Closed Trades</button>
-        <button class="tab-btn" onclick="switchTab('tab-corp', this)">Corporate Actions</button>
-        <button class="tab-btn" onclick="switchTab('tab-log', this)">Trade Log</button>
+    <div id="corpInsertBar">
+        <input type="text" id="newCorpSym" placeholder="SYMBOL (e.g. NPST)" class="btn-sec" style="flex:1; text-transform: uppercase;">
+        <input type="date" id="newCorpDate" class="btn-sec" style="flex:1" title="Ex-Date">
+        <input type="number" id="newCorpRatio" placeholder="Ratio Multiplier (e.g. 3.0)" class="btn-sec" step="0.1" style="flex:1">
+        <button class="btn-pri ctrl-btn" onclick="window.insertCorpAction()">+ Add Split</button>
     </div>
 
-    <div id="tab-open" class="tab-content active">
-        <table id="openPositionsTable">
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Broker</th>
-                    <th>Segment</th>
-                    <th class="text-right">Qty</th>
-                    <th class="text-right">Avg Price</th>
-                    <th class="text-right">Invested</th>
-                    <th class="text-right">CMP</th>
-                    <th class="text-right">P&L</th>
-                    <th class="text-right">ROI %</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <div id="mapperInsertBar">
+        <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2; text-transform: uppercase;">
+        <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1; text-transform: uppercase;">
+        <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap()">+ Add Mapping</button>
+        <button class="btn-pri ctrl-btn" style="background:var(--orange); margin-left:20px;" onclick="window.handleDeepRecalculate()">⚡ Apply & Recalculate</button>
     </div>
 
-    <div id="tab-closed" class="tab-content">
-        <table id="closedTradesTable">
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Broker</th>
-                    <th>Segment</th>
-                    <th>Type</th>
-                    <th>Exit Date</th>
-                    <th class="text-right">Qty</th>
-                    <th class="text-right">Entry</th>
-                    <th class="text-right">Exit</th>
-                    <th class="text-right">P&L</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <div class="table-container" id="mainTableContainer">
+        <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" style="text-align:center">No data loaded.</td></tr></tbody></table>
     </div>
 
-    <div id="tab-corp" class="tab-content">
-        <div style="margin-bottom: 15px; display: flex; justify-content: flex-end;">
-            <input type="text" 
-                   id="corpSearchInput" 
-                   onkeyup="filterCorpActions()" 
-                   placeholder="🔍 Search Symbol (e.g., KPIGREEN)..." 
-                   style="width: 100%; max-width: 300px; padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background-color: #121212; color: #fff; font-size: 14px;">
-        </div>
-        <table id="corpActionsTable">
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Ex-Date</th>
-                    <th class="text-right">Multiplier Ratio</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+    <div class="terminal-wrapper">
+        <div class="terminal-header" onclick="window.toggleTerminal()"><span>>_ SYSTEM LOGS</span><span id="termToggleBtn">▼</span></div>
+        <div class="terminal-body" id="terminalBody"><div class="log-line">System initialized. Awaiting secure Google Drive connection...</div></div>
     </div>
-
-    <div id="tab-log" class="tab-content">
-        <table id="tradeLogTable">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Symbol</th>
-                    <th>Broker</th>
-                    <th>Segment</th>
-                    <th>Action</th>
-                    <th class="text-right">Qty</th>
-                    <th class="text-right">Price</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <div class="terminal-container" id="terminal">
-        <div class="terminal-line"><span class="terminal-time">[System]</span> Initialized. Ready for API connection.</div>
-    </div>
+</div>
 
 <script>
-    // --- GLOBAL STATE ---
-    window.state = {
-        isProcessing: false,
-        open: [],
-        closed: [],
-        corp_actions: [],
-        trade_log: []
-    };
+window.state = {
+    open: [], closed: [], corp: [], trade_log: [], unknown_symbols: {}, token_map: {}, currentTab: 'active',
+    symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map') || '{}'),
+    sortCol: 'Symbol', sortAsc: true, fetchingPrices: false, isPollingLogs: false,
+    backendUrl: localStorage.getItem('tc_backend_url') || 'http://localhost:8000',
+    driveToken: null, driveFolderId: null,
+    pnlChartInstance: null,
+    isProcessing: false
+};
 
-    // Configuration (Replace with your actual Python Backend URL if hosted)
-    const BACKEND_URL = "http://127.0.0.1:10000"; // Update this to your Render URL if needed
+window.currentFilteredData = []; // Stores currently visible rows for mass actions
 
-    // --- UI HELPERS ---
-    function formatCurrency(val) {
-        if (val === null || val === undefined) return "₹0";
-        return "₹" + parseFloat(val).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+let searchTimeout;
+window.debounceSearch = function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => { window.renderUI(); }, 300);
+};
+
+window.lockUI = function() {
+    window.state.isProcessing = true;
+    document.body.style.cursor = 'wait';
+    document.querySelectorAll('.ctrl-btn').forEach(btn => btn.disabled = true);
+};
+
+window.unlockUI = function() {
+    window.state.isProcessing = false;
+    document.body.style.cursor = 'default';
+    document.querySelectorAll('.ctrl-btn').forEach(btn => btn.disabled = false);
+};
+
+window.handleAuthExpiry = function() {
+    window.appendLog("❌ Google Drive Token expired. Please reconnect.");
+    window.state.driveToken = null;
+    document.getElementById('loginGate').style.display = 'flex';
+};
+
+if(localStorage.getItem('tc_theme') === 'light') { document.body.classList.add('light-mode'); }
+
+window.toggleTheme = function() {
+    document.body.classList.toggle('light-mode');
+    localStorage.setItem('tc_theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+};
+
+document.getElementById('backendUrl').value = window.state.backendUrl;
+const GOOGLE_CLIENT_ID = '493818135252-sdciad851g1atck8aq1m4s92qvo15fe6.apps.googleusercontent.com';
+
+let tokenClient;
+window.onload = function() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+                window.state.driveToken = tokenResponse.access_token;
+                document.getElementById('loginGate').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                window.appendLog("✅ Connected to Google Drive.");
+                window.getOrCreateFolder().then(() => window.fetchPortfolio());
+            }
+        },
+    });
+};
+
+window.authGoogleDrive = function() { 
+    if (tokenClient) {
+        tokenClient.requestAccessToken(); 
+    } else {
+        alert("Google Security is still loading. Please wait a second and try again.");
+    }
+};
+
+window.getOrCreateFolder = async function() {
+    if (window.state.driveFolderId) return window.state.driveFolderId;
+    if (!window.state.driveToken) return null;
+    try {
+        const query = encodeURIComponent("name='TradeConsole_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+        if (res.status === 401) { window.handleAuthExpiry(); return null; }
+        const data = await res.json();
+        if (data.files && data.files.length > 0) window.state.driveFolderId = data.files[0].id;
+        else {
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'TradeConsole_Data', mimeType: 'application/vnd.google-apps.folder' })});
+            const createData = await createRes.json();
+            window.state.driveFolderId = createData.id;
+        }
+        return window.state.driveFolderId;
+    } catch(e) { return null; }
+};
+
+window.uploadFileToDrive = async function(filename, content) {
+    const folderId = await window.getOrCreateFolder();
+    if (!folderId) return;
+    const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
+    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    if (searchRes.status === 401) { window.handleAuthExpiry(); return; }
+    const searchData = await searchRes.json();
+    let fileId;
+    if (searchData.files && searchData.files.length > 0) fileId = searchData.files[0].id;
+    else {
+        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: filename, parents: [folderId] })});
+        const metaData = await metaRes.json();
+        fileId = metaData.id;
+    }
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, { method: 'PATCH', headers: { Authorization: `Bearer ${window.state.driveToken}`, 'Content-Type': 'text/plain' }, body: content });
+};
+
+window.deleteFileFromDrive = async function(filename) {
+    if (!window.state.driveToken) return;
+    const folderId = await window.getOrCreateFolder();
+    if (!folderId) return;
+    const query = encodeURIComponent(`name='${filename}' and '${folderId}' in parents and trashed=false`);
+    try {
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+        const searchData = await searchRes.json();
+        if (searchData.files && searchData.files.length > 0) {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+        }
+    } catch(e) {}
+};
+
+window.deleteSnapshot = async function() {
+    await window.deleteFileFromDrive('portfolio_snapshot.json');
+};
+
+window.downloadAllFromDrive = async function() {
+    const folderId = await window.getOrCreateFolder();
+    if (!folderId) return [];
+    window.appendLog("Scanning Google Drive for backup files...");
+    
+    const mQuery = encodeURIComponent(`name='TradeConsole_Master.csv' and '${folderId}' in parents and trashed=false`);
+    const mRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${mQuery}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    let hasMaster = false;
+    
+    if (mRes.ok) {
+        const mData = await mRes.json();
+        if (mData.files && mData.files.length > 0) {
+            hasMaster = true;
+            window.appendLog("⚡ Optimized Master File found! Bypassing massive raw CSV downloads...");
+        }
     }
 
-    function formatNumber(val) {
-        return parseFloat(val).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-    }
+    const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    
+    if (listRes.status === 401) { window.handleAuthExpiry(); return []; }
+    if (!listRes.ok) { window.appendLog(`❌ Drive API Error: ${listRes.status}`); return []; }
 
-    function appendLog(message, type = 'info') {
-        const term = document.getElementById('terminal');
-        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-        let colorClass = '';
-        if (type === 'error') colorClass = 'terminal-error';
-        if (type === 'warning') colorClass = 'terminal-warning';
+    const listData = await listRes.json();
+    const files = [];
+    
+    if (listData.files && listData.files.length > 0) {
+        for (let file of listData.files) {
+            if (hasMaster && file.name.endsWith('.csv') && file.name !== 'TradeConsole_Master.csv') continue; 
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+            const content = await fileRes.text();
+            files.push({ filename: file.name, content: content });
+        }
+        window.appendLog(`✅ Securely downloaded ${files.length} core files from Drive.`);
+    } else {
+        window.appendLog("⚠️ Drive folder is empty.");
+    }
+    return files;
+};
+
+window.clearDriveFiles = async function() {
+    const folderId = await window.getOrCreateFolder();
+    if (!folderId) return;
+    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+    window.state.driveFolderId = null; 
+};
+
+window.toggleSettings = function() {
+    const p = document.getElementById('settingsPanel');
+    p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+};
+
+window.saveSettings = function() {
+    window.state.backendUrl = document.getElementById('backendUrl').value;
+    localStorage.setItem('tc_backend_url', window.state.backendUrl);
+    window.toggleSettings();
+};
+
+window.saveStrategyTag = async function(compositeKey, strategyValue, skipRender = false) {
+    let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    if(strategyValue) tags[compositeKey] = strategyValue;
+    else delete tags[compositeKey];
+    localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
+    
+    if(window.state.driveToken && !skipRender) {
+        window.appendLog(`Syncing strategy tag to Drive...`);
+        await window.uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
+        window.appendLog(`✅ Strategy saved.`);
+        window.renderUI();
+    }
+};
+
+window.applySingleRecommendation = async function(compKey, recValue) {
+    await window.saveStrategyTag(compKey, recValue, false);
+};
+
+// ⚡ NEW: MASS ACCEPT ALGORITHM ⚡
+window.massAcceptRecommendations = async function() {
+    let updated = false;
+    let tags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+
+    window.currentFilteredData.forEach(p => {
+        const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        const currTag = tags[compKey] || '';
         
-        term.innerHTML += `<div class="terminal-line ${colorClass}"><span class="terminal-time">[${time}]</span> ${message}</div>`;
-        term.scrollTop = term.scrollHeight;
-    }
-
-    function showLoader(text) {
-        document.getElementById('loader-text').innerText = text;
-        document.getElementById('loader').style.display = 'flex';
-        window.state.isProcessing = true;
-    }
-
-    function hideLoader() {
-        document.getElementById('loader').style.display = 'none';
-        window.state.isProcessing = false;
-    }
-
-    function switchTab(tabId, btnElement) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        btnElement.classList.add('active');
-    }
-
-    // --- TABLE SEARCH FILTER (CORPORATE ACTIONS) ---
-    window.filterCorpActions = function() {
-        let input = document.getElementById("corpSearchInput");
-        let filter = input.value.toUpperCase();
-        let table = document.getElementById("corpActionsTable");
-        let tr = table.getElementsByTagName("tr");
-
-        for (let i = 1; i < tr.length; i++) {
-            let td = tr[i].getElementsByTagName("td")[0]; // Index 0 is the Symbol column
-            if (td) {
-                let txtValue = td.textContent || td.innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
+        if (!currTag) {
+            const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
+            const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
+            const rec = window.getStrategyRecommendation(p, holdDays);
+            
+            if (rec) {
+                tags[compKey] = rec;
+                updated = true;
             }
         }
-    };
+    });
 
-    // --- RENDERING LOGIC ---
-    function renderDashboard() {
-        let totalInv = 0, currentVal = 0, totalPnl = 0, realizedPnl = 0;
-
-        // Render Open Positions
-        const openTbody = document.querySelector('#openPositionsTable tbody');
-        openTbody.innerHTML = '';
-        
-        window.state.open.forEach(pos => {
-            if(pos.Segment === 'EQ') {
-                totalInv += pos.Invested || 0;
-                currentVal += (pos.Qty * pos.CMP) || 0;
-            }
-            totalPnl += pos['P&L'] || 0;
-
-            const pnlClass = pos['P&L'] >= 0 ? 'profit' : 'loss';
-            const roiClass = pos['ROI %'] >= 0 ? 'profit' : 'loss';
-            const sign = pos['P&L'] > 0 ? '+' : '';
-
-            openTbody.innerHTML += `
-                <tr>
-                    <td><strong>${pos.Symbol}</strong></td>
-                    <td><span class="badge">${pos.Broker}</span></td>
-                    <td>${pos.Segment}</td>
-                    <td class="text-right">${formatNumber(pos.Qty)}</td>
-                    <td class="text-right">${formatNumber(pos['Avg Price'])}</td>
-                    <td class="text-right">${formatCurrency(pos.Invested)}</td>
-                    <td class="text-right">${formatNumber(pos.CMP)}</td>
-                    <td class="text-right ${pnlClass}">${sign}${formatCurrency(pos['P&L'])}</td>
-                    <td class="text-right ${roiClass}">${sign}${formatNumber(pos['ROI %'])}%</td>
-                </tr>
-            `;
-        });
-
-        // Render Closed Trades
-        const closedTbody = document.querySelector('#closedTradesTable tbody');
-        closedTbody.innerHTML = '';
-        
-        window.state.closed.forEach(trade => {
-            realizedPnl += trade['P&L'] || 0;
-            const pnlClass = trade['P&L'] >= 0 ? 'profit' : 'loss';
-            const sign = trade['P&L'] > 0 ? '+' : '';
-
-            closedTbody.innerHTML += `
-                <tr>
-                    <td><strong>${trade.Symbol}</strong></td>
-                    <td><span class="badge">${trade.Broker}</span></td>
-                    <td>${trade.Segment}</td>
-                    <td>${trade['Trade Type'] || '-'}</td>
-                    <td>${trade['Exit Date']}</td>
-                    <td class="text-right">${formatNumber(trade.Qty)}</td>
-                    <td class="text-right">${formatNumber(trade['Entry Price'])}</td>
-                    <td class="text-right">${formatNumber(trade['Exit Price'])}</td>
-                    <td class="text-right ${pnlClass}">${sign}${formatCurrency(trade['P&L'])}</td>
-                </tr>
-            `;
-        });
-
-        // Render Corp Actions
-        const corpTbody = document.querySelector('#corpActionsTable tbody');
-        corpTbody.innerHTML = '';
-        window.state.corp_actions.forEach(act => {
-            corpTbody.innerHTML += `
-                <tr>
-                    <td><strong>${act.Symbol}</strong></td>
-                    <td>${act.Date}</td>
-                    <td class="text-right">${act.Ratio}x</td>
-                </tr>
-            `;
-        });
-
-        // Render Trade Log (Top 100 recent)
-        const logTbody = document.querySelector('#tradeLogTable tbody');
-        logTbody.innerHTML = '';
-        window.state.trade_log.slice(0, 100).forEach(log => {
-            const dirColor = log.Direction === 'Buy' ? 'profit' : 'loss';
-            logTbody.innerHTML += `
-                <tr>
-                    <td>${log.Date}</td>
-                    <td><strong>${log.Symbol}</strong></td>
-                    <td><span class="badge">${log.Broker}</span></td>
-                    <td>${log.Segment}</td>
-                    <td class="${dirColor}">${log.Direction}</td>
-                    <td class="text-right">${formatNumber(log.Qty)}</td>
-                    <td class="text-right">${formatNumber(log.Price)}</td>
-                </tr>
-            `;
-        });
-
-        // Update Top Metrics
-        document.getElementById('val-invested').innerText = formatCurrency(totalInv);
-        document.getElementById('val-current').innerText = formatCurrency(currentVal);
-        
-        const pnlEl = document.getElementById('val-pnl');
-        pnlEl.innerText = (totalPnl > 0 ? '+' : '') + formatCurrency(totalPnl);
-        pnlEl.className = 'metric-value ' + (totalPnl >= 0 ? 'profit' : 'loss');
-
-        const realEl = document.getElementById('val-realized');
-        realEl.innerText = (realizedPnl > 0 ? '+' : '') + formatCurrency(realizedPnl);
-        realEl.className = 'metric-value ' + (realizedPnl >= 0 ? 'profit' : 'loss');
-    }
-
-    // --- CORE API LOGIC ---
-
-    // ⚡ MASTER FILE OVERWRITE LOGIC TRIGGERED HERE ⚡
-    window.handleRefresh = async function(event) {
-        if (window.state.isProcessing) return;
-        
-        if (event && event.shiftKey) {
-            appendLog("Deep Refresh detected. Forcing raw rebuild from Google Drive...", 'warning');
-            showLoader("Deep Rebuilding Ledger...");
-            
-            // Note: If you have a Google Drive API implementation here, 
-            // this is where you explicitly delete TradeConsole_Master.csv from Drive
-            // await window.deleteFileFromDrive('TradeConsole_Master.csv'); 
-            
-            try {
-                const response = await fetch(`${BACKEND_URL}/process_drive`, { method: 'POST' });
-                const data = await response.json();
-                
-                if(data.status === 'success') {
-                    window.state.open = data.data.open || [];
-                    window.state.closed = data.data.closed || [];
-                    window.state.corp_actions = data.data.corp_actions || [];
-                    window.state.trade_log = data.data.trade_log || [];
-                    appendLog("✅ Deep Rebuild Complete. Master File Overwritten.");
-                    renderDashboard();
-                } else {
-                    appendLog("❌ Rebuild Failed: " + data.message, 'error');
-                }
-            } catch (err) {
-                appendLog("❌ Server Error: " + err.message, 'error');
-            }
-        } else {
-            appendLog("Refreshing Live Prices...");
-            showLoader("Updating Prices...");
-            // Standard refresh logic here...
-            setTimeout(() => {
-                appendLog("✅ Live Prices Updated.");
-                renderDashboard();
-                hideLoader();
-            }, 1000);
+    if (updated) {
+        localStorage.setItem('tc_strategy_tags', JSON.stringify(tags));
+        if (window.state.driveToken) {
+            window.appendLog(`Batch syncing mass strategies to Drive...`);
+            await window.uploadFileToDrive('strategy_tags.json', JSON.stringify(tags));
         }
-        hideLoader();
-    };
+        window.renderUI();
+    } else {
+        alert("No visible unassigned recommendations to apply.");
+    }
+};
 
-    window.handleFileUpload = async function(event) {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
+window.setTab = function(tab) {
+    window.state.currentTab = tab;
+    if (tab === 'fy') { window.state.sortCol = 'FY'; window.state.sortAsc = false; }
+    else if (tab === 'log') { window.state.sortCol = 'Date'; window.state.sortAsc = false; }
+    else if (tab !== 'chart' && tab !== 'help') { window.state.sortCol = 'Symbol'; window.state.sortAsc = true; }
+    
+    document.getElementById('tab-active').classList.toggle('active', tab === 'active');
+    document.getElementById('tab-closed').classList.toggle('active', tab === 'closed');
+    document.getElementById('tab-log').classList.toggle('active', tab === 'log');
+    document.getElementById('tab-fy').classList.toggle('active', tab === 'fy');
+    document.getElementById('tab-corp').classList.toggle('active', tab === 'corp');
+    document.getElementById('tab-chart').classList.toggle('active', tab === 'chart');
+    document.getElementById('tab-mapper').classList.toggle('active', tab === 'mapper');
+    document.getElementById('tab-help').classList.toggle('active', tab === 'help');
+    
+    // Manage UI blocks
+    const isHelp = tab === 'help';
+    document.getElementById('helpContainer').style.display = isHelp ? 'block' : 'none';
+    document.getElementById('mainTableContainer').style.display = (tab === 'chart' || isHelp) ? 'none' : 'block';
+    document.getElementById('mainMetricsGrid').style.display = isHelp ? 'none' : 'grid';
+    document.getElementById('chartContainer').style.display = tab === 'chart' ? 'block' : 'none';
+    
+    // Filter Bar Visibilities
+    document.getElementById('filterBar').style.display = (tab === 'corp' || tab === 'mapper' || isHelp) ? 'none' : 'flex';
+    document.getElementById('corpInsertBar').style.display = tab === 'corp' ? 'flex' : 'none';
+    document.getElementById('mapperInsertBar').style.display = tab === 'mapper' ? 'flex' : 'none';
+    
+    document.getElementById('searchFilter').style.display = (tab !== 'fy' && tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('brokerFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('segFilter').style.display = (tab !== 'corp' && tab !== 'mapper') ? 'inline-block' : 'none';
+    document.getElementById('fyFilter').style.display = (tab === 'closed' || tab === 'log' || tab === 'chart') ? 'inline-block' : 'none';
+    
+    // Specific elements for tabs
+    document.getElementById('fyGroupBy').style.display = (tab === 'fy') ? 'inline-block' : 'none';
+    document.getElementById('eliteMetricsGrid').style.display = (tab === 'closed') ? 'grid' : 'none';
+    document.getElementById('strategyFilter').style.display = (tab === 'closed') ? 'inline-block' : 'none';
+    document.getElementById('massAcceptBtn').style.display = (tab === 'closed') ? 'inline-block' : 'none';
 
+    if (!isHelp) window.renderUI(); 
+};
+
+window.handleSort = function(col) {
+    if (window.state.sortCol === col) window.state.sortAsc = !window.state.sortAsc;
+    else { window.state.sortCol = col; window.state.sortAsc = true; }
+    window.renderUI();
+};
+
+window.toggleTerminal = function() {
+    const body = document.getElementById('terminalBody');
+    const btn = document.getElementById('termToggleBtn');
+    if(body.style.display === 'none') { body.style.display = 'block'; btn.innerText = '▼'; } 
+    else { body.style.display = 'none'; btn.innerText = '▲'; }
+};
+
+window.appendLog = function(text) {
+    const tb = document.getElementById('terminalBody');
+    const now = new Date();
+    const ts = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+    tb.innerHTML += `<div class="log-line"><span style="color:#888">${ts}</span> ${text}</div>`;
+    tb.scrollTop = tb.scrollHeight;
+};
+
+window.pollLogs = async function() {
+    if(!window.state.isPollingLogs) return;
+    try {
+        const res = await fetch(`${window.state.backendUrl}/api/logs`);
+        if(res.ok) { const data = await res.json(); data.logs.forEach(log => window.appendLog(log)); }
+    } catch(e){}
+    setTimeout(window.pollLogs, 500);
+};
+
+window.startLogPolling = function() { 
+    if(!window.state.isPollingLogs) { window.state.isPollingLogs = true; window.pollLogs(); } 
+};
+
+window.stopLogPolling = function() { 
+    setTimeout(() => { window.state.isPollingLogs = false; }, 2000); 
+};
+
+const fmtMoney = (num) => "₹" + num.toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtDec = (num) => Number(num).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+window.clearLedger = async function() {
+    if (window.state.isProcessing) return;
+    if(!confirm("Permanently delete all data from Cloud and Google Drive? (Symbol Aliases will be kept)")) return;
+    
+    window.lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Nuking Ledger...</td></tr>`;
+    window.startLogPolling();
+    try {
+        await window.deleteFileFromDrive('TradeConsole_Master.csv');
+        await window.deleteSnapshot();
+        const p1 = fetch(`${window.state.backendUrl}/api/clear`, { method: 'DELETE' }).catch(e=>console.warn(e));
+        const p2 = window.state.driveToken ? window.clearDriveFiles().catch(e=>console.warn(e)) : Promise.resolve();
+        await Promise.all([p1, p2]);
+        window.state.open = []; window.state.closed = []; window.state.corp = []; window.state.trade_log = []; window.state.unknown_symbols = {};
+        localStorage.removeItem('tc_corp_cache');
+        localStorage.removeItem('tc_strategy_tags');
+        
+        if (window.state.driveToken && Object.keys(window.state.symbol_map).length > 0) {
+            await window.uploadFileToDrive('symbol_map.json', JSON.stringify(window.state.symbol_map));
+        }
+
+        window.renderUI();
+        window.appendLog("✅ Ledger and Google Drive Cache wiped (Symbol Maps preserved).");
+    } catch(e) { alert("Failed to clear data."); }
+    window.stopLogPolling();
+    window.unlockUI();
+};
+
+window.handleFileUpload = async function(event) {
+    if (window.state.isProcessing) return;
+    const files = event.target.files;
+    if(!files.length) return;
+    
+    window.lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Processing New Files...</td></tr>`;
+    window.startLogPolling();
+    
+    try {
         const formData = new FormData();
-        for (let i = 0; i < files.length; i++) {
-            formData.append("files", files[i]);
+        const processedFiles = [];
+
+        for(let f of files) {
+            if (f.name.toLowerCase().match(/\.(xlsx|xls)$/)) {
+                window.appendLog(`Converting Excel file ${f.name} to standard CSV format...`);
+                const arrayBuffer = await f.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+                
+                const newFilename = f.name.replace(/\.(xlsx|xls)$/i, '.csv');
+                const newFile = new File([csvContent], newFilename, { type: 'text/csv' });
+                
+                formData.append("files", newFile);
+                processedFiles.push({ name: newFilename, text: csvContent });
+            } else {
+                formData.append("files", f);
+                const text = await f.text();
+                processedFiles.push({ name: f.name, text: text });
+            }
         }
 
-        showLoader("Parsing Raw Uploads...");
-        appendLog(`Uploading ${files.length} raw files...`);
-
-        try {
-            const response = await fetch(`${BACKEND_URL}/upload`, {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                window.state.open = data.data.open || [];
-                window.state.closed = data.data.closed || [];
-                window.state.corp_actions = data.data.corp_actions || [];
-                window.state.trade_log = data.data.trade_log || [];
-                
-                appendLog(`✅ Successfully processed ${files.length} files.`);
-                renderDashboard();
-            } else {
-                appendLog(`❌ Upload Processing Failed: ${data.message}`, 'error');
+        await fetch(`${window.state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        
+        if(window.state.driveToken) {
+            window.appendLog("Backing up new raw files to Drive...");
+            for(let pf of processedFiles) {
+                await window.uploadFileToDrive(pf.name, pf.text);
             }
-        } catch (err) {
-            appendLog(`❌ Server Error: ${err.message}`, 'error');
+            window.appendLog("Invalidating old Master CSV & Snapshot...");
+            await window.deleteFileFromDrive('TradeConsole_Master.csv');
+            await window.deleteSnapshot();
         }
         
-        hideLoader();
-        event.target.value = ''; // Reset input
-    };
+        await window.fetchPortfolio(true);
+    } catch(e) { 
+        alert("Upload failed."); 
+        window.stopLogPolling(); 
+        window.unlockUI();
+    }
+};
 
-    window.clearServerCache = async function() {
-        if(!confirm("Are you sure you want to completely wipe the server cache?")) return;
-        showLoader("Wiping Cache...");
-        try {
-            const response = await fetch(`${BACKEND_URL}/clear_cache`, { method: 'POST' });
-            appendLog("✅ Server memory wiped. Ready for clean ingestion.", 'warning');
-            
-            // Reset UI
-            window.state = { open: [], closed: [], corp_actions: [], trade_log: [] };
-            renderDashboard();
-        } catch(err) {
-            appendLog("❌ Failed to clear cache: " + err.message, 'error');
+window.handleRefresh = async function(event) {
+    if (window.state.isProcessing) return;
+    window.lockUI();
+    if (event && event.shiftKey) {
+        window.appendLog("Deep Refresh detected. Wiping snapshot AND Master File to force raw rebuild...");
+        await window.deleteSnapshot();
+        await window.deleteFileFromDrive('TradeConsole_Master.csv'); // ⚡ THIS IS THE FIX ⚡
+        await window.fetchPortfolio(true);
+    } else {
+        window.appendLog("Refreshing Live Prices...");
+        if (Object.keys(window.state.token_map).length > 0) {
+            await window.fetchLivePrices();
+        } else {
+            await window.fetchPortfolio(false);
         }
-        hideLoader();
-    };
+    }
+};
+window.handleDeepRecalculate = async function() {
+    if (window.state.isProcessing) return;
+    window.lockUI();
+    window.appendLog("Applying changes and forcing deep recalculation...");
+    await window.deleteSnapshot();
+    await window.fetchPortfolio(true);
+};
 
+window.populateFilters = function() {
+    const allBrokers = new Set([...window.state.open.map(p=>p.Broker), ...window.state.closed.map(p=>p.Broker), ...window.state.trade_log.map(p=>p.Broker)]);
+    const selectB = document.getElementById('brokerFilter');
+    const currentValB = selectB.value;
+    selectB.innerHTML = '<option value="ALL">All Brokers</option>';
+    allBrokers.forEach(b => { if(b) selectB.innerHTML += `<option value="${b}">${b}</option>`; });
+    selectB.value = currentValB;
+
+    const allFYs = new Set([...window.state.closed.map(p=>p.FY), ...window.state.trade_log.map(p=>p.FY)]);
+    const selectF = document.getElementById('fyFilter');
+    const currentValF = selectF ? selectF.value : 'ALL';
+    if(selectF) {
+        selectF.innerHTML = '<option value="ALL">All FYs</option>';
+        Array.from(allFYs).filter(Boolean).sort().reverse().forEach(fy => {
+            selectF.innerHTML += `<option value="${fy}">${fy}</option>`;
+        });
+        selectF.value = currentValF;
+    }
+};
+
+window.fetchPortfolio = async function(forceRecalc = false) {
+    window.lockUI();
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Fetching Ledger Data...</td></tr>`;
+    window.startLogPolling();
+
+    if (!forceRecalc && window.state.driveToken) {
+        try {
+            const folderId = await window.getOrCreateFolder();
+            if (folderId) {
+                const query = encodeURIComponent(`name='portfolio_snapshot.json' and '${folderId}' in parents and trashed=false`);
+                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+                const searchData = await searchRes.json();
+                if (searchData.files && searchData.files.length > 0) {
+                    window.appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
+                    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${searchData.files[0].id}?alt=media`, { headers: { Authorization: `Bearer ${window.state.driveToken}` }});
+                    const snapshotData = await fileRes.json();
+                    
+                    window.state.open = snapshotData.open || [];
+                    window.state.closed = snapshotData.closed || [];
+                    window.state.corp = snapshotData.corp_actions || [];
+                    window.state.trade_log = snapshotData.trade_log || [];
+                    window.state.unknown_symbols = snapshotData.unknown_symbols || {};
+                    window.state.token_map = snapshotData.token_map || {};
+
+                    const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
+                    document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
+
+                    window.populateFilters();
+                    window.renderUI();
+
+                    if (window.state.open.length > 0 && Object.keys(window.state.token_map).length > 0) {
+                        await window.fetchLivePrices();
+                    } else { window.stopLogPolling(); window.unlockUI(); }
+                    return;
+                }
+            }
+        } catch(e) { window.appendLog("Snapshot bypass failed, defaulting to server computation..."); }
+    }
+
+    try {
+        const res = await fetch(`${window.state.backendUrl}/api/portfolio`);
+        if(!res.ok) throw new Error("Failed to fetch from backend");
+        const data = await res.json();
+        
+        if ((!data.positions.open || data.positions.open.length === 0) && 
+            (!data.positions.closed || data.positions.closed.length === 0) && 
+            (!data.positions.trade_log || data.positions.trade_log.length === 0)) {
+            
+            if (window.state.driveToken) {
+                window.appendLog("Cloud reset detected. Initiating automated rescue sequence...");
+                try {
+                    const driveFiles = await window.downloadAllFromDrive();
+                    if (driveFiles.length > 0) {
+                        const cacheFile = driveFiles.find(f => f.filename === 'corp_actions_cache.json');
+                        const stratFile = driveFiles.find(f => f.filename === 'strategy_tags.json');
+                        const mapFile = driveFiles.find(f => f.filename === 'symbol_map.json');
+                        const restoreFiles = driveFiles.filter(f => f.filename.endsWith('.csv') || f.filename === 'symbol_map.json');
+                        
+                        if (cacheFile) {
+                            await fetch(`${window.state.backendUrl}/api/restore_cache`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: cacheFile.content });
+                            localStorage.setItem('tc_corp_cache', cacheFile.content);
+                        }
+                        if (stratFile) {
+                            localStorage.setItem('tc_strategy_tags', stratFile.content);
+                        }
+                        if (mapFile) {
+                            localStorage.setItem('tc_symbol_map', mapFile.content);
+                            window.state.symbol_map = JSON.parse(mapFile.content);
+                        }
+                        if (restoreFiles.length > 0) {
+                            window.appendLog(`Pushing ${restoreFiles.length} files to Render in batches to prevent memory overload...`);
+                            const chunkSize = 5;
+                            for (let i = 0; i < restoreFiles.length; i += chunkSize) {
+                                const chunk = restoreFiles.slice(i, i + chunkSize);
+                                await fetch(`${window.state.backendUrl}/api/restore`, { 
+                                    method: 'POST', 
+                                    headers: { 'Content-Type': 'application/json' }, 
+                                    body: JSON.stringify(chunk) 
+                                });
+                            }
+                        }
+                        window.appendLog("✅ Render server jumpstarted! Recalculating...");
+                        return window.fetchPortfolio(true); 
+                    } else {
+                        window.appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
+                    }
+                } catch(restoreErr) {
+                    window.appendLog(`❌ Auto-restore failed: ${restoreErr.message}`);
+                }
+            }
+        }
+        
+        window.state.open = data.positions.open || [];
+        window.state.closed = data.positions.closed || [];
+        window.state.corp = data.positions.corp_actions || []; 
+        window.state.trade_log = data.positions.trade_log || [];
+        window.state.unknown_symbols = data.positions.unknown_symbols || {};
+        window.state.token_map = data.positions.token_map || {};
+
+        if (window.state.driveToken) {
+            if (window.state.open.length > 0 || window.state.closed.length > 0) {
+                window.appendLog("Saving pre-compiled snapshot to Drive for instant loading...");
+                await window.uploadFileToDrive('portfolio_snapshot.json', JSON.stringify(data.positions));
+            }
+            if (data.positions.master_csv_data) {
+                window.appendLog("💾 Generating and saving pristine Master CSV to Drive...");
+                await window.uploadFileToDrive('TradeConsole_Master.csv', data.positions.master_csv_data);
+            }
+        }
+        
+        const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
+        document.getElementById('tab-mapper').innerHTML = pendingCount > 0 ? `SYMBOL MAPPER <span style="color:var(--red)">(${pendingCount})</span>` : `SYMBOL MAPPER`;
+        
+        window.populateFilters();
+        
+        if (window.state.driveToken) {
+            const cacheRes = await fetch(`${window.state.backendUrl}/api/backup_cache`);
+            if (cacheRes.ok) {
+                const cacheData = await cacheRes.json();
+                if (Object.keys(cacheData).length > 0) {
+                    localStorage.setItem('tc_corp_cache', JSON.stringify(cacheData));
+                    await window.uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cacheData));
+                }
+            }
+        }
+        
+        window.renderUI();
+        
+        if (window.state.open.length > 0 && Object.keys(window.state.token_map).length > 0) {
+            await window.fetchLivePrices();
+        } else { window.stopLogPolling(); window.unlockUI(); }
+    } catch(e) { window.stopLogPolling(); window.appendLog(`❌ Fetch Error: ${e.message}`); window.unlockUI(); }
+};
+
+window.fetchLivePrices = async function() {
+    if(Object.keys(window.state.token_map).length === 0) { window.stopLogPolling(); window.unlockUI(); return; }
+    window.state.fetchingPrices = true; if(window.state.currentTab !== 'chart') window.renderUI(); 
+    try {
+        const res = await fetch(`${window.state.backendUrl}/api/live_prices`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token_map: window.state.token_map }) });
+        if (res.ok) {
+            const prices = await res.json();
+            window.state.open.forEach(p => {
+                const cmp = prices[p.Symbol] || 0;
+                if (cmp > 0) {
+                    p.CMP = cmp;
+                    p["P&L"] = (cmp - p["Avg Price"]) * p.Qty * (p.Direction === 'Long' ? 1 : -1);
+                    p["ROI %"] = p.Invested > 0 ? (p["P&L"] / p.Invested) * 100 : (p.Margin > 0 ? (p["P&L"] / p.Margin) * 100 : 0);
+                }
+            });
+        }
+    } catch (e) {} finally { window.state.fetchingPrices = false; if(window.state.currentTab !== 'chart') window.renderUI(); window.stopLogPolling(); window.unlockUI(); }
+};
+
+window.exportToExcel = function() {
+    window.appendLog("Compiling full database into Excel Workbook...");
+    let wb = XLSX.utils.book_new();
+    
+    let wsActive = XLSX.utils.json_to_sheet(window.state.open);
+    XLSX.utils.book_append_sheet(wb, wsActive, "Active Positions");
+    
+    let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    let closedDataWithTags = window.state.closed.map(p => {
+        let compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        return {
+            "Symbol": p.Symbol,
+            "Broker": p.Broker,
+            "Segment": p.Segment,
+            "Trade Type": p["Trade Type"] || '-', 
+            "Direction": p.Direction,
+            "Strategy": stratTags[compKey] || '', 
+            "FY": p.FY,
+            "Qty": p.Qty,
+            "Entry Price": p["Entry Price"],
+            "Exit Price": p["Exit Price"],
+            "P&L": p["P&L"],
+            "Entry Date": p["Entry Date"],
+            "Exit Date": p["Exit Date"]
+        };
+    });
+    let wsClosed = XLSX.utils.json_to_sheet(closedDataWithTags);
+    XLSX.utils.book_append_sheet(wb, wsClosed, "Closed History");
+    
+    let wsLog = XLSX.utils.json_to_sheet(window.state.trade_log);
+    XLSX.utils.book_append_sheet(wb, wsLog, "Raw Trade Log");
+
+    let mapData = Object.keys(window.state.symbol_map).map(messy => ({
+        "Broker Messy Name": messy,
+        "Clean NSE Symbol": window.state.symbol_map[messy]
+    }));
+    let wsMap = XLSX.utils.json_to_sheet(mapData);
+    XLSX.utils.book_append_sheet(wb, wsMap, "Symbol Mapper");
+
+    let filename = `TradeConsole_FullExport_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    window.appendLog(`✅ Successfully downloaded ${filename} with all tabs.`);
+};
+
+window.renderChart = function() {
+    const fyFilter = document.getElementById('fyFilter').value;
+    const brkFilter = document.getElementById('brokerFilter').value;
+    const segFilter = document.getElementById('segFilter').value;
+    
+    let filteredTrades = [...window.state.closed];
+    if (fyFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.FY === fyFilter);
+    if (brkFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Broker === brkFilter);
+    if (segFilter !== 'ALL') filteredTrades = filteredTrades.filter(p => p.Segment === segFilter || (segFilter==='F&O' && p.Segment.includes('FO')));
+
+    filteredTrades.sort((a, b) => new Date(a["Exit Date"]) - new Date(b["Exit Date"]));
+
+    let dailyAgg = {};
+    filteredTrades.forEach(p => {
+        const d = p["Exit Date"];
+        if(!dailyAgg[d]) dailyAgg[d] = 0;
+        dailyAgg[d] += p["P&L"];
+    });
+
+    const dates = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
+    let cumulativeData = [];
+    let runningTotal = 0;
+    
+    dates.forEach(d => {
+        runningTotal += dailyAgg[d];
+        cumulativeData.push({ x: d, y: runningTotal });
+    });
+
+    document.getElementById('lblPnl').innerText = `REALIZED P&L`;
+    const pnlEl = document.getElementById('valPnl');
+    pnlEl.innerText = (runningTotal>0?'+':'') + fmtMoney(runningTotal);
+    pnlEl.className = 'metric-val ' + (runningTotal > 0 ? 'positive' : runningTotal < 0 ? 'negative' : '');
+    
+    document.getElementById('lblInv').innerText = 'CLOSED TRADES';
+    document.getElementById('valInv').innerText = filteredTrades.length;
+    document.getElementById('lblPos').innerText = 'PEAK P&L';
+    const peak = Math.max(0, ...cumulativeData.map(d=>d.y));
+    document.getElementById('valPos').innerText = fmtMoney(peak);
+
+    const finalPnl = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1].y : 0;
+    const chartLineColor = finalPnl >= 0 ? '#48bb78' : '#fc8181';
+    const chartBgColor = finalPnl >= 0 ? 'rgba(72, 187, 120, 0.1)' : 'rgba(252, 129, 129, 0.1)';
+
+    const ctx = document.getElementById('pnlChart').getContext('2d');
+    if (window.state.pnlChartInstance) { window.state.pnlChartInstance.destroy(); }
+
+    window.state.pnlChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Cumulative Realized P&L',
+                data: cumulativeData.map(d => d.y),
+                borderColor: chartLineColor,
+                backgroundColor: chartBgColor,
+                borderWidth: 2,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '₹ ' + c.parsed.y.toLocaleString('en-IN'); } } } },
+            scales: { x: { ticks: { color: '#718096', maxTicksLimit: 10 }, grid: { color: '#1e2533' } }, y: { ticks: { color: '#cbd5e0', callback: function(v) { return '₹ ' + v.toLocaleString('en-IN'); } }, grid: { color: '#1e2533' } } },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+};
+
+window.insertCorpAction = function() {
+    const sym = document.getElementById('newCorpSym').value.toUpperCase().trim();
+    const date = document.getElementById('newCorpDate').value; 
+    const ratio = parseFloat(document.getElementById('newCorpRatio').value);
+    if(!sym || !date || !ratio) return alert("Please fill all fields.");
+
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(!cache[sym]) cache[sym] = [];
+    cache[sym].push({date: date, ratio: ratio});
+    document.getElementById('newCorpSym').value = ''; document.getElementById('newCorpDate').value = ''; document.getElementById('newCorpRatio').value = '';
+    window.syncCacheAndRefresh(cache);
+};
+
+window.deleteCorpAction = function(sym, dateStr) {
+    let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+    if(cache[sym]) { cache[sym] = cache[sym].filter(a => a.date !== dateStr); window.syncCacheAndRefresh(cache); }
+};
+
+window.syncCacheAndRefresh = async function(cache) {
+    localStorage.setItem('tc_corp_cache', JSON.stringify(cache));
+    document.getElementById('tableBody').innerHTML = `<tr><td colspan="10" style="text-align:center">Syncing Database to Drive...</td></tr>`;
+    window.startLogPolling();
+    try {
+        await fetch(`${window.state.backendUrl}/api/restore_cache`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(cache) });
+        if(window.state.driveToken) await window.uploadFileToDrive('corp_actions_cache.json', JSON.stringify(cache));
+        await window.deleteSnapshot();
+        await window.fetchPortfolio(true);
+    } catch(e) { window.stopLogPolling(); window.unlockUI(); }
+};
+
+window.insertSymbolMap = function(messy = null, clean = null) {
+    const m = (messy || document.getElementById('newMessyName').value).toUpperCase().trim();
+    const c = (clean || document.getElementById('newCleanSymbol').value).toUpperCase().trim();
+    if(!m || !c) return alert("Please provide both the messy name and the clean symbol.");
+
+    window.state.symbol_map[m] = c;
+    if(!messy) { document.getElementById('newMessyName').value = ''; document.getElementById('newCleanSymbol').value = ''; }
+    window.syncSymbolMapOnly();
+};
+
+window.deleteSymbolMap = function(messy) {
+    delete window.state.symbol_map[messy];
+    window.syncSymbolMapOnly();
+};
+
+window.syncSymbolMapOnly = async function() {
+    localStorage.setItem('tc_symbol_map', JSON.stringify(window.state.symbol_map));
+    window.appendLog("Syncing Alias Map to Drive & Server in background...");
+    try {
+        const content = JSON.stringify(window.state.symbol_map);
+        const formData = new FormData();
+        formData.append("files", new Blob([content], { type: 'application/json' }), "symbol_map.json");
+        await fetch(`${window.state.backendUrl}/api/upload`, { method: 'POST', body: formData });
+        if(window.state.driveToken) await window.uploadFileToDrive('symbol_map.json', content);
+        window.appendLog("✅ Map saved! Click 'Apply & Recalculate' when ready.");
+        window.renderUI(); 
+    } catch(e) { window.appendLog("❌ Error saving map."); }
+};
+
+// Strategy Recommendation Engine Helper
+window.getStrategyRecommendation = function(p, holdDays) {
+    if (holdDays > 180) return "Long-term Holding";
+    if (p.Segment === 'F&O' || p.Segment === 'MCX') {
+        const isOption = p.Symbol.endsWith('CE') || p.Symbol.endsWith('PE');
+        if (isOption) {
+            if (holdDays === 0) return "0DTE";
+            if (holdDays === 1 && p.Direction === 'Short') return "Overnight pre-expiry";
+        }
+    }
+    return "";
+};
+
+document.getElementById('tableBody').addEventListener('change', function(e) {
+    if(e.target && e.target.classList.contains('strategy-select')) {
+        window.saveStrategyTag(e.target.dataset.compkey, e.target.value);
+    }
+});
+
+window.renderUI = function() {
+    if(window.state.currentTab === 'chart' || window.state.currentTab === 'help') { 
+        if (window.state.currentTab === 'chart') window.renderChart(); 
+        return; 
+    }
+    
+    const bFilter = document.getElementById('brokerFilter').value;
+    const sFilter = document.getElementById('segFilter').value;
+    const fyFilter = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
+    const stratFilter = document.getElementById('strategyFilter') ? document.getElementById('strategyFilter').value : 'ALL';
+    const searchFilter = document.getElementById('searchFilter').value.toUpperCase();
+    let stratTags = JSON.parse(localStorage.getItem('tc_strategy_tags') || '{}');
+    
+    let dataList = [];
+    if (window.state.currentTab === 'active') dataList = [...window.state.open];
+    else if (window.state.currentTab === 'closed') dataList = [...window.state.closed];
+    else if (window.state.currentTab === 'log') dataList = [...window.state.trade_log];
+    else if (window.state.currentTab === 'fy') {
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
+        const d = new Date(); const y = d.getFullYear();
+        const currentFY = "FY" + (d.getMonth() >= 3 ? (y + 1).toString().slice(-2) : y.toString().slice(-2));
+        let summaryMap = {};
+        
+        let filteredClosed = window.state.closed;
+        let filteredOpen = window.state.open;
+        
+        if (bFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Broker === bFilter);
+            filteredOpen = filteredOpen.filter(p => p.Broker === bFilter);
+        }
+        if (sFilter !== 'ALL') {
+            filteredClosed = filteredClosed.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+            filteredOpen = filteredOpen.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+        }
+        
+        filteredClosed.forEach(p => {
+            let key = p.FY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: p.FY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
+            summaryMap[key].Realized += (p["P&L"] || 0);
+        });
+        
+        filteredOpen.forEach(p => {
+            let key = currentFY;
+            if (groupBy.includes('Broker')) key += "_" + p.Broker;
+            if (groupBy.includes('Segment')) key += "_" + p.Segment;
+
+            if (!summaryMap[key]) summaryMap[key] = { FY: currentFY, Broker: groupBy.includes('Broker') ? p.Broker : '-', Segment: groupBy.includes('Segment') ? p.Segment : '-', Realized: 0, Unrealized: 0, Invested: 0, Margin: 0 };
+            summaryMap[key].Unrealized += (p["P&L"] || 0);
+            summaryMap[key].Invested += (p.Invested || 0);
+            summaryMap[key].Margin += (p.Margin || 0);
+        });
+        
+        dataList = Object.values(summaryMap).map(p => { p.Total = p.Realized + p.Unrealized; return p; });
+    }
+    else if (window.state.currentTab === 'corp') {
+        let cache = JSON.parse(localStorage.getItem('tc_corp_cache') || '{}');
+        for (let sym of Object.keys(cache)) { cache[sym].forEach((act) => { dataList.push({ Symbol: sym, Date: act.date, Ratio: act.ratio }); }); }
+    }
+    
+    if (searchFilter && window.state.currentTab !== 'fy' && window.state.currentTab !== 'mapper') {
+        dataList = dataList.filter(p => p.Symbol && p.Symbol.toUpperCase().includes(searchFilter));
+    }
+    
+    if (window.state.currentTab !== 'corp' && window.state.currentTab !== 'mapper' && window.state.currentTab !== 'fy') {
+        if (bFilter !== 'ALL') dataList = dataList.filter(p => p.Broker === bFilter);
+        if (sFilter !== 'ALL') dataList = dataList.filter(p => p.Segment === sFilter || (sFilter==='F&O' && p.Segment.includes('FO')));
+    }
+    
+    if (window.state.currentTab === 'closed' || window.state.currentTab === 'log') {
+        if (fyFilter !== 'ALL') dataList = dataList.filter(p => p.FY === fyFilter);
+    }
+
+    if (window.state.currentTab === 'closed' && stratFilter !== 'ALL') {
+        dataList = dataList.filter(p => {
+            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+            const currTag = stratTags[compKey] || '';
+            if (stratFilter === 'UNASSIGNED') return currTag === '';
+            return currTag === stratFilter;
+        });
+    }
+
+    dataList.sort((a, b) => {
+        let valA = a[window.state.sortCol] !== undefined ? a[window.state.sortCol] : ''; 
+        let valB = b[window.state.sortCol] !== undefined ? b[window.state.sortCol] : '';
+        if(typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+        if (valA < valB) return window.state.sortAsc ? -1 : 1;
+        if (valA > valB) return window.state.sortAsc ? 1 : -1;
+        return 0;
+    });
+
+    // Store globally for Mass Accept
+    window.currentFilteredData = dataList;
+
+    const thIcon = (col) => window.state.sortCol === col ? (window.state.sortAsc ? ' ↑' : ' ↓') : '';
+    let totalPnl = 0, totalInv = 0, totalMar = 0; let totUnreal = 0; let html = '';
+
+    if (window.state.currentTab === 'mapper') {
+        document.getElementById('tableHead').innerHTML = `<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
+        let pendingCount = 0;
+        Object.keys(window.state.unknown_symbols).forEach(sym => {
+            if(!window.state.symbol_map[sym]) {
+                pendingCount++;
+                const sugg = window.state.unknown_symbols[sym] || '';
+                html += `<tr>
+                    <td style="color:var(--red);font-weight:600">${sym}</td>
+                    <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px; text-transform:uppercase; width:120px;">
+                            <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}', document.getElementById('map_clean_${sym}').value)">✅ Accept</button>
+                        </div>
+                    </td>
+                    <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td>
+                </tr>`;
+            }
+        });
+        Object.keys(window.state.symbol_map).forEach(m => {
+            html += `<tr>
+                <td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);">-</td>
+                <td style="color:var(--green);font-weight:600">${window.state.symbol_map[m]}</td>
+                <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span><button class="btn-del ctrl-btn" onclick="window.deleteSymbolMap('${m}')">[X] Delete</button></div></td>
+            </tr>`;
+        });
+        if(!html) html = `<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
+    }
+    else if (window.state.currentTab === 'active') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Avg Price')">AVG PRICE${thIcon('Avg Price')}</th><th onclick="window.handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="window.handleSort('Margin')">MARGIN${thIcon('Margin')}</th><th onclick="window.handleSort('CMP')">CMP${thIcon('CMP')}</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('ROI %')">ROI %${thIcon('ROI %')}</th></tr>`;
+        
+        dataList.forEach(p => {
+            totalPnl += p["P&L"]; totalInv += (p.Invested || 0); totalMar += (p.Margin || 0);
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            const displayCmp = (window.state.fetchingPrices && p.CMP === 0) ? '<span style="color:var(--text3)">...</span>' : fmtDec(p.CMP);
+            const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td><td>${fmtMoney(p.Invested || 0)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin || 0)}</td><td style="color:var(--white)">${displayCmp}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td class="${cls}">${sgn}${fmtDec(p["ROI %"])}%</td></tr>`;
+        });
+    } 
+    else if (window.state.currentTab === 'closed') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Trade Type')">TYPE${thIcon('Trade Type')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th>STRATEGY</th><th>RECOMMENDATION</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Entry Price')">ENTRY${thIcon('Entry Price')}</th><th onclick="window.handleSort('Exit Price')">EXIT${thIcon('Exit Price')}</th><th>DAYS</th><th onclick="window.handleSort('P&L')">P&L${thIcon('P&L')}</th><th onclick="window.handleSort('Exit Date')">PERIOD${thIcon('Exit Date')}</th></tr>`;
+        
+        let wins = 0, losses = 0; let grossWin = 0, grossLoss = 0; let daysWin = 0, daysLoss = 0;
+
+        dataList.forEach(p => {
+            totalPnl += p["P&L"]; 
+            const d1 = new Date(p["Entry Date"]); const d2 = new Date(p["Exit Date"]);
+            const holdDays = Math.max(0, (d2 - d1) / (1000 * 60 * 60 * 24));
+            
+            if (p["Entry Price"] > 0) {
+                if(p["P&L"] > 0) { wins++; grossWin += p["P&L"]; daysWin += holdDays; }
+                else if(p["P&L"] < 0) { losses++; grossLoss += Math.abs(p["P&L"]); daysLoss += holdDays; }
+            }
+
+            const cls = p["P&L"] > 0 ? 'positive' : p["P&L"] < 0 ? 'negative' : '';
+            const sgn = p["P&L"] > 0 ? '+' : '';
+            const dirColor = p.Direction === 'Long' ? 'color:var(--green)' : 'color:var(--red)';
+            const compKey = `${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+            const currTag = stratTags[compKey] || '';
+            
+            // Generate Recommendation
+            let recHTML = '<span style="color:var(--text3)">-</span>';
+            if (!currTag) {
+                const rec = window.getStrategyRecommendation(p, holdDays);
+                if (rec) {
+                    recHTML = `<span class="rec-badge" onclick="window.applySingleRecommendation('${compKey}', '${rec}')">✨ ${rec}</span>`;
+                }
+            }
+            
+            const tradeTypeHTML = p['Trade Type'] === 'Intraday' ? '<span style="font-size:10px;color:var(--orange);font-weight:700;border:1px solid var(--orange);padding:2px 4px;border-radius:4px">INTRADAY</span>' : 
+                                 (p['Trade Type'] === 'Delivery' ? '<span style="font-size:10px;color:var(--blue);font-weight:700;border:1px solid var(--blue);padding:2px 4px;border-radius:4px">DELIVERY</span>' : '<span style="color:var(--text3)">-</span>');
+
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td>${tradeTypeHTML}</td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td>
+            <td><select class="strategy-select" data-compkey="${compKey}">
+                <option value="">- Select Tag -</option>
+                <option value="0DTE" ${currTag==='0DTE'?'selected':''}>0DTE</option>
+                <option value="Overnight pre-expiry" ${currTag==='Overnight pre-expiry'?'selected':''}>Overnight pre-expiry</option>
+                <option value="Short-term Swing" ${currTag==='Short-term Swing'?'selected':''}>Short-term Swing</option>
+                <option value="Long-term Holding" ${currTag==='Long-term Holding'?'selected':''}>Long-term Holding</option>
+                <option value="Cash Secured Put" ${currTag==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
+                <option value="Short Vega" ${currTag==='Short Vega'?'selected':''}>Short Vega</option>
+                <option value="Hedge" ${currTag==='Hedge'?'selected':''}>Hedge</option>
+                <option value="❌ Mistake" ${currTag==='❌ Mistake'?'selected':''}>❌ Mistake</option>
+            </select></td>
+            <td>${recHTML}</td>
+            <td style="color:var(--orange);font-weight:600">${p.FY}</td><td>${p.Qty}</td><td>${fmtDec(p["Entry Price"])}</td><td>${fmtDec(p["Exit Price"])}</td><td>${holdDays.toFixed(0)}</td><td class="${cls}">${sgn}${fmtMoney(p["P&L"])}</td><td style="font-size:11px;color:var(--text3);line-height:1.4">${p["Entry Date"]} <br/> ${p["Exit Date"]}</td></tr>`;
+        });
+        
+        const validTrades = wins + losses;
+        totalInv = validTrades > 0 ? (wins / validTrades * 100).toFixed(1) + '%' : '0%';
+        const avgWin = wins > 0 ? grossWin / wins : 0; 
+        const avgLoss = losses > 0 ? grossLoss / losses : 0;
+        const rr = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
+        
+        document.getElementById('valAvgWin').innerText = '+' + fmtMoney(avgWin); 
+        document.getElementById('valAvgLoss').innerText = '-' + fmtMoney(avgLoss);
+        document.getElementById('valRR').innerText = rr; 
+        document.getElementById('valDaysWin').innerText = wins > 0 ? (daysWin / wins).toFixed(1) : '0.0'; 
+        document.getElementById('valDaysLoss').innerText = losses > 0 ? (daysLoss / losses).toFixed(1) : '0.0';
+    } 
+    else if (window.state.currentTab === 'log') {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th><th onclick="window.handleSort('Segment')">SEG${thIcon('Segment')}</th><th onclick="window.handleSort('Direction')">DIR${thIcon('Direction')}</th><th onclick="window.handleSort('Date')">DATE${thIcon('Date')}</th><th onclick="window.handleSort('Qty')">QTY${thIcon('Qty')}</th><th onclick="window.handleSort('Price')">AVG PRICE${thIcon('Price')}</th><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th></tr>`;
+        let buyV = 0, sellV = 0;
+        dataList.forEach(p => {
+            if(p.Direction === 'Buy') buyV += (p.Qty * p.Price); else sellV += (p.Qty * p.Price);
+            const dirColor = p.Direction === 'Buy' ? 'color:var(--green)' : 'color:var(--red)';
+            html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td style="color:var(--text3);font-size:12px">${p.Broker}</td><td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td><td style="font-weight:600;font-size:11px;${dirColor}">${p.Direction.toUpperCase()}</td><td>${p.Date}</td><td>${p.Qty}</td><td>${fmtDec(p.Price)}</td><td style="color:var(--orange);font-weight:600">${p.FY}</td></tr>`;
+        });
+        totalPnl = buyV; totalInv = sellV;
+    }
+    else if (window.state.currentTab === 'fy') {
+        const groupBy = document.getElementById('fyGroupBy') ? document.getElementById('fyGroupBy').value : 'FY_Broker_Segment';
+        let thHtml = `<tr><th onclick="window.handleSort('FY')">FY${thIcon('FY')}</th>`;
+        if (groupBy.includes('Broker')) thHtml += `<th onclick="window.handleSort('Broker')">BROKER${thIcon('Broker')}</th>`;
+        if (groupBy.includes('Segment')) thHtml += `<th onclick="window.handleSort('Segment')">SEGMENT${thIcon('Segment')}</th>`;
+        thHtml += `<th onclick="window.handleSort('Realized')">REALIZED P&L${thIcon('Realized')}</th><th onclick="window.handleSort('Unrealized')">UNREALIZED P&L${thIcon('Unrealized')}</th><th onclick="window.handleSort('Total')">TOTAL P&L${thIcon('Total')}</th><th onclick="window.handleSort('Invested')">INVESTED${thIcon('Invested')}</th><th onclick="window.handleSort('Margin')">MARGIN${thIcon('Margin')}</th></tr>`;
+        document.getElementById('tableHead').innerHTML = thHtml;
+
+        dataList.forEach(p => {
+            totalPnl += p.Realized; totUnreal += p.Unrealized; 
+            totalInv += p.Invested; totalMar += p.Margin;
+            
+            const rCls = p.Realized > 0 ? 'positive' : p.Realized < 0 ? 'negative' : '';
+            const uCls = p.Unrealized > 0 ? 'positive' : p.Unrealized < 0 ? 'negative' : '';
+            const tCls = p.Total > 0 ? 'positive' : p.Total < 0 ? 'negative' : '';
+            
+            html += `<tr><td style="font-weight:800;color:var(--orange)">${p.FY.toUpperCase()}</td>`;
+            if (groupBy.includes('Broker')) html += `<td style="color:var(--white);font-weight:600">${p.Broker}</td>`;
+            if (groupBy.includes('Segment')) html += `<td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>`;
+            html += `<td class="${rCls}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td><td class="${uCls}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td><td class="${tCls}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td><td>${fmtMoney(p.Invested)}</td><td style="color:var(--orange)">${fmtMoney(p.Margin)}</td></tr>`;
+        });
+    }
+    else {
+        document.getElementById('tableHead').innerHTML = `<tr><th onclick="window.handleSort('Symbol')">SYMBOL${thIcon('Symbol')}</th><th onclick="window.handleSort('Date')">EX-DATE${thIcon('Date')}</th><th onclick="window.handleSort('Ratio')">MULTIPLIER${thIcon('Ratio')}</th><th>ACTION</th></tr>`;
+        dataList.forEach(p => { html += `<tr><td style="font-weight:600;color:var(--white)">${p.Symbol}</td><td>${p.Date}</td><td style="color:var(--blue);font-weight:600">${p.Ratio}x</td><td><button class="btn-del ctrl-btn" onclick="window.deleteCorpAction('${p.Symbol}', '${p.Date}')">[X] Delete</button></td></tr>`; });
+    }
+
+    if(!dataList.length && window.state.currentTab !== 'mapper') html = `<tr><td colspan="10" style="text-align:center">No data found.</td></tr>`;
+    document.getElementById('tableBody').innerHTML = html;
+    
+    const c3 = document.getElementById('lblMar').parentElement;
+    
+    if (window.state.currentTab === 'mapper') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'PENDING ALIASES';
+        const pendingCount = Object.keys(window.state.unknown_symbols).filter(sym => !window.state.symbol_map[sym]).length;
+        document.getElementById('valPnl').innerText = pendingCount; 
+        document.getElementById('valPnl').className = 'metric-val ' + (pendingCount > 0 ? 'negative' : 'positive');
+        document.getElementById('lblInv').innerText = 'MAPPED SYMBOLS'; 
+        document.getElementById('valInv').innerText = Object.keys(window.state.symbol_map).length; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL TRACKED'; 
+        document.getElementById('valPos').innerText = pendingCount + Object.keys(window.state.symbol_map).length; 
+        document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (window.state.currentTab === 'corp') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'STORED SPLITS';
+        document.getElementById('valPnl').innerText = dataList.length; document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = '-';
+        document.getElementById('valInv').innerText = '-'; document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'TOTAL SPLITS';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (window.state.currentTab === 'log') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'TOTAL BUY VALUE';
+        document.getElementById('valPnl').innerText = fmtMoney(totalPnl); document.getElementById('valPnl').className = 'metric-val';
+        document.getElementById('lblInv').innerText = 'TOTAL SELL VALUE';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'NO. OF TRADES';
+        document.getElementById('valPos').innerText = dataList.length; document.getElementById('valPos').className = 'metric-val';
+    } 
+    else if (window.state.currentTab === 'closed') {
+        c3.style.display = 'none';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'WIN RATE';
+        document.getElementById('valInv').innerText = totalInv; 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'CLOSED TRADES';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (window.state.currentTab === 'active') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerHTML = window.state.fetchingPrices ? 'NET UNREALIZED <span style="color:var(--orange);font-size:10px;margin-left:8px;font-weight:700">fetching ⏳...</span>' : 'NET UNREALIZED';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'TOTAL INVESTED';
+        document.getElementById('valInv').innerText = fmtMoney(totalInv); 
+        document.getElementById('valInv').className = 'metric-val';
+        document.getElementById('lblMar').innerText = 'TOTAL MARGIN';
+        document.getElementById('valMar').innerText = fmtMoney(totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'ACTIVE POSITIONS';
+        document.getElementById('valPos').innerText = dataList.length; 
+        document.getElementById('valPos').className = 'metric-val';
+    }
+    else if (window.state.currentTab === 'fy') {
+        c3.style.display = 'block';
+        document.getElementById('lblPnl').innerText = 'REALIZED P&L';
+        document.getElementById('valPnl').innerText = (totalPnl>0?'+':'') + fmtMoney(totalPnl); 
+        document.getElementById('valPnl').className = 'metric-val ' + (totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : '');
+        document.getElementById('lblInv').innerText = 'UNREALIZED P&L';
+        document.getElementById('valInv').innerText = (totUnreal>0?'+':'') + fmtMoney(totUnreal); 
+        document.getElementById('valInv').className = 'metric-val ' + (totUnreal > 0 ? 'positive' : totUnreal < 0 ? 'negative' : '');
+        document.getElementById('lblMar').innerText = 'CAPITAL DEPLOYED';
+        document.getElementById('valMar').innerText = fmtMoney(totalInv + totalMar); 
+        document.getElementById('valMar').className = 'metric-val';
+        document.getElementById('lblPos').innerText = 'COMBINED P&L';
+        const combined = totalPnl + totUnreal;
+        document.getElementById('valPos').innerText = (combined>0?'+':'') + fmtMoney(combined); 
+        document.getElementById('valPos').className = 'metric-val ' + (combined > 0 ? 'positive' : combined < 0 ? 'negative' : '');
+    }
+};
 </script>
 </body>
 </html>
