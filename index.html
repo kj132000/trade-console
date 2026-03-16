@@ -375,7 +375,40 @@ window.deleteFileFromDrive = async function(filename) {
 
 window.deleteSnapshot = async function() { await window.deleteFileFromDrive('portfolio_snapshot.json'); };
 
-window.downloadAllFromDrive = async function() {
+window.downloadAllFromDrive = async function(retried=false) {
+    // FIX 1: if token is expired, silently re-auth and retry once rather than
+    // aborting the rescue sequence and showing the login gate.
+    const ensureToken = async () => {
+        if(!window.state.driveToken) return false;
+        // Probe with a cheap authenticated request
+        const probe = await fetch('https://www.googleapis.com/drive/v3/about?fields=user',
+            {headers:{Authorization:`Bearer ${window.state.driveToken}`}});
+        if(probe.status !== 401) return true;
+        // Token expired — refresh silently using the existing tokenClient
+        if(!retried && tokenClient) {
+            window.appendLog("🔄 Drive token expired — refreshing silently...");
+            return new Promise((resolve) => {
+                const prev = tokenClient.callback;
+                tokenClient.callback = (resp) => {
+                    tokenClient.callback = prev;
+                    if(resp && resp.access_token){
+                        window.state.driveToken = resp.access_token;
+                        window.appendLog("✅ Drive token refreshed.");
+                        resolve(true);
+                    } else {
+                        window.appendLog("❌ Could not refresh Drive token.");
+                        resolve(false);
+                    }
+                };
+                tokenClient.requestAccessToken({prompt:''});
+            });
+        }
+        return false;
+    };
+
+    const tokenOk = await ensureToken();
+    if(!tokenOk){ window.appendLog("❌ Drive token unavailable. Cannot restore from Drive."); return []; }
+
     const folderId = await window.getOrCreateFolder();
     if(!folderId) return [];
     window.appendLog("Scanning Google Drive for backup files...");
@@ -385,7 +418,10 @@ window.downloadAllFromDrive = async function() {
     if(mRes.ok){ const md=await mRes.json(); if(md.files&&md.files.length>0){hasMaster=true;window.appendLog("⚡ Master File found! Bypassing raw CSV downloads...");} }
     const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
     const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`,{headers:{Authorization:`Bearer ${window.state.driveToken}`}});
-    if(listRes.status===401){window.handleAuthExpiry();return[];}
+    if(listRes.status===401){
+        // Second 401 after refresh attempt — show login gate
+        window.handleAuthExpiry(); return [];
+    }
     if(!listRes.ok){window.appendLog(`❌ Drive API Error: ${listRes.status}`);return[];}
     const listData = await listRes.json();
     const files = [];
@@ -395,7 +431,7 @@ window.downloadAllFromDrive = async function() {
             const fr = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,{headers:{Authorization:`Bearer ${window.state.driveToken}`}});
             files.push({filename:file.name, content:await fr.text()});
         }
-        window.appendLog(`✅ Downloaded ${files.length} files from Drive.`);
+        window.appendLog(`✅ Securely downloaded ${files.length} core files from Drive.`);
     } else window.appendLog("⚠️ Drive folder is empty.");
     return files;
 };
@@ -599,6 +635,87 @@ window.handleFileUpload = async function(event) {
     } catch(e){ alert("Upload failed."); window.stopLogPolling(); window.unlockUI(); }
 };
 
+
+// ── FIX 2: Async calculation helper ──────────────────────────────────────
+// Triggers /api/calculate/start and polls /api/calculate/status every 3s.
+// Avoids the 30-second HTTP timeout on Render/HF for 2+ minute calculations.
+// On completion, loads result, saves snapshot to Drive, then renders.
+window.runAsyncCalculation = async function() {
+    try {
+        // Kick off the background job
+        const startRes = await fetch(`${window.state.backendUrl}/api/calculate/start`,{method:'POST'});
+        if(!startRes.ok) throw new Error(`calculate/start HTTP ${startRes.status}`);
+        const startData = await startRes.json();
+        if(startData.status==='error') throw new Error(startData.message);
+
+        const jobId = startData.job_id;
+        window.appendLog(`[INFO] Calculation job ${jobId} started on ${startData.file_count||'?'} files. Polling for result...`);
+
+        // Poll every 3 seconds
+        const result = await new Promise((resolve, reject) => {
+            const poll = async () => {
+                try {
+                    const r = await fetch(`${window.state.backendUrl}/api/calculate/status?job_id=${jobId}`);
+                    if(!r.ok){ setTimeout(poll, 3000); return; }
+                    const d = await r.json();
+
+                    // Flush any new log lines from the background thread
+                    if(d.logs && d.logs.length) d.logs.forEach(l=>window.appendLog(l));
+
+                    if(d.status==='running'){ setTimeout(poll, 3000); return; }
+                    if(d.status==='done')   { resolve(d.result); return; }
+                    if(d.status==='error')  { reject(new Error(d.error||'Calculation error')); return; }
+                    // Unknown status — treat as still running
+                    setTimeout(poll, 3000);
+                } catch(e){ setTimeout(poll, 3000); }
+            };
+            poll();
+        });
+
+        // Job done — load results into state
+        window.state.open             = result.open||[];
+        window.state.closed           = result.closed||[];
+        window.state.corp             = result.corp_actions||[];
+        window.state.trade_log        = result.trade_log||[];
+        window.state.unknown_symbols  = result.unknown_symbols||{};
+        window.state.token_map        = result.token_map||{};
+
+        if(window.state.driveToken){
+            if(window.state.open.length>0||window.state.closed.length>0){
+                window.appendLog("Saving snapshot to Drive for instant loading...");
+                await window.uploadFileToDrive('portfolio_snapshot.json',JSON.stringify(result));
+            }
+            if(result.master_csv_data){
+                window.appendLog("💾 Saving Master CSV to Drive...");
+                await window.uploadFileToDrive('TradeConsole_Master.csv',result.master_csv_data);
+            }
+            // Backup corp actions cache
+            const cr = await fetch(`${window.state.backendUrl}/api/backup_cache`);
+            if(cr.ok){
+                const cd = await cr.json();
+                if(Object.keys(cd).length>0){
+                    localStorage.setItem('tc_corp_cache',JSON.stringify(cd));
+                    await window.uploadFileToDrive('corp_actions_cache.json',JSON.stringify(cd));
+                }
+            }
+        }
+
+        const pc = Object.keys(window.state.unknown_symbols).filter(s=>!window.state.symbol_map[s]).length;
+        document.getElementById('tab-mapper').innerHTML = pc>0?`SYMBOL MAPPER <span style="color:var(--red)">(${pc})</span>`:`SYMBOL MAPPER`;
+        window.populateFilters();
+        window.renderUI();
+        window.appendLog("✅ Calculation complete.");
+
+        if(window.state.open.length>0&&Object.keys(window.state.token_map).length>0) await window.fetchLivePrices();
+        else{window.stopLogPolling();window.unlockUI();}
+
+    } catch(e){
+        window.appendLog(`❌ Calculation error: ${e.message}`);
+        window.stopLogPolling();
+        window.unlockUI();
+    }
+};
+
 window.handleRefresh = async function(event) {
     if(window.state.isProcessing) return;
     window.lockUI();
@@ -606,7 +723,10 @@ window.handleRefresh = async function(event) {
         window.appendLog("Deep Refresh detected. Wiping snapshot AND Master File to force raw rebuild...");
         await window.deleteSnapshot();
         await window.deleteFileFromDrive('TradeConsole_Master.csv');
-        await window.fetchPortfolio(true);
+        // FIX 2: use async calculation instead of blocking fetchPortfolio
+        window.startLogPolling();
+        document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Starting deep rebuild...</td></tr>`;
+        await window.runAsyncCalculation();
     } else {
         window.appendLog("Refreshing Live Prices...");
         if(Object.keys(window.state.token_map).length>0) await window.fetchLivePrices();
@@ -619,7 +739,9 @@ window.handleDeepRecalculate = async function() {
     window.lockUI();
     window.appendLog("Applying changes and forcing deep recalculation...");
     await window.deleteSnapshot();
-    await window.fetchPortfolio(true);
+    window.startLogPolling();
+    document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Recalculating...</td></tr>`;
+    await window.runAsyncCalculation();
 };
 
 window.populateFilters = function() {
@@ -687,21 +809,34 @@ window.fetchPortfolio = async function(forceRecalc=false) {
                 try {
                     const driveFiles = await window.downloadAllFromDrive();
                     if(driveFiles.length>0){
-                        const cacheFile = driveFiles.find(f=>f.filename==='corp_actions_cache.json');
-                        const stratFile = driveFiles.find(f=>f.filename==='strategy_tags.json');
-                        const mapFile   = driveFiles.find(f=>f.filename==='symbol_map.json');
-                        const restoreFiles = driveFiles.filter(f=>f.filename.endsWith('.csv')||f.filename==='symbol_map.json');
+                        const cacheFile    = driveFiles.find(f=>f.filename==='corp_actions_cache.json');
+                        const stratFile    = driveFiles.find(f=>f.filename==='strategy_tags.json');
+                        const mapFile      = driveFiles.find(f=>f.filename==='symbol_map.json');
+                        const restoreFiles = driveFiles.filter(f=>f.filename.endsWith('.csv'));
+
                         if(cacheFile){ await fetch(`${window.state.backendUrl}/api/restore_cache`,{method:'POST',headers:{'Content-Type':'application/json'},body:cacheFile.content}); localStorage.setItem('tc_corp_cache',cacheFile.content); }
                         if(stratFile) localStorage.setItem('tc_strategy_tags',stratFile.content);
                         if(mapFile){ localStorage.setItem('tc_symbol_map',mapFile.content); window.state.symbol_map=JSON.parse(mapFile.content); }
+
                         if(restoreFiles.length>0){
-                            window.appendLog(`Pushing ${restoreFiles.length} files to server...`);
+                            // FIX 3: push ALL batches first, fully awaited, BEFORE triggering calculation.
+                            // /api/restore now only writes files to disk (no processing per batch).
+                            window.appendLog(`Pushing ${restoreFiles.length} files to Render in batches...`);
                             for(let i=0;i<restoreFiles.length;i+=5){
-                                await fetch(`${window.state.backendUrl}/api/restore`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(restoreFiles.slice(i,i+5))});
+                                const chunk = restoreFiles.slice(i,i+5);
+                                await fetch(`${window.state.backendUrl}/api/restore`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});
+                                window.appendLog(`  ↳ Batch ${Math.floor(i/5)+1}/${Math.ceil(restoreFiles.length/5)} written (${chunk.length} files)`);
                             }
+                            window.appendLog("✅ All files on server. Starting background calculation...");
+
+                            // FIX 2: trigger async calculation and poll for completion.
+                            // /api/calculate/start returns job_id immediately; no HTTP timeout.
+                            window.stopLogPolling();
+                            await window.runAsyncCalculation();
+                            return;
+                        } else {
+                            window.appendLog("⚠️ No CSV files found in Drive. Please upload CSVs manually.");
                         }
-                        window.appendLog("✅ Server jumpstarted! Recalculating...");
-                        return window.fetchPortfolio(true);
                     } else window.appendLog("⚠️ Cannot auto-restore. Please upload CSVs manually.");
                 } catch(restoreErr){ window.appendLog(`❌ Auto-restore failed: ${restoreErr.message}`); }
             }
