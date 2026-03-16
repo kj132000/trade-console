@@ -716,6 +716,65 @@ window.runAsyncCalculation = async function() {
     }
 };
 
+
+// ── Server-file check + calculate ────────────────────────────────────────
+// Used by Deep Refresh and Apply & Recalculate.
+// Checks if the server has CSV files. If yes, goes straight to calculation.
+// If no (cold instance), runs the Drive rescue sequence first then calculates.
+// This fixes the "No CSV files found on server" error on cold Render/HF boots.
+window.ensureServerFilesAndCalculate = async function() {
+    try {
+        const statusRes = await fetch(`${window.state.backendUrl}/api/server/status`);
+        const status    = statusRes.ok ? await statusRes.json() : {has_files: false};
+
+        if(status.has_files){
+            window.appendLog(`Server has ${status.file_count} file(s). Starting calculation directly...`);
+            await window.runAsyncCalculation();
+        } else {
+            window.appendLog("Server disk is empty (cold instance). Restoring files from Drive first...");
+            if(!window.state.driveToken){
+                window.appendLog("❌ No Drive token. Please upload CSV files manually.");
+                window.stopLogPolling();
+                window.unlockUI();
+                return;
+            }
+            // Full rescue: download → write batches → calculate once
+            const driveFiles = await window.downloadAllFromDrive();
+            if(!driveFiles.length){
+                window.appendLog("⚠️ Drive folder is empty. Please upload CSV files manually.");
+                window.stopLogPolling();
+                window.unlockUI();
+                return;
+            }
+            const cacheFile    = driveFiles.find(f=>f.filename==='corp_actions_cache.json');
+            const stratFile    = driveFiles.find(f=>f.filename==='strategy_tags.json');
+            const mapFile      = driveFiles.find(f=>f.filename==='symbol_map.json');
+            const restoreFiles = driveFiles.filter(f=>f.filename.endsWith('.csv'));
+            if(cacheFile){ await fetch(`${window.state.backendUrl}/api/restore_cache`,{method:'POST',headers:{'Content-Type':'application/json'},body:cacheFile.content}); localStorage.setItem('tc_corp_cache',cacheFile.content); }
+            if(stratFile) localStorage.setItem('tc_strategy_tags',stratFile.content);
+            if(mapFile){ localStorage.setItem('tc_symbol_map',mapFile.content); window.state.symbol_map=JSON.parse(mapFile.content); }
+            if(restoreFiles.length){
+                window.appendLog(`Restoring ${restoreFiles.length} files to server...`);
+                for(let i=0;i<restoreFiles.length;i+=5){
+                    const chunk = restoreFiles.slice(i,i+5);
+                    await fetch(`${window.state.backendUrl}/api/restore`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});
+                    window.appendLog(`  ↳ Batch ${Math.floor(i/5)+1}/${Math.ceil(restoreFiles.length/5)} written`);
+                }
+                window.appendLog("✅ All files restored. Starting calculation...");
+                await window.runAsyncCalculation();
+            } else {
+                window.appendLog("⚠️ No CSV files in Drive. Please upload CSV files manually.");
+                window.stopLogPolling();
+                window.unlockUI();
+            }
+        }
+    } catch(e){
+        window.appendLog(`❌ Server check failed: ${e.message}`);
+        window.stopLogPolling();
+        window.unlockUI();
+    }
+};
+
 window.handleRefresh = async function(event) {
     if(window.state.isProcessing) return;
     window.lockUI();
@@ -723,10 +782,12 @@ window.handleRefresh = async function(event) {
         window.appendLog("Deep Refresh detected. Wiping snapshot AND Master File to force raw rebuild...");
         await window.deleteSnapshot();
         await window.deleteFileFromDrive('TradeConsole_Master.csv');
-        // FIX 2: use async calculation instead of blocking fetchPortfolio
         window.startLogPolling();
         document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Starting deep rebuild...</td></tr>`;
-        await window.runAsyncCalculation();
+        // Check whether the server already has files on disk.
+        // On a cold Render/HF instance the disk is empty even though Drive has files.
+        // If the server is empty, run the full rescue sequence first.
+        await window.ensureServerFilesAndCalculate();
     } else {
         window.appendLog("Refreshing Live Prices...");
         if(Object.keys(window.state.token_map).length>0) await window.fetchLivePrices();
@@ -741,7 +802,7 @@ window.handleDeepRecalculate = async function() {
     await window.deleteSnapshot();
     window.startLogPolling();
     document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Recalculating...</td></tr>`;
-    await window.runAsyncCalculation();
+    await window.ensureServerFilesAndCalculate();
 };
 
 window.populateFilters = function() {
