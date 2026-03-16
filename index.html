@@ -651,10 +651,14 @@ window.handleFileUpload = async function(event) {
 window.handleRefresh = async function(event) {
     if (window.state.isProcessing) return;
     window.lockUI();
+    
     if (event && event.shiftKey) {
         window.appendLog("Deep Refresh detected. Wiping snapshot AND Master File to force raw rebuild...");
+        
         await window.deleteSnapshot();
-        await window.deleteFileFromDrive('TradeConsole_Master.csv'); // ⚡ THIS IS THE FIX ⚡
+        // ⚡ THIS IS THE CRITICAL NEW LINE ⚡
+        await window.deleteFileFromDrive('TradeConsole_Master.csv'); 
+        
         await window.fetchPortfolio(true);
     } else {
         window.appendLog("Refreshing Live Prices...");
