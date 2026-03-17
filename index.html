@@ -259,7 +259,7 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
 
 <script>
 window.state = {
-    open:[], closed:[], corp:[], trade_log:[], unknown_symbols:{}, token_map:{}, currentTab:'active',
+    open:[], closed:[], corp:[], trade_log:[], unknown_symbols:{}, token_map:{}, currentTab:'active', dirtySymbols: new Set(),
     symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map')||'{}'),
     sortCol:'Symbol', sortAsc:true, fetchingPrices:false, isPollingLogs:false,
     backendUrl: localStorage.getItem('tc_backend_url')||'http://localhost:8000',
@@ -550,10 +550,23 @@ window.toggleTerminal = function() {
     else{body.style.display='none';btn.innerText='▲';}
 };
 
+window._lastLogText = '';
+window._lastLogCount = 0;
 window.appendLog = function(text) {
     const tb = document.getElementById('terminalBody');
+    if(!tb) return;
     const now = new Date();
     const ts = `[${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}]`;
+    // Suppress consecutive identical lines — update last line with repeat count instead
+    if(text === window._lastLogText) {
+        window._lastLogCount++;
+        const lines = tb.querySelectorAll('.log-line');
+        if(lines.length > 0)
+            lines[lines.length-1].innerHTML = `<span style="color:#888">${ts}</span> ${text} <span style="color:#666">(×${window._lastLogCount+1})</span>`;
+        return;
+    }
+    window._lastLogText = text;
+    window._lastLogCount = 0;
     tb.innerHTML += `<div class="log-line"><span style="color:#888">${ts}</span> ${text}</div>`;
     tb.scrollTop = tb.scrollHeight;
 };
@@ -637,16 +650,23 @@ window.handleFileUpload = async function(event) {
 // Triggers /api/calculate/start and polls /api/calculate/status every 3s.
 // Avoids the 30-second HTTP timeout on Render/HF for 2+ minute calculations.
 // On completion, loads result, saves snapshot to Drive, then renders.
-window.runAsyncCalculation = async function() {
+window.runAsyncCalculation = async function(opts={}) {
     try {
         // Kick off the background job
-        const startRes = await fetch(`${window.state.backendUrl}/api/calculate/start`,{method:'POST'});
+        // opts.dirty_symbols: string[] for delta run, omit for full run
+        const body = opts.dirty_symbols ? JSON.stringify({dirty_symbols: opts.dirty_symbols}) : null;
+        const startRes = await fetch(`${window.state.backendUrl}/api/calculate/start`,{
+            method:'POST',
+            headers: body ? {'Content-Type':'application/json'} : {},
+            body: body
+        });
         if(!startRes.ok) throw new Error(`calculate/start HTTP ${startRes.status}`);
         const startData = await startRes.json();
         if(startData.status==='error') throw new Error(startData.message);
 
         const jobId = startData.job_id;
-        window.appendLog(`[INFO] Calculation job ${jobId} started on ${startData.file_count||'?'} files. Polling for result...`);
+        const runType = startData.run_type || 'full';
+        window.appendLog(`[INFO] Job ${jobId} started — ${runType} run on ${startData.file_count||'?'} files. Polling...`);
 
         // Poll every 3 seconds
         const result = await new Promise((resolve, reject) => {
@@ -701,6 +721,7 @@ window.runAsyncCalculation = async function() {
         document.getElementById('tab-mapper').innerHTML = pc>0?`SYMBOL MAPPER <span style="color:var(--red)">(${pc})</span>`:`SYMBOL MAPPER`;
         window.populateFilters();
         window.renderUI();
+        window.state.dirtySymbols = new Set();  // clear dirty set after successful calc
         window.appendLog("✅ Calculation complete.");
 
         if(window.state.open.length>0&&Object.keys(window.state.token_map).length>0) await window.fetchLivePrices();
@@ -752,6 +773,8 @@ window.ensureServerFilesAndCalculate = async function() {
             if(mapFile){ localStorage.setItem('tc_symbol_map',mapFile.content); window.state.symbol_map=JSON.parse(mapFile.content); }
             if(restoreFiles.length){
                 window.appendLog(`Restoring ${restoreFiles.length} files to server...`);
+                // Wipe server disk first — Render disk persists between deploys
+                await fetch(`${window.state.backendUrl}/api/clear-uploads`,{method:'POST'});
                 for(let i=0;i<restoreFiles.length;i+=5){
                     const chunk = restoreFiles.slice(i,i+5);
                     await fetch(`${window.state.backendUrl}/api/restore`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});
@@ -795,11 +818,24 @@ window.handleRefresh = async function(event) {
 window.handleDeepRecalculate = async function() {
     if(window.state.isProcessing) return;
     window.lockUI();
-    window.appendLog("Applying changes and forcing deep recalculation...");
-    await window.deleteSnapshot();
-    window.startLogPolling();
-    document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Recalculating...</td></tr>`;
-    await window.ensureServerFilesAndCalculate();
+    const dirty = Array.from(window.state.dirtySymbols);
+    if(dirty.length > 0 && dirty.length < 50){
+        // Delta run — only recalculate affected symbols
+        window.appendLog(`Delta recalculate: ${dirty.length} symbol(s) changed → ${dirty.slice(0,5).join(', ')}${dirty.length>5?'…':''}`);
+        window.startLogPolling();
+        document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Recalculating ${dirty.length} symbol(s)...</td></tr>`;
+        await window.runAsyncCalculation({dirty_symbols: dirty});
+    } else {
+        // Full run — too many dirty symbols or none tracked
+        window.appendLog(dirty.length >= 50
+            ? `${dirty.length} symbols changed — running full recalculation...`
+            : "Applying changes and forcing deep recalculation...");
+        await window.deleteSnapshot();
+        window.startLogPolling();
+        document.getElementById('tableBody').innerHTML=`<tr><td colspan="10" style="text-align:center">Recalculating...</td></tr>`;
+        await window.ensureServerFilesAndCalculate();
+    }
+    window.state.dirtySymbols = new Set();  // clear after calc
 };
 
 window.populateFilters = function() {
@@ -879,6 +915,8 @@ window.fetchPortfolio = async function(forceRecalc=false) {
                         if(restoreFiles.length>0){
                             // FIX 3: push ALL batches first, fully awaited, BEFORE triggering calculation.
                             // /api/restore now only writes files to disk (no processing per batch).
+                            // Wipe server disk before restoring — Render disk persists between runs
+                            await fetch(`${window.state.backendUrl}/api/clear-uploads`,{method:'POST'});
                             window.appendLog(`Pushing ${restoreFiles.length} files to Render in batches...`);
                             for(let i=0;i<restoreFiles.length;i+=5){
                                 const chunk = restoreFiles.slice(i,i+5);
@@ -1056,12 +1094,18 @@ window.insertSymbolMap = function(messy=null, clean=null) {
     const c = (clean||document.getElementById('newCleanSymbol').value).toUpperCase().trim();
     if(!m||!c) return alert("Please provide both the messy name and the clean symbol.");
     window.state.symbol_map[m]=c;
+    // Track as dirty — both the broker name and the clean symbol need re-FIFO
+    window.state.dirtySymbols.add(m);
+    window.state.dirtySymbols.add(c);
     if(!messy){ document.getElementById('newMessyName').value=''; document.getElementById('newCleanSymbol').value=''; }
     window.syncSymbolMapOnly();
 };
 
 window.deleteSymbolMap = function(messy) {
+    const wasClean = window.state.symbol_map[messy];
     delete window.state.symbol_map[messy];
+    window.state.dirtySymbols.add(messy.toUpperCase());
+    if(wasClean) window.state.dirtySymbols.add(wasClean.toUpperCase());
     window.syncSymbolMapOnly();
 };
 
