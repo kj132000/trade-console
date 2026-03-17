@@ -1260,8 +1260,8 @@ window.renderUI = function() {
                 <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
-                <td>${p.Invested>0?fmtMoney(p.Invested):''}</td>
-                <td style="color:var(--orange)">${p.Margin>0?fmtMoney(p.Margin):''}</td>
+                <td>${p.Segment==='EQ'?fmtMoney(p.Invested||0):'-'}</td>
+                <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):'-'}</td>
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"]||0)}%</td>
