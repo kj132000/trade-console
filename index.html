@@ -158,9 +158,6 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
             <option value="Long-term Holding">Long-term Holding</option>
             <option value="Cash Secured Put">Cash Secured Put</option>
             <option value="Short Vega">Short Vega</option>
-            <option value="VCP">VCP</option>
-            <option value="Stage 2 Breakout">Stage 2 Breakout</option>
-            <option value="Momentum Breakout">Momentum Breakout</option>
             <option value="Hedge">Hedge</option>
             <option value="❌ Mistake">❌ Mistake</option>
         </select>
@@ -532,7 +529,7 @@ window.setTab = function(tab) {
     document.getElementById('fyFilter').style.display       = (tab==='closed'||tab==='log'||tab==='chart')?'inline-block':'none';
     document.getElementById('fyGroupBy').style.display      = tab==='fy'?'inline-block':'none';
     document.getElementById('eliteMetricsGrid').style.display = tab==='closed'?'grid':'none';
-    document.getElementById('strategyFilter').style.display = tab==='closed'?'inline-block':'none';
+    document.getElementById('strategyFilter').style.display = (tab==='closed'||tab==='chart')?'inline-block':'none';
     document.getElementById('massAcceptBtn').style.display  = tab==='closed'?'inline-block':'none';
 
     // NEW: date range filter — only on closed history
@@ -985,10 +982,20 @@ window.renderChart = function() {
     const fyF = document.getElementById('fyFilter').value;
     const bF  = document.getElementById('brokerFilter').value;
     const sF  = document.getElementById('segFilter').value;
+    const stF = document.getElementById('strategyFilter')?document.getElementById('strategyFilter').value:'ALL';
+    let stratTagsChart = JSON.parse(localStorage.getItem('tc_strategy_tags')||'{}')
     let ft = [...window.state.closed];
     if(fyF!=='ALL') ft=ft.filter(p=>p.FY===fyF);
     if(bF!=='ALL')  ft=ft.filter(p=>p.Broker===bF);
     if(sF!=='ALL')  ft=ft.filter(p=>p.Segment===sF||(sF==='F&O'&&p.Segment.includes('FO')));
+    if(stF!=='ALL'&&stF!=='UNASSIGNED') ft=ft.filter(p=>{
+        const ck=`${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        return (stratTagsChart[ck]||'')=== stF;
+    });
+    if(stF==='UNASSIGNED') ft=ft.filter(p=>{
+        const ck=`${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
+        return !(stratTagsChart[ck]||'');
+    });
     ft.sort((a,b)=>new Date(a["Exit Date"])-new Date(b["Exit Date"]));
     let da={};
     ft.forEach(p=>{const d=p["Exit Date"];if(!da[d])da[d]=0;da[d]+=p["P&L"];});
@@ -1203,17 +1210,21 @@ window.renderUI = function() {
 
     // ── Symbol Mapper ──────────────────────────────────────────────────────
     if(window.state.currentTab==='mapper'){
-        document.getElementById('tableHead').innerHTML=`<tr><th>MESSY NAME FROM BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
-        Object.keys(window.state.unknown_symbols).forEach(sym=>{
+        document.getElementById('tableHead').innerHTML=`<tr><th onclick="window.handleSort('Symbol')">MESSY NAME${thI('Symbol')}</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
+        const unknownSorted = Object.keys(window.state.unknown_symbols).filter(s=>!window.state.symbol_map[s]).sort();
+        unknownSorted.forEach(sym=>{
             if(!window.state.symbol_map[sym]){
-                const sugg=window.state.unknown_symbols[sym]||'';
+                // AI suggestion: processor sets unknown_symbols[sym]='' currently
+                // Use KNOWN_ALIASES logic: strip numbers, try common NSE suffixes
+                const raw = window.state.unknown_symbols[sym]||'';
+                const sugg = raw || sym.replace(/\s*LTD\.?$/i,'').replace(/\s*LIMITED$/i,'').replace(/\s*LT$/i,'').trim();
                 html+=`<tr><td style="color:var(--red);font-weight:600">${sym}</td><td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
                 <td><div style="display:flex;gap:6px;"><input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px;text-transform:uppercase;width:120px;">
                 <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}',document.getElementById('map_clean_${sym}').value)">✅ Accept</button></div></td>
                 <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td></tr>`;
             }
         });
-        Object.keys(window.state.symbol_map).forEach(m=>{
+        Object.keys(window.state.symbol_map).sort().forEach(m=>{
             html+=`<tr><td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);">-</td>
             <td style="color:var(--green);font-weight:600">${window.state.symbol_map[m]}</td>
             <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span>
@@ -1249,8 +1260,8 @@ window.renderUI = function() {
                 <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
-                <td>${fmtMoney(p.Invested||0)}</td>
-                <td style="color:var(--orange)">${fmtMoney(p.Margin||0)}</td>
+                <td>${p.Invested>0?fmtMoney(p.Invested):''}</td>
+                <td style="color:var(--orange)">${p.Margin>0?fmtMoney(p.Margin):''}</td>
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"]||0)}%</td>
@@ -1291,11 +1302,7 @@ window.renderUI = function() {
             const ct=stratTags[ck]||'';
             let recHTML='<span style="color:var(--text3)">-</span>';
             if(!ct){const rec=window.getStrategyRecommendation(p,hd);if(rec)recHTML=`<span class="rec-badge" onclick="window.applySingleRecommendation('${ck}','${rec}')">✨ ${rec}</span>`;}
-            const ttHTML=p['Trade Type']==='Intraday'?
-                '<span style="font-size:10px;color:var(--orange);font-weight:700;border:1px solid var(--orange);padding:2px 4px;border-radius:4px">INTRADAY</span>':
-                (p['Trade Type']==='Delivery'?
-                '<span style="font-size:10px;color:var(--blue);font-weight:700;border:1px solid var(--blue);padding:2px 4px;border-radius:4px">DELIVERY</span>':
-                '<span style="color:var(--text3)">-</span>');
+            const ttHTML=p['Trade Type']||'-';
             html+=`<tr>
                 <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
                 <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
@@ -1310,9 +1317,6 @@ window.renderUI = function() {
                     <option value="Long-term Holding" ${ct==='Long-term Holding'?'selected':''}>Long-term Holding</option>
                     <option value="Cash Secured Put" ${ct==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
                     <option value="Short Vega" ${ct==='Short Vega'?'selected':''}>Short Vega</option>
-                    <option value="VCP" ${ct==='VCP'?'selected':''}>VCP</option>
-                    <option value="Stage 2 Breakout" ${ct==='Stage 2 Breakout'?'selected':''}>Stage 2 Breakout</option>
-                    <option value="Momentum Breakout" ${ct==='Momentum Breakout'?'selected':''}>Momentum Breakout</option>
                     <option value="Hedge" ${ct==='Hedge'?'selected':''}>Hedge</option>
                     <option value="❌ Mistake" ${ct==='❌ Mistake'?'selected':''}>❌ Mistake</option>
                 </select></td>
@@ -1373,9 +1377,7 @@ window.renderUI = function() {
         if(gBy.includes('Segment')) thH+=`<th onclick="window.handleSort('Segment')">SEGMENT${thI('Segment')}</th>`;
         thH+=`<th onclick="window.handleSort('Realized')">REALIZED P&amp;L${thI('Realized')}</th>
               <th onclick="window.handleSort('Unrealized')">UNREALIZED P&amp;L${thI('Unrealized')}</th>
-              <th onclick="window.handleSort('Total')">TOTAL P&amp;L${thI('Total')}</th>
-              <th onclick="window.handleSort('Invested')">INVESTED${thI('Invested')}</th>
-              <th onclick="window.handleSort('Margin')">MARGIN${thI('Margin')}</th></tr>`;
+              <th onclick="window.handleSort('Total')">TOTAL P&amp;L${thI('Total')}</th></tr>`;
         document.getElementById('tableHead').innerHTML=thH;
         dataList.forEach(p=>{
             totalPnl+=p.Realized; totUnreal+=p.Unrealized; totalInv+=p.Invested; totalMar+=p.Margin;
@@ -1387,9 +1389,7 @@ window.renderUI = function() {
             if(gBy.includes('Segment')) html+=`<td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>`;
             html+=`<td class="${rc}">${p.Realized>0?'+':''}${fmtMoney(p.Realized)}</td>
                    <td class="${uc}">${p.Unrealized>0?'+':''}${fmtMoney(p.Unrealized)}</td>
-                   <td class="${tc}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td>
-                   <td>${fmtMoney(p.Invested)}</td>
-                   <td style="color:var(--orange)">${fmtMoney(p.Margin)}</td></tr>`;
+                   <td class="${tc}" style="font-weight:800">${p.Total>0?'+':''}${fmtMoney(p.Total)}</td></tr>`;
         });
     }
 
