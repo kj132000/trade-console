@@ -126,6 +126,7 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
         <button id="tab-chart" class="btn-sec" onclick="window.setTab('chart')">P&L TRACKER</button>
         <button id="tab-fy" class="btn-sec" onclick="window.setTab('fy')">FY SUMMARY</button>
         <button id="tab-corp" class="btn-sec" onclick="window.setTab('corp')">CORPORATE ACTIONS</button>
+        <button id="tab-untracked" class="btn-sec" onclick="window.setTab('untracked')">UNTRACKED HOLDINGS</button>
         <button id="tab-mapper" class="btn-sec" onclick="window.setTab('mapper')">SYMBOL MAPPER</button>
         <button id="tab-help" class="btn-sec" onclick="window.setTab('help')" style="border-color:var(--blue);color:var(--blue);">HELP &amp; LOGIC</button>
     </div>
@@ -251,7 +252,9 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
         <table><thead id="tableHead"></thead><tbody id="tableBody"><tr><td colspan="10" style="text-align:center">No data loaded.</td></tr></tbody></table>
     </div>
 
-    <div class="terminal-wrapper">
+    <div id="untrackedContainer" style="display:none;margin-top:8px"><div class="table-container"><table><thead id="untrackedHead"></thead><tbody id="untrackedBody"></tbody></table></div></div>
+
+<div class="terminal-wrapper">
         <div class="terminal-header" onclick="window.toggleTerminal()"><span>&gt;_ SYSTEM LOGS</span><span id="termToggleBtn">▼</span></div>
         <div class="terminal-body" id="terminalBody"><div class="log-line">System initialized. Awaiting secure Google Drive connection...</div></div>
     </div>
@@ -259,7 +262,7 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
 
 <script>
 window.state = {
-    open:[], closed:[], corp:[], trade_log:[], unknown_symbols:{}, token_map:{}, currentTab:'active', dirtySymbols: new Set(),
+    open:[], closed:[], corp:[], trade_log:[], unknown_symbols:{}, token_map:{}, currentTab:'active', dirtySymbols: new Set(), untracked: [],
     symbol_map: JSON.parse(localStorage.getItem('tc_symbol_map')||'{}'),
     sortCol:'Symbol', sortAsc:true, fetchingPrices:false, isPollingLogs:false,
     backendUrl: localStorage.getItem('tc_backend_url')||'http://localhost:8000',
@@ -504,18 +507,19 @@ window.setTab = function(tab) {
     else if(tab==='log'){window.state.sortCol='Date';window.state.sortAsc=false;}
     else if(tab!=='chart'&&tab!=='help'){window.state.sortCol='Symbol';window.state.sortAsc=true;}
 
-    ['active','closed','log','chart','fy','corp','mapper','help'].forEach(t=>{
+    ['active','closed','log','chart','fy','corp','mapper','help','untracked'].forEach(t=>{
         document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
     });
 
     const isHelp = tab==='help';
     document.getElementById('helpContainer').style.display       = isHelp?'block':'none';
-    document.getElementById('mainTableContainer').style.display  = (tab==='chart'||isHelp)?'none':'block';
+    document.getElementById('untrackedContainer').style.display  = tab==='untracked'?'block':'none';
+    document.getElementById('mainTableContainer').style.display  = (tab==='chart'||isHelp||tab==='untracked')?'none':'block';
     document.getElementById('mainMetricsGrid').style.display     = isHelp?'none':'grid';
     document.getElementById('chartContainer').style.display      = tab==='chart'?'block':'none';
 
     // Main filter bar — hide for corp / mapper / help
-    document.getElementById('filterBar').style.display      = (tab==='corp'||tab==='mapper'||isHelp)?'none':'flex';
+    document.getElementById('filterBar').style.display      = (tab==='corp'||tab==='mapper'||tab==='untracked'||isHelp)?'none':'flex';
     document.getElementById('corpInsertBar').style.display  = tab==='corp'?'flex':'none';
     document.getElementById('mapperInsertBar').style.display= tab==='mapper'?'flex':'none';
 
@@ -536,6 +540,7 @@ window.setTab = function(tab) {
     document.getElementById('dateRangeWrap').style.display  = tab==='closed'?'flex':'none';
 
     if(!isHelp) window.renderUI();
+    if(tab==='untracked') window.renderUntracked();
 };
 
 window.handleSort = function(col) {
@@ -657,6 +662,12 @@ window.handleFileUpload = async function(event) {
 // Avoids the 30-second HTTP timeout on Render/HF for 2+ minute calculations.
 // On completion, loads result, saves snapshot to Drive, then renders.
 window.runAsyncCalculation = async function(opts={}) {
+    // Clear terminal if not already cleared by caller
+    if(!opts._termCleared){
+        const _tb2 = document.getElementById('terminalBody');
+        if(_tb2) _tb2.innerHTML = '';
+        window._lastLogText = ''; window._lastLogCount = 0;
+    }
     try {
         // Kick off the background job
         // opts.dirty_symbols: string[] for delta run, omit for full run
@@ -697,6 +708,7 @@ window.runAsyncCalculation = async function(opts={}) {
 
         // Job done — load results into state
         window.state.open             = result.open||[];
+        window.state.untracked        = result.untracked_holdings||[];
         window.state.closed           = result.closed||[];
         window.state.corp             = result.corp_actions||[];
         window.state.trade_log        = result.trade_log||[];
@@ -747,6 +759,10 @@ window.runAsyncCalculation = async function(opts={}) {
 // If no (cold instance), runs the Drive rescue sequence first then calculates.
 // This fixes the "No CSV files found on server" error on cold Render/HF boots.
 window.ensureServerFilesAndCalculate = async function() {
+    // Clear terminal at start of every calculation entry point
+    const _tb = document.getElementById('terminalBody');
+    if(_tb) _tb.innerHTML = '';
+    window._lastLogText = ''; window._lastLogCount = 0;
     try {
         const statusRes = await fetch(`${window.state.backendUrl}/api/server/status`);
         const status    = statusRes.ok ? await statusRes.json() : {has_files: false};
@@ -878,8 +894,9 @@ window.fetchPortfolio = async function(forceRecalc=false) {
                     window.appendLog("⚡ Snapshot found! Bypassing server and rendering instantly...");
                     const fr = await fetch(`https://www.googleapis.com/drive/v3/files/${sd.files[0].id}?alt=media`,{headers:{Authorization:`Bearer ${window.state.driveToken}`}});
                     const snap = await fr.json();
-                    window.state.open  = snap.open||[];
-                    window.state.closed= snap.closed||[];
+                    window.state.open      = snap.open||[];
+                    window.state.untracked = snap.untracked_holdings||[];
+                    window.state.closed    = snap.closed||[];
                     window.state.corp  = snap.corp_actions||[];
                     window.state.trade_log = snap.trade_log||[];
                     window.state.unknown_symbols = snap.unknown_symbols||{};
@@ -944,8 +961,9 @@ window.fetchPortfolio = async function(forceRecalc=false) {
             }
         }
 
-        window.state.open  = data.positions.open||[];
-        window.state.closed= data.positions.closed||[];
+        window.state.open      = data.positions.open||[];
+        window.state.untracked = data.positions.untracked_holdings||[];
+        window.state.closed    = data.positions.closed||[];
         window.state.corp  = data.positions.corp_actions||[];
         window.state.trade_log = data.positions.trade_log||[];
         window.state.unknown_symbols = data.positions.unknown_symbols||{};
@@ -1538,6 +1556,42 @@ window.renderUI = function() {
         document.getElementById('valPos').className='metric-val '+(combined>0?'positive':combined<0?'negative':'');
     }
 };
+// ── Untracked Holdings renderer ────────────────────────────────────────────
+window.renderUntracked = function() {
+    const uh   = window.state.untracked || [];
+    const head = document.getElementById('untrackedHead');
+    const body = document.getElementById('untrackedBody');
+    if(!head || !body) return;
+    head.innerHTML = `<tr>
+        <th>SYMBOL</th><th>BROKER</th><th>DATE</th>
+        <th style="text-align:right">QTY SOLD</th>
+        <th style="text-align:right">AVG SELL PRICE</th>
+        <th style="text-align:right">TOTAL PROCEEDS</th>
+    </tr>`;
+    if(!uh.length){
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">No untracked holdings found.</td></tr>';
+        return;
+    }
+    const grp = {};
+    uh.forEach(u => {
+        if(!grp[u.Symbol]) grp[u.Symbol] = {Symbol:u.Symbol, Broker:u.Broker, Date:u.Date, Qty:0, Proceeds:0};
+        grp[u.Symbol].Qty      += u.Qty;
+        grp[u.Symbol].Proceeds += u.Qty * u.Price;
+        if(u.Date < grp[u.Symbol].Date) grp[u.Symbol].Date = u.Date;
+    });
+    const fmtM = n => '₹'+n.toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+    body.innerHTML = Object.values(grp)
+        .sort((a,b)=>b.Date.localeCompare(a.Date))
+        .map(r=>`<tr>
+            <td style="font-weight:600;color:var(--white)">${r.Symbol}</td>
+            <td style="color:var(--text3);font-size:12px">${r.Broker}</td>
+            <td>${r.Date}</td>
+            <td style="text-align:right">${r.Qty.toLocaleString('en-IN')}</td>
+            <td style="text-align:right">${fmtM(r.Qty>0?r.Proceeds/r.Qty:0)}</td>
+            <td style="text-align:right;font-weight:600;color:var(--green)">${fmtM(r.Proceeds)}</td>
+        </tr>`).join('');
+};
+
 </script>
 </body>
 </html>
