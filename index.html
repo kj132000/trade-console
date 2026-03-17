@@ -579,7 +579,13 @@ window.pollLogs = async function() {
     } catch(e){}
     setTimeout(window.pollLogs, 500);
 };
-window.startLogPolling = function(){if(!window.state.isPollingLogs){window.state.isPollingLogs=true;window.pollLogs();}};
+window.startLogPolling = function(){
+    // Clear terminal at the start of every new run
+    const tb = document.getElementById('terminalBody');
+    if(tb) tb.innerHTML = '';
+    window._lastLogText = ''; window._lastLogCount = 0;
+    if(!window.state.isPollingLogs){window.state.isPollingLogs=true;window.pollLogs();}
+};
 window.stopLogPolling  = function(){setTimeout(()=>{window.state.isPollingLogs=false;},2000);};
 
 const fmtMoney = (n)=>"₹"+n.toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
