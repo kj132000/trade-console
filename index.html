@@ -33,7 +33,7 @@ input,select{font-family:inherit;outline:none}
 .metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px}
 .metric-title{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;font-weight:600;}
 .metric-val{font-size:24px;font-weight:500;color:var(--white)}
-.table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.table-container{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow-x:auto;width:100%}
 table{width:100%;border-collapse:collapse;text-align:left}
 th{font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);font-weight:600;padding:16px;border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;user-select:none;}
 th:hover{color:var(--white)}
@@ -138,8 +138,8 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
         <select id="segFilter" class="btn-sec" onchange="window.renderUI()">
             <option value="ALL">All Segments</option>
             <option value="EQ">Equity</option>
-            <option value="F&O">F&O</option>
-            <option value="MCX">Commodity</option>
+            <option value="FUT">Futures</option>
+            <option value="OPT">Options</option>
         </select>
         <select id="fyFilter" class="btn-sec" onchange="window.renderUI()" style="display:none;">
             <option value="ALL">All FYs</option>
@@ -499,6 +499,33 @@ window.clearDateRange = function() {
     document.getElementById('closedDateFrom').value = '';
     document.getElementById('closedDateTo').value   = '';
     window.renderUI();
+};
+
+
+// ── F&O Symbol Parser ──────────────────────────────────────────────────────
+// Canonical format: UNDERLYING{YYMMM}[STRIKE][CE|PE|FUT]
+// e.g. COFORGE26MAR1080PE, COFORGE26MARFUT, MIDCPNIFTY25MARFUT
+window.parseSymbol = function(sym, seg) {
+    const OPT = /^([A-Z&]+)(\d{2}[A-Z]{3})(\d+)(CE|PE)$/;
+    const FUT = /^([A-Z&]+)(\d{2}[A-Z]{3})FUT$/;
+    const s = (sym||'').toUpperCase().trim();
+    const mo = OPT.exec(s);
+    if (mo) return {
+        underlying: mo[1],
+        series:     mo[2].slice(0,2) + mo[2][2].toUpperCase() + mo[2].slice(3).toLowerCase(), // 26Mar
+        strike:     mo[3],
+        type:       mo[4],
+        dispSeg:    'OPT'
+    };
+    const mf = FUT.exec(s);
+    if (mf) return {
+        underlying: mf[1],
+        series:     mf[2].slice(0,2) + mf[2][2].toUpperCase() + mf[2].slice(3).toLowerCase(),
+        strike:     '',
+        type:       'FUT',
+        dispSeg:    'FUT'
+    };
+    return { underlying: sym, series: '', strike: '', type: '', dispSeg: seg==='EQ'?'EQ':seg };
 };
 
 window.setTab = function(tab) {
@@ -1049,7 +1076,7 @@ window.renderChart = function() {
     let ft = [...window.state.closed];
     if(fyF!=='ALL') ft=ft.filter(p=>p.FY===fyF);
     if(bF!=='ALL')  ft=ft.filter(p=>p.Broker===bF);
-    if(sF!=='ALL')  ft=ft.filter(p=>p.Segment===sF||(sF==='F&O'&&p.Segment.includes('FO')));
+    if(sF!=='ALL')  ft=ft.filter(p=>sF==='ALL'||window.parseSymbol(p.Symbol,p.Segment).dispSeg===sF);
     if(stF!=='ALL'&&stF!=='UNASSIGNED') ft=ft.filter(p=>{
         const ck=`${p.Symbol}_${p.Segment}_${p.Direction}_${p["Entry Date"]}_${p["Exit Date"]}`;
         return (stratTagsChart[ck]||'')=== stF;
@@ -1196,7 +1223,7 @@ window.renderUI = function() {
         let sm={};
         let fc=window.state.closed, fo=window.state.open;
         if(bFilter!=='ALL'){fc=fc.filter(p=>p.Broker===bFilter);fo=fo.filter(p=>p.Broker===bFilter);}
-        if(sFilter!=='ALL'){fc=fc.filter(p=>p.Segment===sFilter||(sFilter==='F&O'&&p.Segment.includes('FO')));fo=fo.filter(p=>p.Segment===sFilter||(sFilter==='F&O'&&p.Segment.includes('FO')));}
+        if(sFilter!=='ALL'){fc=fc.filter(p=>sFilter==='ALL'||window.parseSymbol(p.Symbol,p.Segment).dispSeg===sFilter);fo=fo.filter(p=>sFilter==='ALL'||window.parseSymbol(p.Symbol,p.Segment).dispSeg===sFilter);}
         fc.forEach(p=>{
             let k=p.FY;if(gBy.includes('Broker'))k+="_"+p.Broker;if(gBy.includes('Segment'))k+="_"+p.Segment;
             if(!sm[k])sm[k]={FY:p.FY,Broker:gBy.includes('Broker')?p.Broker:'-',Segment:gBy.includes('Segment')?p.Segment:'-',Realized:0,Unrealized:0,Invested:0,Margin:0};
@@ -1235,7 +1262,7 @@ window.renderUI = function() {
     // Broker / segment filter
     if(window.state.currentTab!=='corp'&&window.state.currentTab!=='mapper'&&window.state.currentTab!=='fy'){
         if(bFilter!=='ALL') dataList=dataList.filter(p=>p.Broker===bFilter);
-        if(sFilter!=='ALL') dataList=dataList.filter(p=>p.Segment===sFilter||(sFilter==='F&O'&&p.Segment.includes('FO')));
+        if(sFilter!=='ALL') dataList=dataList.filter(p=>sFilter==='ALL'||window.parseSymbol(p.Symbol,p.Segment).dispSeg===sFilter);
     }
 
     // FY filter
@@ -1306,7 +1333,7 @@ window.renderUI = function() {
         document.getElementById('tableHead').innerHTML=`<tr>
             <th onclick="window.handleSort('Symbol')">SYMBOL${thI('Symbol')}</th>
             <th onclick="window.handleSort('Broker')">BROKER${thI('Broker')}</th>
-            <th onclick="window.handleSort('Segment')">SEG${thI('Segment')}</th>
+            <th>SEG</th><th>TYPE</th><th>SERIES</th><th>STRIKE</th>
             <th onclick="window.handleSort('Direction')">DIR${thI('Direction')}</th>
             <th onclick="window.handleSort('Qty')">QTY${thI('Qty')}</th>
             <th onclick="window.handleSort('Avg Price')">AVG PRICE${thI('Avg Price')}</th>
@@ -1322,10 +1349,15 @@ window.renderUI = function() {
             const sgn=p["P&L"]>0?'+':'';
             const cmp=(window.state.fetchingPrices&&p.CMP===0)?'<span style="color:var(--text3)">...</span>':fmtDec(p.CMP);
             const dc=p.Direction==='Long'?'color:var(--green)':'color:var(--red)';
+            const _ps = window.parseSymbol(p.Symbol, p.Segment);
+            const _segBadgeCol = _ps.dispSeg==='OPT'?'var(--orange)':_ps.dispSeg==='FUT'?'#7ec8e3':'var(--text3)';
             html+=`<tr>
-                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
-                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
+                <td style="font-weight:600;color:var(--white)">${_ps.underlying}</td>
+                <td style="color:var(--text3);font-size:11px">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 5px;font-size:10px;border-color:${_segBadgeCol};color:${_segBadgeCol}">${_ps.dispSeg}</span></td>
+                <td style="font-size:11px;font-weight:600;color:${_ps.type==='PE'?'var(--red)':_ps.type==='CE'?'var(--green)':'var(--text3)'}">${_ps.type||'-'}</td>
+                <td style="font-size:11px;color:var(--text3)">${_ps.series||'-'}</td>
+                <td style="font-size:11px">${_ps.strike||'-'}</td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
                 <td>${p.Segment==='EQ'?fmtMoney(p.Invested||0):'-'}</td>
@@ -1342,10 +1374,9 @@ window.renderUI = function() {
         document.getElementById('tableHead').innerHTML=`<tr>
             <th onclick="window.handleSort('Symbol')">SYMBOL${thI('Symbol')}</th>
             <th onclick="window.handleSort('Broker')">BROKER${thI('Broker')}</th>
-            <th onclick="window.handleSort('Segment')">SEG${thI('Segment')}</th>
-            <th onclick="window.handleSort('Trade Type')">TYPE${thI('Trade Type')}</th>
+            <th>SEG</th><th>TYPE</th><th>SERIES</th><th>STRIKE</th>
             <th onclick="window.handleSort('Direction')">DIR${thI('Direction')}</th>
-            <th>STRATEGY</th><th>RECOMMENDATION</th>
+            <th>STRATEGY</th>
             <th onclick="window.handleSort('FY')">FY${thI('FY')}</th>
             <th onclick="window.handleSort('Qty')">QTY${thI('Qty')}</th>
             <th onclick="window.handleSort('Entry Price')">ENTRY${thI('Entry Price')}</th>
@@ -1371,24 +1402,28 @@ window.renderUI = function() {
             let recHTML='<span style="color:var(--text3)">-</span>';
             if(!ct){const rec=window.getStrategyRecommendation(p,hd);if(rec)recHTML=`<span class="rec-badge" onclick="window.applySingleRecommendation('${ck}','${rec}')">✨ ${rec}</span>`;}
             const ttHTML=p['Trade Type']||'-';
+                        const _pc = window.parseSymbol(p.Symbol, p.Segment);
+            const _scol = _pc.dispSeg==='OPT'?'var(--orange)':_pc.dispSeg==='FUT'?'#7ec8e3':'var(--text3)';
             html+=`<tr>
-                <td style="font-weight:600;color:var(--white)">${p.Symbol}</td>
-                <td style="color:var(--text3);font-size:12px">${p.Broker}</td>
-                <td><span class="btn-sec" style="padding:2px 6px;font-size:10px">${p.Segment}</span></td>
-                <td>${ttHTML}</td>
+                <td style="font-weight:600;color:var(--white)">${_pc.underlying}</td>
+                <td style="color:var(--text3);font-size:11px">${p.Broker}</td>
+                <td><span class="btn-sec" style="padding:2px 5px;font-size:10px;border-color:${_scol};color:${_scol}">${_pc.dispSeg}</span></td>
+                <td style="font-size:11px;font-weight:600;color:${_pc.type==='PE'?'var(--red)':_pc.type==='CE'?'var(--green)':'var(--text3)'}">${_pc.type||'-'}</td>
+                <td style="font-size:11px;color:var(--text3)">${_pc.series||'-'}</td>
+                <td style="font-size:11px">${_pc.strike||'-'}</td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
-                <td><select class="strategy-select" data-compkey="${ck}">
-                    <option value="">- Select Tag -</option>
+                <td style="min-width:120px"><select class="strategy-select" data-compkey="${ck}">
+                    <option value="">- Tag -</option>
                     <option value="0DTE" ${ct==='0DTE'?'selected':''}>0DTE</option>
-                    <option value="Overnight pre-expiry" ${ct==='Overnight pre-expiry'?'selected':''}>Overnight pre-expiry</option>
-                    <option value="Short-term Swing" ${ct==='Short-term Swing'?'selected':''}>Short-term Swing</option>
-                    <option value="Long-term Holding" ${ct==='Long-term Holding'?'selected':''}>Long-term Holding</option>
-                    <option value="Cash Secured Put" ${ct==='Cash Secured Put'?'selected':''}>Cash Secured Put</option>
+                    <option value="Overnight pre-expiry" ${ct==='Overnight pre-expiry'?'selected':''}>Overnight</option>
+                    <option value="Short-term Swing" ${ct==='Short-term Swing'?'selected':''}>Swing</option>
+                    <option value="Long-term Holding" ${ct==='Long-term Holding'?'selected':''}>Long Hold</option>
+                    <option value="Cash Secured Put" ${ct==='Cash Secured Put'?'selected':''}>CSP</option>
                     <option value="Short Vega" ${ct==='Short Vega'?'selected':''}>Short Vega</option>
                     <option value="Hedge" ${ct==='Hedge'?'selected':''}>Hedge</option>
                     <option value="❌ Mistake" ${ct==='❌ Mistake'?'selected':''}>❌ Mistake</option>
-                </select></td>
-                <td>${recHTML}</td>
+                </select>
+                ${!ct&&recHTML!='<span style="color:var(--text3)">-</span>'?`<div style="font-size:10px;margin-top:2px;color:var(--text3)">${recHTML}</div>`:''}</td>
                 <td style="color:var(--orange);font-weight:600">${p.FY}</td>
                 <td>${p.Qty}</td>
                 <td>${fmtDec(p["Entry Price"])}</td>
