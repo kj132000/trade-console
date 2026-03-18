@@ -578,6 +578,9 @@ window.setTab = function(tab) {
 
     if(!isHelp) window.renderUI();
     if(tab==='untracked') window.renderUntracked();
+    // Manage price auto-refresh
+    if(tab==='active') window.startPriceAutoRefresh();
+    else window.stopPriceAutoRefresh();
 };
 
 window.handleSort = function(col) {
@@ -1038,6 +1041,21 @@ window.fetchPortfolio = async function(forceRecalc=false) {
     } catch(e){ window.stopLogPolling(); window.appendLog(`❌ Fetch Error: ${e.message}`); window.unlockUI(); }
 };
 
+// Auto-refresh prices every 60s when on active tab
+let _priceRefreshTimer = null;
+window.startPriceAutoRefresh = function() {
+    if(_priceRefreshTimer) clearInterval(_priceRefreshTimer);
+    _priceRefreshTimer = setInterval(() => {
+        if(window.state.currentTab==='active' && !window.state.fetchingPrices
+           && Object.keys(window.state.token_map).length > 0) {
+            window.fetchLivePrices();
+        }
+    }, 60000); // every 60 seconds
+};
+window.stopPriceAutoRefresh = function() {
+    if(_priceRefreshTimer) { clearInterval(_priceRefreshTimer); _priceRefreshTimer = null; }
+};
+
 window.fetchLivePrices = async function() {
     if(Object.keys(window.state.token_map).length===0){window.stopLogPolling();window.unlockUI();return;}
     window.state.fetchingPrices = true;
@@ -1352,7 +1370,7 @@ window.renderUI = function() {
             <th onclick="window.handleSort('Avg Price')">AVG PRICE${thI('Avg Price')}</th>
             <th onclick="window.handleSort('Invested')">INVESTED${thI('Invested')}</th>
             <th onclick="window.handleSort('Margin')">MARGIN${thI('Margin')}</th>
-            <th onclick="window.handleSort('CMP')">CMP${thI('CMP')}</th>
+            <th onclick="window.handleSort('CMP')">CMP <button onclick="window.fetchLivePrices()" style="font-size:9px;padding:1px 5px;margin-left:4px;background:var(--border);border:none;border-radius:3px;color:var(--text3);cursor:pointer" title="Refresh prices">⟳</button>${thI('CMP')}</th>
             <th onclick="window.handleSort('P&L')">P&amp;L${thI('P&L')}</th>
             <th onclick="window.handleSort('ROI %')">ROI %${thI('ROI %')}</th>
         </tr>`;
