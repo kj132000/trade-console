@@ -1374,7 +1374,8 @@ window.renderUI = function() {
             .filter(s => !window.state.symbol_map[s])
             .filter(s => !_mapQ || s.toUpperCase().includes(_mapQ))
             .filter(s => _mapBroker==='ALL' || (window.state.unknown_symbols[s]||'')=== _mapBroker)
-            .sort        unknownSorted.forEach(sym=>{
+            .sort();
+        unknownSorted.forEach(sym=>{
             if(!window.state.symbol_map[sym]){
                 // AI suggestion: processor sets unknown_symbols[sym]='' currently
                 // Use KNOWN_ALIASES logic: strip numbers, try common NSE suffixes
