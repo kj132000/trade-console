@@ -505,18 +505,34 @@ window.clearDateRange = function() {
 // ── F&O Symbol Parser ──────────────────────────────────────────────────────
 // Canonical format: UNDERLYING{YYMMM}[STRIKE][CE|PE|FUT]
 // e.g. COFORGE26MAR1080PE, COFORGE26MARFUT, MIDCPNIFTY25MARFUT
-window.parseSymbol = function(sym, seg) {
+window.parseSymbol = function(sym, seg, expiry) {
     const OPT_FULL = /^([A-Z&]+)(\d{2}[A-Z]{3})(\d+)(CE|PE)$/;   // COFORGE26MAR1080PE
     const FUT_FULL = /^([A-Z&]+)(\d{2}[A-Z]{3})FUT$/;              // COFORGE26MARFUT
     const OPT_BARE = /^([A-Z&]+)(\d+)(CE|PE)$/;                    // NIFTY23500PE, HAL3600PE
     const FUT_BARE = /^([A-Z&]+)FUT$/;                               // COFORGEФUT, MIDCPNIFTYFUT
     const fmtSeries = s => s.slice(0,2) + s[2].toUpperCase() + s.slice(3).toLowerCase(); // 26MAR→26Mar
+    // Derive YYMMM series from expiry string (various formats)
+    const _serFromExpiry = (exp) => {
+        if(!exp) return '';
+        const e = String(exp).toUpperCase().trim();
+        // Already YYMMM: '26MAR'
+        if(/^\d{2}[A-Z]{3}$/.test(e)) return fmtSeries(e);
+        // YYYY-MM-DD or DD-MM-YYYY: extract month+year
+        const mISO = e.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if(mISO) { const mn=['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            return fmtSeries(mISO[1].slice(2)+mn[parseInt(mISO[2])]); }
+        // YYYYMM (from IIFL): '202603'
+        const mYM = e.match(/^(\d{4})(\d{2})/);
+        if(mYM) { const mn=['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            return fmtSeries(mYM[1].slice(2)+mn[parseInt(mYM[2])]); }
+        return '';
+    };
     const s = (sym||'').toUpperCase().trim();
     let m;
     if ((m = OPT_FULL.exec(s))) return { underlying:m[1], series:fmtSeries(m[2]), strike:m[3], type:m[4], dispSeg:'OPT' };
     if ((m = FUT_FULL.exec(s))) return { underlying:m[1], series:fmtSeries(m[2]), strike:'',   type:'FUT', dispSeg:'FUT' };
-    if ((m = OPT_BARE.exec(s))) return { underlying:m[1], series:'',              strike:m[2], type:m[3], dispSeg:'OPT' };
-    if ((m = FUT_BARE.exec(s))) return { underlying:m[1], series:'',              strike:'',   type:'FUT', dispSeg:'FUT' };
+    if ((m = OPT_BARE.exec(s))) { const _ser=_serFromExpiry(expiry); return { underlying:m[1], series:_ser, strike:m[2], type:m[3], dispSeg:'OPT' }; }
+    if ((m = FUT_BARE.exec(s))) { const _ser=_serFromExpiry(expiry); return { underlying:m[1], series:_ser, strike:'', type:'FUT', dispSeg:'FUT' }; }
     // EQ or unrecognised
     const ds = (seg==='F&O'||seg==='MCX') ? (s.endsWith('CE')||s.endsWith('PE') ? 'OPT' : 'FUT') : 'EQ';
     return { underlying: sym, series: '', strike: '', type: '', dispSeg: ds };
@@ -1299,22 +1315,24 @@ window.renderUI = function() {
 
     // ── Symbol Mapper ──────────────────────────────────────────────────────
     if(window.state.currentTab==='mapper'){
-        document.getElementById('tableHead').innerHTML=`<tr><th onclick="window.handleSort('Symbol')">MESSY NAME${thI('Symbol')}</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
+        document.getElementById('tableHead').innerHTML=`<tr><th onclick="window.handleSort('Symbol')">MESSY NAME${thI('Symbol')}</th><th>BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
         const unknownSorted = Object.keys(window.state.unknown_symbols).filter(s=>!window.state.symbol_map[s]).sort();
         unknownSorted.forEach(sym=>{
             if(!window.state.symbol_map[sym]){
                 // AI suggestion: processor sets unknown_symbols[sym]='' currently
                 // Use KNOWN_ALIASES logic: strip numbers, try common NSE suffixes
-                const raw = window.state.unknown_symbols[sym]||'';
-                const sugg = raw || sym.replace(/\s*LTD\.?$/i,'').replace(/\s*LIMITED$/i,'').replace(/\s*LT$/i,'').trim();
-                html+=`<tr><td style="color:var(--red);font-weight:600">${sym}</td><td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
+                const broker = window.state.unknown_symbols[sym]||'';
+                const sugg = sym.replace(/\s*LTD\.?$/i,'').replace(/\s*LIMITED$/i,'').replace(/\s*LT$/i,'').trim();
+                html+=`<tr><td style="color:var(--red);font-weight:600">${sym}</td><td style="color:var(--text3);font-size:11px">${broker||'-'}</td>
+                <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
                 <td><div style="display:flex;gap:6px;"><input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px;text-transform:uppercase;width:120px;">
                 <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}',document.getElementById('map_clean_${sym}').value)">✅ Accept</button></div></td>
                 <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td></tr>`;
             }
         });
         Object.keys(window.state.symbol_map).sort().forEach(m=>{
-            html+=`<tr><td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);">-</td>
+            html+=`<tr><td style="color:var(--white);font-weight:600">${m}</td><td style="color:var(--text3);font-size:11px">-</td>
+            <td style="color:var(--text3);">-</td>
             <td style="color:var(--green);font-weight:600">${window.state.symbol_map[m]}</td>
             <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span>
             <button class="btn-del ctrl-btn" onclick="window.deleteSymbolMap('${m}')">[X] Delete</button></div></td></tr>`;
@@ -1343,7 +1361,7 @@ window.renderUI = function() {
             const sgn=p["P&L"]>0?'+':'';
             const cmp=(window.state.fetchingPrices&&p.CMP===0)?'<span style="color:var(--text3)">...</span>':fmtDec(p.CMP);
             const dc=p.Direction==='Long'?'color:var(--green)':'color:var(--red)';
-            const _ps = window.parseSymbol(p.Symbol, p.Segment);
+            const _ps = window.parseSymbol(p.Symbol, p.Segment, p.Expiry||p.expiry||"");
             const _segBadgeCol = _ps.dispSeg==='OPT'?'var(--orange)':_ps.dispSeg==='FUT'?'#7ec8e3':'var(--text3)';
             html+=`<tr>
                 <td style="font-weight:600;color:var(--white)">${_ps.underlying}</td>
@@ -1396,7 +1414,7 @@ window.renderUI = function() {
             let recHTML='<span style="color:var(--text3)">-</span>';
             if(!ct){const rec=window.getStrategyRecommendation(p,hd);if(rec)recHTML=`<span class="rec-badge" onclick="window.applySingleRecommendation('${ck}','${rec}')">✨ ${rec}</span>`;}
             const ttHTML=p['Trade Type']||'-';
-                        const _pc = window.parseSymbol(p.Symbol, p.Segment);
+                        const _pc = window.parseSymbol(p.Symbol, p.Segment, p.Expiry||p.expiry||"");
             const _scol = _pc.dispSeg==='OPT'?'var(--orange)':_pc.dispSeg==='FUT'?'#7ec8e3':'var(--text3)';
             html+=`<tr>
                 <td style="font-weight:600;color:var(--white)">${_pc.underlying}</td>
