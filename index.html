@@ -1323,10 +1323,11 @@ window.renderUI = function() {
                 // Use KNOWN_ALIASES logic: strip numbers, try common NSE suffixes
                 const broker = window.state.unknown_symbols[sym]||'';
                 const sugg = sym.replace(/\s*LTD\.?$/i,'').replace(/\s*LIMITED$/i,'').replace(/\s*LT$/i,'').trim();
+                const symId = sym.replace(/[^A-Z0-9]/g,"_");
                 html+=`<tr><td style="color:var(--red);font-weight:600">${sym}</td><td style="color:var(--text3);font-size:11px">${broker||'-'}</td>
                 <td style="color:var(--orange);font-family:'DM Mono'">${sugg}</td>
-                <td><div style="display:flex;gap:6px;"><input type="text" id="map_clean_${sym}" value="${sugg}" class="btn-sec" style="padding:4px 8px;text-transform:uppercase;width:120px;">
-                <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}',document.getElementById('map_clean_${sym}').value)">✅ Accept</button></div></td>
+                <td><div style="display:flex;gap:6px;"><input type="text" id="map_clean_${symId}" value="${sugg}" class="btn-sec" style="padding:4px 8px;text-transform:uppercase;width:120px;">
+                <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap('${sym}',document.getElementById('map_clean_${symId}').value)">✅ Accept</button></div></td>
                 <td><span style="color:var(--red);font-size:10px;padding:2px 6px;border:1px solid var(--red);border-radius:4px">Unmapped</span></td></tr>`;
             }
         });
