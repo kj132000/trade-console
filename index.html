@@ -506,26 +506,20 @@ window.clearDateRange = function() {
 // Canonical format: UNDERLYING{YYMMM}[STRIKE][CE|PE|FUT]
 // e.g. COFORGE26MAR1080PE, COFORGE26MARFUT, MIDCPNIFTY25MARFUT
 window.parseSymbol = function(sym, seg) {
-    const OPT = /^([A-Z&]+)(\d{2}[A-Z]{3})(\d+)(CE|PE)$/;
-    const FUT = /^([A-Z&]+)(\d{2}[A-Z]{3})FUT$/;
+    const OPT_FULL = /^([A-Z&]+)(\d{2}[A-Z]{3})(\d+)(CE|PE)$/;   // COFORGE26MAR1080PE
+    const FUT_FULL = /^([A-Z&]+)(\d{2}[A-Z]{3})FUT$/;              // COFORGE26MARFUT
+    const OPT_BARE = /^([A-Z&]+)(\d+)(CE|PE)$/;                    // NIFTY23500PE, HAL3600PE
+    const FUT_BARE = /^([A-Z&]+)FUT$/;                               // COFORGEФUT, MIDCPNIFTYFUT
+    const fmtSeries = s => s.slice(0,2) + s[2].toUpperCase() + s.slice(3).toLowerCase(); // 26MAR→26Mar
     const s = (sym||'').toUpperCase().trim();
-    const mo = OPT.exec(s);
-    if (mo) return {
-        underlying: mo[1],
-        series:     mo[2].slice(0,2) + mo[2][2].toUpperCase() + mo[2].slice(3).toLowerCase(), // 26Mar
-        strike:     mo[3],
-        type:       mo[4],
-        dispSeg:    'OPT'
-    };
-    const mf = FUT.exec(s);
-    if (mf) return {
-        underlying: mf[1],
-        series:     mf[2].slice(0,2) + mf[2][2].toUpperCase() + mf[2].slice(3).toLowerCase(),
-        strike:     '',
-        type:       'FUT',
-        dispSeg:    'FUT'
-    };
-    return { underlying: sym, series: '', strike: '', type: '', dispSeg: seg==='EQ'?'EQ':seg };
+    let m;
+    if ((m = OPT_FULL.exec(s))) return { underlying:m[1], series:fmtSeries(m[2]), strike:m[3], type:m[4], dispSeg:'OPT' };
+    if ((m = FUT_FULL.exec(s))) return { underlying:m[1], series:fmtSeries(m[2]), strike:'',   type:'FUT', dispSeg:'FUT' };
+    if ((m = OPT_BARE.exec(s))) return { underlying:m[1], series:'',              strike:m[2], type:m[3], dispSeg:'OPT' };
+    if ((m = FUT_BARE.exec(s))) return { underlying:m[1], series:'',              strike:'',   type:'FUT', dispSeg:'FUT' };
+    // EQ or unrecognised
+    const ds = (seg==='F&O'||seg==='MCX') ? (s.endsWith('CE')||s.endsWith('PE') ? 'OPT' : 'FUT') : 'EQ';
+    return { underlying: sym, series: '', strike: '', type: '', dispSeg: ds };
 };
 
 window.setTab = function(tab) {
