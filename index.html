@@ -241,11 +241,26 @@ input[type="date"].btn-sec{padding:7px 10px;font-size:12px;}
         <button class="btn-pri ctrl-btn" onclick="window.insertCorpAction()">+ Add Split</button>
     </div>
 
-    <div id="mapperInsertBar">
-        <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2;text-transform:uppercase;">
-        <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1;text-transform:uppercase;">
-        <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap()">+ Add Mapping</button>
-        <button class="btn-pri ctrl-btn" style="background:var(--orange);margin-left:20px;" onclick="window.handleDeepRecalculate()">⚡ Apply &amp; Recalculate</button>
+    <div id="mapperInsertBar" style="flex-direction:column;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="mapperSymSearch" class="btn-sec" placeholder="🔍 Search symbol..." onkeyup="window.renderUI()" style="width:180px;text-transform:uppercase">
+            <select id="mapperBrokerFilter" class="btn-sec" onchange="window.renderUI()" style="width:140px">
+                <option value="ALL">All Brokers</option>
+                <option value="Zerodha">Zerodha</option>
+                <option value="m.Stock">m.Stock</option>
+                <option value="ICICI Direct">ICICI Direct</option>
+                <option value="IIFL">IIFL</option>
+                <option value="Upstox">Upstox</option>
+                <option value="Angel One">Angel One</option>
+            </select>
+            <span id="mapperCount" style="color:var(--text3);font-size:12px;margin-left:4px"></span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="newMessyName" placeholder="MESSY NAME (e.g. BHARAT DYNAMICS LIMITED)" class="btn-sec" style="flex:2;text-transform:uppercase;">
+            <input type="text" id="newCleanSymbol" placeholder="CLEAN SYMBOL (e.g. BDL)" class="btn-sec" style="flex:1;text-transform:uppercase;">
+            <button class="btn-pri ctrl-btn" onclick="window.insertSymbolMap()">+ Add Mapping</button>
+            <button class="btn-pri ctrl-btn" style="background:var(--orange);margin-left:8px;" onclick="window.handleDeepRecalculate()">⚡ Apply &amp; Recalculate</button>
+        </div>
     </div>
 
     <div class="table-container" id="mainTableContainer">
@@ -451,6 +466,22 @@ window.saveSettings = function() {
     window.state.backendUrl = document.getElementById('backendUrl').value;
     localStorage.setItem('tc_backend_url', window.state.backendUrl);
     window.toggleSettings();
+};
+
+// ── Active position strategy tags ────────────────────────────────────────
+window.getActiveStrategy = function(sym, broker) {
+    const tags = JSON.parse(localStorage.getItem('tc_active_strategy_tags')||'{}');
+    return tags[`${sym}_${broker}`]||'';
+};
+window.saveActiveStrategy = async function(sym, broker, val) {
+    let tags = JSON.parse(localStorage.getItem('tc_active_strategy_tags')||'{}');
+    const key = `${sym}_${broker}`;
+    if(val) tags[key]=val; else delete tags[key];
+    localStorage.setItem('tc_active_strategy_tags', JSON.stringify(tags));
+    if(window.state.driveToken) {
+        await window.uploadFileToDrive('active_strategy_tags.json', JSON.stringify(tags));
+    }
+    window.renderUI();
 };
 
 window.saveStrategyTag = async function(compositeKey, strategyValue, skipRender=false) {
@@ -940,6 +971,8 @@ window.fetchPortfolio = async function(forceRecalc=false) {
                     window.state.corp  = snap.corp_actions||[];
                     window.state.trade_log = snap.trade_log||[];
                     window.state.unknown_symbols = snap.unknown_symbols||{};
+                    const _asFile = files.find(f=>f.filename==='active_strategy_tags.json');
+                    if(_asFile){try{localStorage.setItem('tc_active_strategy_tags',_asFile.content);}catch(e2){}}
                     window.state.token_map = snap.token_map||{};
                     const pc = Object.keys(window.state.unknown_symbols).filter(s=>!window.state.symbol_map[s]).length;
                     document.getElementById('tab-mapper').innerHTML = pc>0?`SYMBOL MAPPER <span style="color:var(--red)">(${pc})</span>`:`SYMBOL MAPPER`;
@@ -1334,8 +1367,14 @@ window.renderUI = function() {
     // ── Symbol Mapper ──────────────────────────────────────────────────────
     if(window.state.currentTab==='mapper'){
         document.getElementById('tableHead').innerHTML=`<tr><th onclick="window.handleSort('Symbol')">MESSY NAME${thI('Symbol')}</th><th>BROKER</th><th>AI SUGGESTION</th><th>FINAL MAPPING</th><th>STATUS</th></tr>`;
-        const unknownSorted = Object.keys(window.state.unknown_symbols).filter(s=>!window.state.symbol_map[s]).sort();
-        unknownSorted.forEach(sym=>{
+        const _mapSymSearch = (document.getElementById('mapperSymSearch')||{}).value||'';
+        const _mapBroker    = (document.getElementById('mapperBrokerFilter')||{}).value||'ALL';
+        const _mapQ = _mapSymSearch.trim().toUpperCase();
+        const unknownSorted = Object.keys(window.state.unknown_symbols)
+            .filter(s => !window.state.symbol_map[s])
+            .filter(s => !_mapQ || s.toUpperCase().includes(_mapQ))
+            .filter(s => _mapBroker==='ALL' || (window.state.unknown_symbols[s]||'')=== _mapBroker)
+            .sort        unknownSorted.forEach(sym=>{
             if(!window.state.symbol_map[sym]){
                 // AI suggestion: processor sets unknown_symbols[sym]='' currently
                 // Use KNOWN_ALIASES logic: strip numbers, try common NSE suffixes
@@ -1356,6 +1395,8 @@ window.renderUI = function() {
             <td><div style="display:flex;gap:12px;align-items:center;"><span style="color:var(--green);font-size:10px;padding:2px 6px;border:1px solid var(--green);border-radius:4px">Mapped</span>
             <button class="btn-del ctrl-btn" onclick="window.deleteSymbolMap('${m}')">[X] Delete</button></div></td></tr>`;
         });
+        const _mcEl = document.getElementById('mapperCount');
+        if(_mcEl) _mcEl.innerText = unknownSorted.length + ' unmapped';
         if(!html) html=`<tr><td colspan="10" style="text-align:center">No symbols to map. Everything looks perfectly clean!</td></tr>`;
     }
 
@@ -1373,6 +1414,7 @@ window.renderUI = function() {
             <th onclick="window.handleSort('CMP')">CMP <button onclick="window.fetchLivePrices()" style="font-size:9px;padding:1px 5px;margin-left:4px;background:var(--border);border:none;border-radius:3px;color:var(--text3);cursor:pointer" title="Refresh prices">⟳</button>${thI('CMP')}</th>
             <th onclick="window.handleSort('P&L')">P&amp;L${thI('P&L')}</th>
             <th onclick="window.handleSort('ROI %')">ROI %${thI('ROI %')}</th>
+            <th>STRATEGY</th>
         </tr>`;
         dataList.forEach(p=>{
             totalPnl+=(p["P&L"]||0); totalInv+=(p.Invested||0); totalMar+=(p.Margin||0);
@@ -1396,6 +1438,11 @@ window.renderUI = function() {
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"]||0)}%</td>
+                <td style="min-width:130px">
+                <select class="strategy-select" onchange="window.saveActiveStrategy('${p.Symbol}','${p.Broker}',this.value)" style="width:100%;font-size:11px">
+                    <option value="">- Tag -</option>
+                    ${['Positional','Short-term Swing','Long-term Holding','Hedge','Overnight','0DTE','❌ Mistake'].map(o=>`<option value="${o}" ${window.getActiveStrategy('${p.Symbol}','${p.Broker}')==o?'selected':''>${o}</option>`).join('')}
+                </select></td>
             </tr>`;
         });
     }
