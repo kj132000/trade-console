@@ -1424,6 +1424,7 @@ window.renderUI = function() {
             const cmp=(window.state.fetchingPrices&&p.CMP===0)?'<span style="color:var(--text3)">...</span>':fmtDec(p.CMP);
             const dc=p.Direction==='Long'?'color:var(--green)':'color:var(--red)';
             const _ps = window.parseSymbol(p.Symbol, p.Segment, p.Expiry||p.expiry||"");
+            const _at = window.getActiveStrategy(p.Symbol, p.Broker);
             const _segBadgeCol = _ps.dispSeg==='OPT'?'var(--orange)':_ps.dispSeg==='FUT'?'#7ec8e3':'var(--text3)';
             html+=`<tr>
                 <td style="font-weight:600;color:var(--white)">${_ps.underlying}</td>
@@ -1439,11 +1440,7 @@ window.renderUI = function() {
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${sgn}${fmtDec(p["ROI %"]||0)}%</td>
-                <td style="min-width:130px">
-                <select class="strategy-select" onchange="window.saveActiveStrategy('${p.Symbol}','${p.Broker}',this.value)" style="width:100%;font-size:11px">
-                    <option value="">- Tag -</option>
-                    ${['Positional','Short-term Swing','Long-term Holding','Hedge','Overnight','0DTE','❌ Mistake'].map(o=>`<option value="${o}" ${window.getActiveStrategy('${p.Symbol}','${p.Broker}')==o?'selected':''>${o}</option>`).join('')}
-                </select></td>
+                <td style="min-width:130px"><select class="strategy-select" onchange="window.saveActiveStrategy('${p.Symbol}','${p.Broker}',this.value)" style="width:100%;font-size:11px"><option value="">- Tag -</option><option value="Positional" ${_at==="Positional"?"selected":""}>Positional</option><option value="Short-term Swing" ${_at==="Short-term Swing"?"selected":""}>Swing</option><option value="Long-term Holding" ${_at==="Long-term Holding"?"selected":""}>Long Hold</option><option value="Hedge" ${_at==="Hedge"?"selected":""}>Hedge</option><option value="Overnight" ${_at==="Overnight"?"selected":""}>Overnight</option><option value="0DTE" ${_at==="0DTE"?"selected":""}>0DTE</option><option value="❌ Mistake" ${_at==="❌ Mistake"?"selected":""}>❌ Mistake</option></select></td>
             </tr>`;
         });
     }
