@@ -1460,11 +1460,11 @@ window.renderUI = function() {
                 <td style="font-size:11px">${_ps.strike||'-'}</td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
-                <td style="${_mtf>0?'color:var(--orange)':''}">${p.Segment==='EQ'?fmtMoney(_dispInv):'-'}</td>
-                <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):(_mtf>0?'MTF':'-)'}</td>
+                <td style="${_mtf?'color:var(--orange)':''}">${p.Segment==='EQ'?fmtMoney(_dispInv):'-'}</td>
+                <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):(_mtf?'MTF':'-')}</td>
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
-                <td class="${cls}">${_mtf>0&&_mtfMargin>0?(sgn+(((p["P&L"]||0)/_mtfMargin)*100).toFixed(2)+'%'):(sgn+fmtDec(p["ROI %"]||0)+'%')}</td>
+                <td class="${cls}">${_mtf&&_mtfMargin>0?(sgn+(((p["P&L"]||0)/_mtfMargin)*100).toFixed(2)+'%'):(sgn+fmtDec(p["ROI %"]||0)+'%')}</td>
                 <td style="min-width:130px"><select class="strategy-select" onchange="window.saveActiveStrategy('${p.Symbol}','${p.Broker}',this.value)" style="width:100%;font-size:11px"><option value="">- Tag -</option><option value="Positional" ${_at==="Positional"?"selected":""}>Positional</option><option value="Short-term Swing" ${_at==="Short-term Swing"?"selected":""}>Swing</option><option value="Long-term Holding" ${_at==="Long-term Holding"?"selected":""}>Long Hold</option><option value="Hedge" ${_at==="Hedge"?"selected":""}>Hedge</option><option value="Overnight" ${_at==="Overnight"?"selected":""}>Overnight</option><option value="0DTE" ${_at==="0DTE"?"selected":""}>0DTE</option><option value="❌ Mistake" ${_at==="❌ Mistake"?"selected":""}>❌ Mistake</option></select></td>
                 <td style="text-align:center">
                 ${p.Segment==='EQ' && _mtfPct > 0 ? `
