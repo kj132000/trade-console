@@ -751,6 +751,10 @@ window.runAsyncCalculation = async function(opts={}) {
         if(!startRes.ok) throw new Error(`calculate/start HTTP ${startRes.status}`);
         const startData = await startRes.json();
         if(startData.status==='error') throw new Error(startData.message);
+        // If a job is already running, attach to it instead of starting another
+        if(startData.status==='already_running'){
+            window.appendLog(`[INFO] Attaching to existing job ${startData.job_id}...`);
+        }
 
         const jobId = startData.job_id;
         const runType = startData.run_type || 'full';
