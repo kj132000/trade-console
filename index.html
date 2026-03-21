@@ -1466,15 +1466,13 @@ window.renderUI = function() {
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${_mtf&&_mtfMargin>0?(sgn+(((p["P&L"]||0)/_mtfMargin)*100).toFixed(2)+'%'):(sgn+fmtDec(p["ROI %"]||0)+'%')}</td>
                 <td style="min-width:130px"><select class="strategy-select" onchange="window.saveActiveStrategy('${p.Symbol}','${p.Broker}',this.value)" style="width:100%;font-size:11px"><option value="">- Tag -</option><option value="Positional" ${_at==="Positional"?"selected":""}>Positional</option><option value="Short-term Swing" ${_at==="Short-term Swing"?"selected":""}>Swing</option><option value="Long-term Holding" ${_at==="Long-term Holding"?"selected":""}>Long Hold</option><option value="Hedge" ${_at==="Hedge"?"selected":""}>Hedge</option><option value="Overnight" ${_at==="Overnight"?"selected":""}>Overnight</option><option value="0DTE" ${_at==="0DTE"?"selected":""}>0DTE</option><option value="❌ Mistake" ${_at==="❌ Mistake"?"selected":""}>❌ Mistake</option></select></td>
-                <td style="text-align:center">
-                ${p.Segment==='EQ' && _mtfPct > 0 ? `
-                <input type="checkbox" ${_mtf?"checked":""}
-                 onchange="window.setMtf('${p.Symbol}','${p.Broker}',this.checked)"
-                 title="MTF eligible: ${_mtfPct}% margin required (${100-_mtfPct}% funded by m.Stock)"
-                 style="cursor:pointer;width:14px;height:14px">
-                ${_mtf?`<span style="font-size:9px;color:var(--orange);display:block;line-height:1.2">${_mtfPct}%</span>`:''}
-                ` : '<span style="color:var(--text3);font-size:10px">—</span>'}
-                </td>
+                <td style="text-align:center">${(()=>{
+                    if(p.Segment!=='EQ'||!_mtfPct) return '<span style="color:var(--text3);font-size:10px">—</span>';
+                    const chk = _mtf ? 'checked' : '';
+                    const pctBadge = _mtf ? '<span style="font-size:9px;color:var(--orange);display:block;line-height:1.2">'+_mtfPct+'%</span>' : '';
+                    const tip = 'MTF: '+_mtfPct+'% margin ('+( 100-_mtfPct)+'% funded)';
+                    return '<input type="checkbox" '+chk+' onchange="window.setMtf(\'${p.Symbol}\',\'${p.Broker}\',this.checked)" title="'+tip+'" style="cursor:pointer;width:14px;height:14px">'+pctBadge;
+                })()}</td>
             </tr>`
         });
     }
