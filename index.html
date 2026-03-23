@@ -1272,6 +1272,15 @@ document.getElementById('tableBody').addEventListener('change',function(e){
 });
 
 // ── MAIN RENDER ────────────────────────────────────────────────────────────
+// MTF checkbox — delegated handler (avoids inline JS quoting issues)
+document.addEventListener('change', function(e) {
+    if(e.target.classList.contains('mtf-cb')) {
+        const sym    = e.target.getAttribute('data-sym');
+        const broker = e.target.getAttribute('data-broker');
+        window.setMtf(sym, broker, e.target.checked);
+    }
+});
+
 window.renderUI = function() {
     if(window.state.currentTab==='chart'||window.state.currentTab==='help'){
         if(window.state.currentTab==='chart') window.renderChart();
@@ -1462,7 +1471,7 @@ window.renderUI = function() {
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
                 <td style="${_mtf?'color:var(--orange)':''}">${p.Segment==='EQ'?fmtMoney(_dispInv):'-'}</td>
                 <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):(_mtf?'MTF':'-')}</td>
-                <td style="text-align:center">${p.Segment!=='EQ'||!_mtfPct ? '<span style="color:var(--text3);font-size:10px">—</span>' : ('<input type="checkbox" '+ (_mtf?"checked ":"")+'onchange="window.setMtf(\'${p.Symbol}\',\'${p.Broker}\',this.checked)"'+' title="MTF '+ _mtfPct +'% margin" style="cursor:pointer;width:14px;height:14px">'+(_mtf ? '<span style="font-size:9px;color:var(--orange);display:block">'+ _mtfPct +'%</span>' : ''))}</td>
+                <td style="text-align:center">${p.Segment!=='EQ'||!_mtfPct ? '<span style="color:var(--text3);font-size:10px">—</span>' : ('<input type="checkbox" class="mtf-cb" data-sym="'+p.Symbol+'" data-broker="'+p.Broker+'" '+(_mtf?"checked":"")+' title="MTF: '+_mtfPct+'% margin ('+( 100-_mtfPct)+'% funded)" style="cursor:pointer;width:14px;height:14px"><span style="font-size:9px;color:var(--orange);display:block">'+(_mtf?_mtfPct+'%':'')+'</span>')}</td>
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
                 <td class="${cls}">${_mtf&&_mtfMargin>0?(sgn+(((p["P&L"]||0)/_mtfMargin)*100).toFixed(2)+'%'):(sgn+fmtDec(p["ROI %"]||0)+'%')}</td>
