@@ -1447,7 +1447,13 @@ window.renderUI = function() {
             <th>STRATEGY</th>
         </tr>`;
         dataList.forEach(p=>{
-            totalPnl+=(p["P&L"]||0); totalInv+=(p.Invested||0); totalMar+=(p.Margin||0);
+            // MTF-aware totals: if MTF on, invested=0, margin+=mtfMargin
+            const _tMtfOn  = window.getMtf(p.Symbol, p.Broker);
+            const _tMtfPct = p.MtfMarginPct || 0;
+            const _tMtfMar = (_tMtfOn && _tMtfPct > 0) ? (p.Invested||0) * _tMtfPct / 100 : 0;
+            totalPnl += (p["P&L"]||0);
+            totalInv += _tMtfOn ? 0 : (p.Invested||0);
+            totalMar += p.Segment!=='EQ' ? (p.Margin||0) : (_tMtfOn ? _tMtfMar : 0);
             const cls=p["P&L"]>0?'positive':p["P&L"]<0?'negative':'';
             const sgn=p["P&L"]>0?'+':'';
             const cmp=(window.state.fetchingPrices&&p.CMP===0)?'<span style="color:var(--text3)">...</span>':fmtDec(p.CMP);
@@ -1469,8 +1475,8 @@ window.renderUI = function() {
                 <td style="font-size:11px">${_ps.strike||'-'}</td>
                 <td style="font-weight:600;font-size:11px;${dc}">${p.Direction.toUpperCase()}</td>
                 <td>${p.Qty}</td><td>${fmtDec(p["Avg Price"])}</td>
-                <td style="${_mtf?'color:var(--orange)':''}">${p.Segment==='EQ'?fmtMoney(_dispInv):'-'}</td>
-                <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):(_mtf?'MTF':'-')}</td>
+                <td style="color:var(--text3)">${p.Segment==='EQ'?(_mtf?'—':fmtMoney(p.Invested||0)):'-'}</td>
+                <td style="color:var(--orange)">${p.Segment!=='EQ'?fmtMoney(p.Margin||0):(_mtf?fmtMoney(_mtfMargin):'-')}</td>
                 <td style="text-align:center">${p.Segment!=='EQ'||!_mtfPct ? '<span style="color:var(--text3);font-size:10px">—</span>' : ('<input type="checkbox" class="mtf-cb" data-sym="'+p.Symbol+'" data-broker="'+p.Broker+'" '+(_mtf?"checked":"")+' title="MTF: '+_mtfPct+'% margin ('+( 100-_mtfPct)+'% funded)" style="cursor:pointer;width:14px;height:14px"><span style="font-size:9px;color:var(--orange);display:block">'+(_mtf?_mtfPct+'%':'')+'</span>')}</td>
                 <td style="color:var(--white)">${cmp}</td>
                 <td class="${cls}">${sgn}${fmtMoney(p["P&L"]||0)}</td>
